@@ -113,7 +113,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
-                        hintText: 'Email Or Phone Number',
+                        hintText: 'Email',
                         hintStyle: const TextStyle(color: Colors.grey),
                         contentPadding: const EdgeInsets.symmetric(
                             vertical: 22, horizontal: 28),
