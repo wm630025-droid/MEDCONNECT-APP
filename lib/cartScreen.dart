@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/checkoutAddress.dart';
+import 'package:medconnect_app/homeScreen.dart';
+//import 'package:medconnect_app/checkoutAddress.dart';
 import 'package:medconnect_app/mainScreen.dart';
 
 class CartItem {
@@ -34,24 +35,7 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  int selectedCartTab = 0; // 0 = Purchase | 1 = Rental
-
-  //int _selectedIndex = 1;
-
-  // void _onItemTapped(int index) {
-  //   setState(() {
-  //     _selectedIndex = index;
-  //     if (index == 0) {
-  //       Navigator.pushReplacement(
-  //         context,
-  //         MaterialPageRoute(builder: (_) => const HomeScreen()),
-  //       );
-  //     } else if (index == 2) {
-  //       Navigator.pushReplacementNamed(context, '/wishlist');
-  //     }
-  //   });
-  // }
-
+  int selectedCartTab = 0; 
   @override
   Widget build(BuildContext context) {
     final filteredItems = cartItemsGlobal.where((item) {
@@ -109,20 +93,38 @@ class _CartPageState extends State<CartPage> {
                 ],
               ),
             ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => CheckoutAddressPage(cartItems: cartItemsGlobal)),
-              );
-            },
-            child: const Text(
-              'Continue To Address',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            bottomSheet: cartItemsGlobal.isEmpty
+          ? null
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                height: 50,
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0A69C3),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => CheckoutAddressPage(cartItems: cartItemsGlobal)),
+                    );
+                  },
+                  child: Text(
+                    selectedCartTab == 0 ? "pay to buy" : "pay to rent",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
             ),
+          
     );
   }
 

@@ -612,6 +612,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       price: widget.product.price,
       type: selectedPurchase == 0 ? "rent" : "buy",
       dateRange: selectedPurchase == 0 ? "3 Days" : "",
+      daily_rent: 50,
     ),
   );
 
