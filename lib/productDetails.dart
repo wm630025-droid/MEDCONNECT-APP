@@ -289,6 +289,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             setState(() {
               if (isStart) {
                 rentStartDate = picked;
+
               } else {
                 rentEndDate = picked;
               }

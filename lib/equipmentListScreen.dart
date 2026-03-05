@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medconnect_app/core/app_colorAccepted.dart';
 import 'package:medconnect_app/mainScreen.dart';
 //import 'package:medconnect_app/mainScreen.dart';
 //import 'homeScreen.dart';
@@ -140,7 +141,8 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
         child: const Icon(Icons.add),
       ),
       appBar: AppBar(
-        title: const Text("Equipment Lists"),
+        title: const Text("Equipment Lists",style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
         leading: IconButton(
     icon: const Icon(Icons.arrow_back_ios_new),
     onPressed: () {  //new modification 
@@ -153,109 +155,146 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
     },
   ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: lists.length,
-        itemBuilder: (context, index) {
-          final list = lists[index];
-
-          return Card(
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text(list.title),
-                  subtitle: Text("${list.items.length} Items"),
-trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Delete مع Confirmation
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Color.fromARGB(255, 185, 200, 239)),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text("Delete List"),
-                              content: const Text("Are you sure?"),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text("Cancel"),
+      body: Container(
+        color: const Color.fromARGB(255, 247, 246, 246),
+        child: ListView.builder(
+          
+          padding: const EdgeInsets.all(12),
+          itemCount: lists.length,
+          itemBuilder: (context, index) {
+            final list = lists[index];
+        
+            return Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    title: Text(list.title),
+                    subtitle: Text("${list.items.length} Items"),
+        trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Delete مع Confirmation
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline,),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: const Text("Delete List"),
+                                content: const Text("Are you sure?"),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text("Cancel"),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      deleteList(index);
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text("Delete"),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(list.isExpanded ? Icons.expand_less : Icons.expand_more),
+                          onPressed: () {
+                            setState(() {
+                              list.isExpanded = !list.isExpanded;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+        
+                  if (list.isExpanded)
+                    Column(
+                      children: [
+                        ...list.items.map((item) {
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(item.name),
+                                    Text("\$${item.price}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    if (!item.inStock)
+                                      const Text("Out Of Stock", style: TextStyle(color: Color.fromARGB(255, 126, 12, 4))),
+                                  ],
                                 ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    deleteList(index);
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text("Delete"),
-                                ),
+                                if (!item.inStock)
+                                  TextButton(
+                                    onPressed: () {
+                                      
+                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context)=>const MainScreen()), (Route)=>false);
+                                     },
+                                 
+                                    child: const Text("Search Again", style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color.fromARGB(255, 62, 93, 193),
+                        ),),
+                                  ),
+                                  
                               ],
                             ),
                           );
-                        },
+                        }).toList(),
+                           Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
                       ),
-                      IconButton(
-                        icon: Icon(list.isExpanded ? Icons.expand_less : Icons.expand_more),
-                        onPressed: () {
-                          setState(() {
-                            list.isExpanded = !list.isExpanded;
-                          });
-                        },
+                    onPressed: () => addAllToCart(list),
+                      child: const Text(
+                        "Add All To Cart",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-
-                if (list.isExpanded)
-                  Column(
-                    children: [
-                      ...list.items.map((item) {
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(item.name),
-                                  Text("\$${item.price}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  if (!item.inStock)
-                                    const Text("Out Of Stock", style: TextStyle(color: Colors.red)),
-                                ],
-                              ),
-                              if (!item.inStock)
-                                TextButton(
-                                  onPressed: () {
-                                    
-                    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context)=>const MainScreen()), (Route)=>false);
-                                   },
-                               
-                                  child: const Text("Search Again"),
-                                ),
-                                
-                            ],
-                          ),
-                        );
-                      }).toList(),
-
-                      ElevatedButton(
-                        onPressed: () => addAllToCart(list),
-                        child: const Text("Add All To Cart"),
-                      ),
-
-                      const SizedBox(height: 10),
-                    ],
-                  )
-              ],
-            ),
-          );
-        },
+                        // ElevatedButton(
+                        //   onPressed: () => addAllToCart(list),
+                        //   child: const Text("Add All To Cart",style: TextStyle(
+                        //   fontSize: 16,
+                        //   fontWeight: FontWeight.bold,
+                        //   color: Colors.white,
+                        // ),),
+                        // ),
+        
+                        const SizedBox(height: 10),
+                      ],
+                    )
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
