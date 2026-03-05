@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
+import 'package:medconnect_app/introScreen.dart';
 import 'package:medconnect_app/productDetails.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/doctorProfile.dart';
@@ -160,82 +161,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   //int _selectedIndex = 0;
 
-  // void _onItemTapped(int index) {
-  //   // if (index == 0) {
-  //   //   Navigator.push(
-  //   //     context,
-  //   //     MaterialPageRoute(builder: (_) => const HomeScreen()),
-  //   //   );
-  //   // }else
-  //   if (index == 1) {
-  //     Navigator.push(
-  //       context,
-  //       MaterialPageRoute(builder: (_) => const CartPage()),
-  //     );
-  //   } else if (index == 2) {
-  //     Navigator.push(
-  //       context,
-  //       MaterialPageRoute(builder: (_) => const WishlistPage()),
-  //     );
-  //   } else if(index ==3){ //new modification
-  //     openEquipmentLists();
-
-
-  //   }
-
-  //   setState(() {
-  //     _selectedIndex = index;
-  //   });
-  // }
-  // void openEquipmentLists() async {
-  //   final result = await Navigator.push(
-  //     context,
-  //     MaterialPageRoute(
-  //       builder: (_) => const EquipmentListsScreen(),
-  //     ),
-  //   );
-
-  //   if (result != null && result is String) {
-  //     _searchController.text = result; // يحط الاسم في السيرش
-  //     _searchProduct(result);          // يشغل البحث تلقائي
-  //   }
-  // }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       
-
-     appBar: AppBar(
-  backgroundColor: Colors.white,
-  elevation: 0,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back_ios_new),
-    onPressed: () {  //new modification 
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(
-      //   //  builder: (context) => const IntroScreen(),
-      //   ),
-      // );
-    },
-  ),
-  title: SizedBox(
-    height: 30,
-    child: Image.asset("assets/images/logoPNG.png", fit: BoxFit.contain),
-  ),
-  actions: [
-    IconButton(
-      icon: const Icon(
-        Icons.person_outline,
-        color: Colors.black,
-      ),
-      onPressed: () {
-        Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const doctorProfilePage()),
-        );
-
-
       appBar: AppBar(
         backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
@@ -285,28 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // bottomNavigationBar: BottomNavigationBar(
-      //   currentIndex: _selectedIndex,
-      //   onTap: _onItemTapped,
-      //   selectedItemColor: const Color(0xFF0A69C3),
-      //   unselectedItemColor: Colors.grey,
-      //   type: BottomNavigationBarType.fixed,
-      //   items: const [
-      //     BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.shopping_cart_outlined),
-      //       label: "Cart",
-      //     ),
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.favorite_border),
-      //       label: "Wishlist",
-      //     ),
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.notifications),
-      //       label: "equipmentlist",
-      //     ),
-      //   ],
-      // ),
+     
     );
   }
 
@@ -428,34 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // PRODUCT CARD
   // ---------------------
   Widget _productCard(Product p) {
-    bool isInWishlist = wishListGlobal.any((i) => i["name"] == p.name);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProductDetailsPage(product: p),
-                    ),
-                  );
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    p.imagePath,
-                    height: MediaQuery.of(context).size.height * 0.17,
-                    width: double.infinity,
-                    fit: BoxFit.fill,
+    
   bool isInWishlist = wishListGlobal.any((i) => i["name"] == p.name);
  bool isInequipmentList = equipmentListGlobal.any((i) => i["name"] == p.name);
   return Container(
@@ -475,7 +357,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                     builder: (_) => ProductDetailsPage(product: p ),
                   ),
+                );
+              },
+              //#####################################################
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  p.imagePath,
+                  height: MediaQuery.of(context).size.height * 0.17,
+                  width: double.infinity,
+                  fit: BoxFit.fill,
                 ),
+              ),
               ),
 
             Padding(
@@ -490,6 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+            ),
 
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -503,6 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 12,
                 ),
               ),
+            ),
 
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -516,54 +411,57 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+            ),
 
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 8.0,
                   vertical: 4,
                 ),
-                child: _buildActionButton(p),
-              ),
-            ],
-          ),
+                //############################################################################################
+    //             child: _buildActionButton(p),
+    //           ),
+    //         ],
+    //       ),
 
-          Positioned(
-            right: 10,
-            top: 10,
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (isInWishlist) {
-                    wishListGlobal.removeWhere((i) => i["name"] == p.name);
-                  } else {
-                    wishListGlobal.add({
-                      "name": p.name,
-                      "price": p.price,
-                      "image": p.imagePath,
-                    });
-                  }
-                });
+    //       Positioned(
+    //         right: 10,
+    //         top: 10,
+    //         child: GestureDetector(
+    //           onTap: () {
+    //             setState(() {
+    //               if (isInWishlist) {
+    //                 wishListGlobal.removeWhere((i) => i["name"] == p.name);
+    //               } else {
+    //                 wishListGlobal.add({
+    //                   "name": p.name,
+    //                   "price": p.price,
+    //                   "image": p.imagePath,
+    //                 });
+    //               }
+    //             });
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      isInWishlist
-                          ? "${p.name} removed from wishlist"
-                          : "${p.name} added to wishlist",
-                    ),
-                  ),
-                );
-              },
-              child: Icon(
-                isInWishlist ? Icons.favorite : Icons.favorite_border,
-                color: isInWishlist ? Colors.red : Colors.black,
-                size: 28,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    //             ScaffoldMessenger.of(context).showSnackBar(
+    //               SnackBar(
+    //                 content: Text(
+    //                   isInWishlist
+    //                       ? "${p.name} removed from wishlist"
+    //                       : "${p.name} added to wishlist",
+    //                 ),
+    //               ),
+    //             );
+    //           },
+    //           child: Icon(
+    //             isInWishlist ? Icons.favorite : Icons.favorite_border,
+    //             color: isInWishlist ? Colors.red : Colors.black,
+    //             size: 28,
+    //           ),
+    //         ),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    //########################################################################################################################
               child: _buildActionButton(p),
             ),
           ],
