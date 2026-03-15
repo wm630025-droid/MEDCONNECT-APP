@@ -3,6 +3,10 @@ import 'package:medconnect_app/mainScreen.dart';
 import 'package:medconnect_app/signupScreen.dart';
 import '../services/api_service.dart'; // استيراد ApiService
 
+////////hagertestingacc@gmail.com
+///P@ssword123
+
+
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -51,6 +55,15 @@ class _SignInScreenState extends State<SignInScreen> {
 
     // 5. Handle Result
     if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('sign in succesfully'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      await Future.delayed(Duration(milliseconds: 500));
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => MainScreen()),
@@ -124,7 +137,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
               child: Form(
                 key: _formKey,
-                
 
                 autovalidateMode: AutovalidateMode.disabled,
 
