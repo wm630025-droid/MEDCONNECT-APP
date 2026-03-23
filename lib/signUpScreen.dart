@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/signInScreen.dart';
 import 'package:flutter/services.dart';
+import 'package:medconnect_app/services/postRegister.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'dart:io';
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -11,10 +15,26 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+  final ApiService apiService = ApiService();
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final selectedGovernorateController = TextEditingController();
+    // أضف المتحكمات لباقي الحقول
+  final fullNameController = TextEditingController();
+  final nationalIdController = TextEditingController();
+  final addressController = TextEditingController();
+  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
+  final licenseNumberController = TextEditingController();
+  
+  // متغير للصورة
+  File? profileImage;
+  final ImagePicker imagePicker = ImagePicker();
+  
+  // متغير للـ loading
+  bool isLoading = false;
+  
   void _showGovernorateSheet() {
   showModalBottomSheet(
     context: context,
@@ -75,15 +95,100 @@ final List<String> egyptGovernorates = [
   'North Sinai',
   'Sohag',
 ];
+  // دالة اختيار الصورة
+  Future<void> pickImage() async {
+    try {
+      final XFile? pickedFile = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 75,
+      );
+      
+      if (pickedFile != null) {
+        setState(() {
+          profileImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+    }
+  }
+    // دالة التسجيل
+  Future<void> signUp() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final result = await ApiService.signUp(
+        fullName: fullNameController.text.trim(),
+        email: emailController.text.trim(),
+        password: _passwordController.text,
+        address: addressController.text.trim(),
+        governorate: selectedGovernorate!,
+        nationalId: nationalIdController.text.trim(),
+        phone: phoneController.text.trim(),
+        licenseNumber: licenseNumberController.text.trim(),
+        profileImage: profileImage,
+      );
+
+      if (result['success']) {
+        Fluttertoast.showToast(
+          msg: "Registration successful!",
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+        );
+        
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (_) => HomeScreen())
+        );
+      } else {
+        String errorMessage = result['message'] ?? 'Registration failed';
+        
+        if (result['errors'] != null && result['errors'].isNotEmpty) {
+          errorMessage = result['errors'].values.first[0];
+        }
+        
+        Fluttertoast.showToast(
+          msg: errorMessage,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "An error occurred. Please try again.",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
 
   @override
+    @override
   void dispose() {
+    fullNameController.dispose();
+    nationalIdController.dispose();
+    addressController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    licenseNumberController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    selectedGovernorateController.dispose();
     super.dispose();
   }
- 
   @override
  Widget build(BuildContext context) {
     return Scaffold(
@@ -131,47 +236,52 @@ final List<String> egyptGovernorates = [
                     const SizedBox(height: 20),
 
                     // الصورة الشخصية في اليمين + أيقونة الكاميرا
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 50,
-                              backgroundColor: Colors.grey[300],
-                              child: const Icon(Icons.person, size: 60, color: Colors.white),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: CircleAvatar(
-                                radius: 18,
-                                backgroundColor: const Color(0xFF0066FF),
-                                child: IconButton(
-                                  icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
-                                  onPressed: () {
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                   // الصورة الشخصية في اليمين + أيقونة الكاميرا
+Row(
+  mainAxisAlignment: MainAxisAlignment.end,
+  children: [
+    Stack(
+      children: [
+        CircleAvatar(
+          radius: 50,
+          backgroundColor: Colors.grey[300],
+          backgroundImage: profileImage != null 
+              ? FileImage(profileImage!) 
+              : null,
+          child: profileImage == null
+              ? const Icon(Icons.person, size: 60, color: Colors.white)
+              : null,
+        ),
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: CircleAvatar(
+            radius: 18,
+            backgroundColor: const Color(0xFF0066FF),
+            child: IconButton(
+              icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+              onPressed: pickImage, // غيرناها من (){} لـ _pickImage
+            ),
+          ),
+        ),
+      ],
+    ),
+  ],
+),
 
                     const SizedBox(height: 40),
 
                     const Text('User Information', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
 
-                    _buildTextField(label: 'Full Name (As On National ID)', validator: (v) {
+                    _buildTextField(label: 'full_name', validator: (v) {
                       if (v == null || v.isEmpty) return 'Required';
                       if (RegExp(r'[0-9]').hasMatch(v)) return 'No numbers allowed';
                       return null;
                     }),
 
                     _buildTextField(
-                      label: 'National ID Number',
+                      label: 'national_id',
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(14)],
                       validator: (v) => v?.length != 14 ? 'Must be 14 digits' : null,
@@ -183,7 +293,7 @@ final List<String> egyptGovernorates = [
                     const Text('Account Information', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
                     _buildTextField(
-                   label: 'Governorate',
+                   label: 'governorate',
                    readOnly: true,
                    hintText: '$selectedGovernorate',
                   suffixIcon: const Icon(Icons.arrow_drop_down),
@@ -192,20 +302,20 @@ final List<String> egyptGovernorates = [
                   ),
 
                     _buildTextField(
-                      label: 'Email',
+                      label: 'email',
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) => !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v!) ? 'Invalid email' : null,
                     ),
 
                     _buildTextField(
-                      label: 'Phone Number',
+                      label: 'phone',
                       keyboardType: TextInputType.phone,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(11)],
                       validator: (v) => v?.length != 11 ? 'Must be 11 digits' : null,
                     ),
 
             _buildTextField(
-             label: 'Password',
+             label: 'password',
              controller: _passwordController,
             obscureText: _obscurePassword,
              suffixIcon: IconButton(
@@ -238,9 +348,9 @@ final List<String> egyptGovernorates = [
                     const SizedBox(height: 16),
 
                     _buildTextField(
-                      label: 'Medical Practice License Number',
+                      label: 'license_number',
                       keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9 -]'))],
                     ),
 
                    
@@ -256,11 +366,12 @@ final List<String> egyptGovernorates = [
                         ),
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
-                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+                            signUp();
                           }
                         },
-                        child: const Text('Sign Up', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
+child: isLoading
+    ? const CircularProgressIndicator(color: Colors.white)
+    : const Text('Sign Up', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),                      ),
                     ),
 
                     const SizedBox(height: 20),
