@@ -209,7 +209,7 @@ class ApiService {
   // في api_service.dart
   Future<Map<String, dynamic>> fetchProductsWithPagination({
     int page = 1,
-    int perPage = 15,
+    int perPage = 2,
   }) async {
     try {
       if (_token == null) {
@@ -260,9 +260,10 @@ class ApiService {
 
           return {
             'products': products,
+            
             'lastPage': data['last_page'] ?? 1,
             'total': data['total'] ?? 0,
-            'perPage': data['per_page'] ?? 15,
+            'perPage': 2,
           };
         } else {
           print('❌ API returned success=false: ${data['message']}');
@@ -279,7 +280,48 @@ class ApiService {
     }
   }
   //###################################
+  // ------------------- Fetch Product By ID -------------------
+Future<Product> fetchProductById(int productId) async {
+  try {
+    if (_token == null) {
+      throw Exception('Please login first');
+    }
 
+    final uri = Uri.parse('$baseUrl/v1/product/doctor/show/$productId');
+    print('🌐 Fetching product details: $uri');
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $_token',
+      },
+    );
+
+    print('📦 Product Details Response status: ${response.statusCode}');
+    print('📦 Product Details Response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      var data = jsonDecode(response.body);
+      
+      if (data['success'] == true) {
+        return Product.fromJson(data['data']);
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch product details');
+      }
+    } else if (response.statusCode == 401) {
+      throw Exception('Session expired. Please login again.');
+    } else if (response.statusCode == 404) {
+      throw Exception('Product not found');
+    } else {
+      throw Exception('HTTP Error: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('❌ Error fetching product details: $e');
+    throw Exception('Error loading product: $e');
+  }
+}
+//##################################
   Future<void> _saveToken(String token) async {
     print('💾 _saveToken called with: $token');
 

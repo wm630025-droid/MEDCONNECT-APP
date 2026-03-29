@@ -142,47 +142,47 @@ class _SignInScreenState extends State<SignInScreen> {
 
                 child: Column(
                   children: [
-                    const SizedBox(height: 20),
+                    //const SizedBox(height: 20),
 
                     // Avatar (كما هو)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 50,
-                              backgroundColor: Colors.white,
-                              child: CircleAvatar(
-                                radius: 47,
-                                backgroundColor: Colors.grey[300],
-                                child: const Icon(
-                                  Icons.person,
-                                  size: 60,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: CircleAvatar(
-                                radius: 18,
-                                backgroundColor: const Color(0xFF0066FF),
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.camera_alt,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () {},
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.end,
+                    //   children: [
+                    //     Stack(
+                    //       children: [
+                    //         CircleAvatar(
+                    //           radius: 50,
+                    //           backgroundColor: Colors.white,
+                    //           child: CircleAvatar(
+                    //             radius: 47,
+                    //             backgroundColor: Colors.grey[300],
+                    //             child: const Icon(
+                    //               Icons.person,
+                    //               size: 60,
+                    //               color: Colors.white70,
+                    //             ),
+                    //           ),
+                    //         ),
+                    //         Positioned(
+                    //           bottom: 0,
+                    //           right: 0,
+                    //           child: CircleAvatar(
+                    //             radius: 18,
+                    //             backgroundColor: const Color(0xFF0066FF),
+                    //             child: IconButton(
+                    //               icon: const Icon(
+                    //                 Icons.camera_alt,
+                    //                 size: 18,
+                    //                 color: Colors.white,
+                    //               ),
+                    //               onPressed: () {},
+                    //             ),
+                    //           ),
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ],
+                    // ),
 
                     const SizedBox(height: 50),
 

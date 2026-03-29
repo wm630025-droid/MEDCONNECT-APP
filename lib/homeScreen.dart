@@ -516,7 +516,7 @@ void dispose() {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ProductDetailsPage(product: p),
+                      builder: (_) => ProductDetailsPage(productId: p.id,product: p,),
                     ),
                   );
                 },

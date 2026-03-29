@@ -3,7 +3,14 @@ import 'package:medconnect_app/core/app_colorSupplier.dart';
 import 'package:medconnect_app/models/supplier_product.dart';
 
 class SupplierProfileScreen extends StatelessWidget {
-  SupplierProfileScreen({super.key});
+
+  final int supplierId;
+  final String supplierName;
+  SupplierProfileScreen({
+    super.key,
+    required this.supplierId,
+    required this.supplierName
+    });
 
   final List<SupplierProduct> supplierProducts = [
     SupplierProduct(

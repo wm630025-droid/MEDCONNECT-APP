@@ -1,17 +1,25 @@
 class Product {
-  final int id;                    // 👈 جديد
+  final int id;
+  final int supplierId;              // ✅ جديد (مهم للمورد)
   final String name;
   final String brand;
   final double price;
   final String imagePath;
-  final int stock;                 // 👈 جديد (للتحقق من Out of Stock)
-  final bool isRentable;           // 👈 جديد (لإظهار زر Rent)
-  final DateTime? restockDate;     // 👈 جديد (لإظهار Notify Me)
-  final String status;             // موجود
-  final List<String> images;       // موجود
+  final int stock;
+  final bool isRentable;
+  final DateTime? restockDate;
+  final String status;
+  final List<String> images;
+  
+  // ✅ الحقول الجديدة من API
+  final String description;
+  final List<dynamic> specification;
+  final String warranty;
+  final int setupDuration;
 
   Product({
     required this.id,
+    required this.supplierId,
     required this.name,
     required this.brand,
     required this.price,
@@ -21,11 +29,15 @@ class Product {
     this.restockDate,
     required this.status,
     required this.images,
+    required this.description,
+    required this.specification,
+    required this.warranty,
+    required this.setupDuration,
   });
 
   // دالة لتحويل JSON من API إلى Product
   factory Product.fromJson(Map<String, dynamic> json) {
-    // استخراج أول صورة إذا وجدت
+    // استخراج أول صورة
     String firstImage = '';
     List<String> imagesList = [];
     
@@ -38,6 +50,7 @@ class Product {
 
     return Product(
       id: json['id'],
+      supplierId: json['supplier_id'] ?? 0,
       name: json['name'],
       brand: json['name'], // مؤقتاً، لو مفيش brand منفصل
       price: double.tryParse(json['price'].toString()) ?? 0.0,
@@ -49,6 +62,10 @@ class Product {
           : null,
       status: json['status'] ?? 'active',
       images: imagesList,
+      description: json['description'] ?? '',
+      specification: json['specification'] ?? [],
+      warranty: json['warranty'] ?? '0',
+      setupDuration: json['setup_duration'] ?? 0,
     );
   }
 }
