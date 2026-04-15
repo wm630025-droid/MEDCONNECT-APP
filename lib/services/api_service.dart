@@ -11,6 +11,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:medconnect_app/models/category.dart';
+import 'package:medconnect_app/models/custom_request_model.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -126,7 +127,7 @@ class ApiService {
 
       var data = jsonDecode(response.body);
       print("token berfor logout : $_token");
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 401) {
         // ✅ مسح البيانات المحلية
         print("log out sucess from server");
         _token = null;
@@ -310,15 +311,15 @@ Future<Product> fetchProductById(int productId) async {
         throw Exception(data['message'] ?? 'Failed to fetch product details');
       }
     } else if (response.statusCode == 401) {
-      throw Exception('Session expired. Please login again.');
+      throw 'Session expired. Please login again.';
     } else if (response.statusCode == 404) {
-      throw Exception('Product not found');
+      throw 'Product not found';
     } else {
-      throw Exception('HTTP Error: ${response.statusCode}');
+      throw 'HTTP Error: ${response.statusCode}';
     }
   } catch (e) {
     print('❌ Error fetching product details: $e');
-    throw Exception('Error loading product: $e');
+    throw 'Error loading product: $e';
   }
 }
 
@@ -333,7 +334,7 @@ Future<Map<String, dynamic>> fetchProductsBySupplierId({
        print('🔵 fetchProductsBySupplierId called - supplierId: $supplierId, page: $page');
     if (_token == null) {
       print('❌ No token found for supplier products');
-      throw Exception('Please login first');
+      throw 'Please login first';
       
     }
 
@@ -382,20 +383,196 @@ Future<Map<String, dynamic>> fetchProductsBySupplierId({
           'perPage': data['per_page'] ?? perPage,
         };
       } else {
-        throw Exception(data['message'] ?? 'Failed to fetch supplier products');
+        throw data['message'] ?? 'Failed to fetch supplier products';
       }
     } else if (response.statusCode == 401) {
-      throw Exception('Session expired. Please login again.');
+      throw 'Session expired. Please login again.';
     } else if (response.statusCode == 404) {
         print('❌ Supplier not found: $supplierId');
-      throw Exception('Supplier not found');
+      throw 'Supplier not found';
     } else {
         print('❌ Supplier products HTTP error: ${response.statusCode}');
-      throw Exception('HTTP Error: ${response.statusCode}');
+      throw 'HTTP Error: ${response.statusCode}';
     }
   } catch (e) {
     print('❌ Error fetching supplier products: $e');
-    throw Exception('Error loading supplier products: $e');
+    throw 'Error loading supplier products: $e';
+  }
+}
+
+
+//#################################
+// في lib/services/api_service.dart
+
+// ------------------- Create Custom Request -------------------
+// Future<Map<String, dynamic>> createCustomRequest(CustomRequestModel request) async {
+//   try {
+//     if (_token == null) throw Exception('Please login first');
+
+//     final response = await http.post(
+//       Uri.parse('$baseUrl/v1/customRequest/create'),
+//       headers: {
+//         'Accept': 'application/json',
+//         'Authorization': 'Bearer $_token',
+//         'Content-Type': 'application/json',
+//       },
+//       body: jsonEncode(request.toJson()),
+//     );
+
+//     print('📦 Create Custom Request Response: ${response.body}');
+
+//     if (response.statusCode == 200 || response.statusCode == 201) {
+//       return jsonDecode(response.body);
+//     } else {
+//       throw Exception('Failed to createxxxxxxxxxxx custom request');
+//     }
+//   } catch (e) {
+//     print('❌ Error creating custom request: $e');
+//     throw Exception('Error: $e');
+//   }
+// }
+Future<CustomRequest> createCustomRequest(CustomRequest request) async {
+  try {
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print("Token : $_token");
+
+      if (_token == null || _token!.isEmpty) {
+      print('❌ No token found! Please login again.');
+      throw Exception('No authentication token. Please login again.');
+    }
+    if (_token == null) throw 'Please login first';
+ 
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('📤 [CREATE CUSTOM REQUEST] Sending request');
+    print('📦 Request Body: ${jsonEncode(request.toJson())}');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/v1/customRequest/create'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $_token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(request.toJson()),
+    );
+
+    print('📥 Response status: ${response.statusCode}');
+    print('📥 Response body: ${response.body}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      print('✅ Custom request created successfully!');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      // ✅ الـ Response ممكن يرجع نفس الـ data أو data['data']
+      if (data['data'] != null) {
+        return CustomRequest.fromJson(data['data']);
+      }
+      return CustomRequest.fromJson(data);
+    } else if (response.statusCode == 401) {
+      throw 'Session expired. Please login again.';
+    }
+     else {
+      throw 'Failed to create custom request';
+    }
+  } catch (e) {
+    print('❌22 Error: $e');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    throw 'Error: $e';
+  }
+}
+// ------------------- Get Custom Requests -------------------
+// Future<Map<String, dynamic>> getCustomRequests({
+//   int page = 1,
+//   int perPage = 15,
+//   String status = 'open', // open, applied, cancelled, expired, all
+// }) async {
+//   try {
+//     if (_token == null) throw Exception('Please login first');
+
+//     final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(queryParameters: {
+//       'page': page.toString(),
+//       'per_page': perPage.toString(),
+//       'status': status,
+//     });
+
+//     final response = await http.get(
+//       uri,
+//       headers: {
+//         'Accept': 'application/json',
+//         'Authorization': 'Bearer $_token',
+//       },
+//     );
+
+//     print('📦 Get Custom Requests Response: ${response.body}');
+
+//     if (response.statusCode == 200) {
+//       return jsonDecode(response.body);
+//     } else {
+//       throw Exception('Failed to fetch custom requests');
+//     }
+//   } catch (e) {
+//     print('❌ Error fetching custom requests: $e');
+//     throw Exception('Error: $e');
+//   }
+// }
+Future<List<CustomRequest>> getCustomRequests({
+  int page = 1,
+  int perPage = 15,
+  String status = 'open',
+}) async {
+  try {
+    
+    if (_token == null) throw Exception('Please login first');
+   
+    final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(queryParameters: {
+      'page': page.toString(),
+      'per_page': perPage.toString(),
+      'status': status,
+    });
+
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('📤 [GET CUSTOM REQUESTS] URL: $uri');
+
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $_token',
+      },
+    );
+
+    print('📥 Response status: ${response.statusCode}');
+    print('📥 Response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      
+      if (data['success'] == true) {
+        final List<dynamic> requestsData = data['data'];
+        final requests = requestsData.map((json) => CustomRequest.fromJson(json)).toList();
+        
+        print('✅ Loaded ${requests.length} custom requests');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return requests;
+      } else {
+        throw data['message'] ?? 'Failed to fetch requests';
+      }
+
+    } else if (response.statusCode == 401) {
+      throw 'Session expired. Please login again.';
+    }
+     else {
+      throw 'Failed to fetch custom requests';
+    }
+  } catch (e) {
+    print('❌ EError: $e');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    if(e is Exception){
+    throw e.toString().replaceAll('Exeption', '').trim();
+    }
+    rethrow;
   }
 }
 //##################################

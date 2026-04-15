@@ -35,10 +35,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Product> displayedProducts = [];
   List<Product> _allProducts = [];
-int _currentPage = 1;
-int _totalPages = 1;
-bool _isLoadingMore = false;
-bool _hasMore = true;
+  int _currentPage = 1;
+  int _totalPages = 1;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
   //########################
 
   // Categories variables
@@ -51,7 +51,7 @@ bool _hasMore = true;
   String? _productsError;
 
   final ApiService _apiService = ApiService();
-final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = ScrollController();
   @override
   void initState() {
     super.initState();
@@ -59,67 +59,70 @@ final ScrollController _scrollController = ScrollController();
 
     _loadProducts();
     _scrollController.addListener(() {
-    if (_scrollController.position.pixels == 
-        _scrollController.position.maxScrollExtent && 
-        _hasMore && !_isLoadingMore) {
-      _loadProducts(loadMore: true);
-    }
-  });
-  }
-@override
-void dispose() {
-  _scrollController.dispose();
-  super.dispose();
-}
- Future<void> _loadProducts({bool loadMore = false}) async {
-  if (ApiService.token == null) {
-    setState(() {
-      _productsError = 'Please login first';
-      _isLoadingProducts = false;
-    });
-    return;
-  }
-  
-  if (!loadMore) {
-    setState(() {
-      _isLoadingProducts = true;
-      _productsError = null;
-      _currentPage = 1;
-      _allProducts = [];
-    });
-  } else {
-    setState(() {
-      _isLoadingMore = true;
-    });
-  }
-  
-  try {
-    final result = await _apiService.fetchProductsWithPagination(
-      page: _currentPage,
-      perPage: 10,
-    );
-    
-    setState(() {
-      if (loadMore) {
-        _allProducts.addAll(result['products']);
-      } else {
-        _allProducts = result['products'];
+      if (_scrollController.position.pixels ==
+              _scrollController.position.maxScrollExtent &&
+          _hasMore &&
+          !_isLoadingMore) {
+        _loadProducts(loadMore: true);
       }
-      displayedProducts = List.from(_allProducts);
-      _totalPages = result['lastPage'];
-      _hasMore = _currentPage < _totalPages;
-      _currentPage++;
-      _isLoadingProducts = false;
-      _isLoadingMore = false;
-    });
-  } catch (e) {
-    setState(() {
-      _productsError = e.toString();
-      _isLoadingProducts = false;
-      _isLoadingMore = false;
     });
   }
-}
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProducts({bool loadMore = false}) async {
+    if (ApiService.token == null) {
+      setState(() {
+        _productsError = 'Please login first';
+        _isLoadingProducts = false;
+      });
+      return;
+    }
+
+    if (!loadMore) {
+      setState(() {
+        _isLoadingProducts = true;
+        _productsError = null;
+        _currentPage = 1;
+        _allProducts = [];
+      });
+    } else {
+      setState(() {
+        _isLoadingMore = true;
+      });
+    }
+
+    try {
+      final result = await _apiService.fetchProductsWithPagination(
+        page: _currentPage,
+        perPage: 10,
+      );
+
+      setState(() {
+        if (loadMore) {
+          _allProducts.addAll(result['products']);
+        } else {
+          _allProducts = result['products'];
+        }
+        displayedProducts = List.from(_allProducts);
+        _totalPages = result['lastPage'];
+        _hasMore = _currentPage < _totalPages;
+        _currentPage++;
+        _isLoadingProducts = false;
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        _productsError = e.toString();
+        _isLoadingProducts = false;
+        _isLoadingMore = false;
+      });
+    }
+  }
 
   Future<void> _loadCategories() async {
     // ✅ التأكد من وجود توكن
@@ -448,70 +451,79 @@ void dispose() {
   // Grid Products
   // ---------------------
   Widget _featuredGrid() {
-  if (_isLoadingProducts && _allProducts.isEmpty) {
-    return const Center(child: CircularProgressIndicator());
-  }
-  
-  if (_productsError != null && _allProducts.isEmpty) {
-    return Center(
-      child: Column(
-        children: [
-          Text('Error: $_productsError'),
-          ElevatedButton(
-            onPressed: () => _loadProducts(),
-            child: const Text('Retry'),
+    if (_isLoadingProducts && _allProducts.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_productsError != null && _allProducts.isEmpty) {
+      return Center(
+        child: Column(
+          children: [
+            Text('Error: $_productsError'),
+            SizedBox(height: 10,),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.blueAccent,
+              ),
+              onPressed: () => _loadProducts(),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_allProducts.isEmpty) {
+      return const Center(child: Text('No products found.'));
+    }
+
+    return Column(
+      children: [
+        GridView.builder(
+          controller: _scrollController,
+          itemCount: displayedProducts.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.60,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
           ),
-        ],
-      ),
+          itemBuilder: (context, index) {
+            return _productCard(displayedProducts[index]);
+          },
+        ),
+        if (_isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: CircularProgressIndicator(),
+          ),
+      ],
     );
   }
-  
-  if (_allProducts.isEmpty) {
-    return const Center(child: Text('No products found.'));
-  }
 
-  return Column(
-    children: [
-      GridView.builder(
-        controller: _scrollController,
-        itemCount: displayedProducts.length,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.60,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemBuilder: (context, index) {
-          return _productCard(displayedProducts[index]);
-        },
-      ),
-      if (_isLoadingMore)
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: CircularProgressIndicator(),
-        ),
-    ],
-  );
-}
   // ---------------------
   // PRODUCT CARD
   // ---------------------
   Widget _productCard(Product p) {
-final wishlistProvider = Provider.of<WishlistProvider>(context, listen: true);
-final isInWishlist = wishlistProvider.isInWishlist(p.id);
+    final wishlistProvider = Provider.of<WishlistProvider>(
+      context,
+      listen: true,
+    );
+    final isInWishlist = wishlistProvider.isInWishlist(p.id);
 
-   // bool isInWishlist = wishListGlobal.any((i) => i["name"] == p.name);
+    // bool isInWishlist = wishListGlobal.any((i) => i["name"] == p.name);
     bool isInequipmentList = equipmentListGlobal.any(
       (i) => i["name"] == p.name,
     );
 
     String supplierName = '';
-    if(p.supplierData != null && p.supplierData!['company_name'] != null){
-supplierName = p.supplierData!['company_name'];
+    if (p.supplierData != null && p.supplierData!['company_name'] != null) {
+      supplierName = p.supplierData!['company_name'];
     }
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -527,7 +539,8 @@ supplierName = p.supplierData!['company_name'];
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ProductDetailsPage(productId: p.id,product: p,),
+                      builder: (_) =>
+                          ProductDetailsPage(productId: p.id, product: p),
                     ),
                   );
                 },
@@ -645,14 +658,14 @@ supplierName = p.supplierData!['company_name'];
                 // ❤️ Wishlist
                 GestureDetector(
                   onTap: () {
-                   wishlistProvider.toggleWishlist(p.id);
+                    wishlistProvider.toggleWishlist(p.id);
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
                           wishlistProvider.isInWishlist(p.id)
                               ? "${p.name} added to wishlist"
-                              :"${p.name} removed from wishlist"
+                              : "${p.name} removed from wishlist",
                         ),
                       ),
                     );

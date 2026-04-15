@@ -1,19 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/core/app_colorMycustom.dart';
-import 'package:medconnect_app/customRequest.dart';
+//import 'package:medconnect_app/customRequest.dart';
+import 'package:medconnect_app/doctorProfile.dart';
+import 'package:medconnect_app/models/custom_request_model.dart';
 import 'package:medconnect_app/responseScreen.dart';
-import 'package:medconnect_app/models/request_status.dart';
-import 'package:medconnect_app/data/custom_request_store.dart';
+
 import 'package:medconnect_app/acceptedSupplier.dart';
+import 'package:medconnect_app/services/api_service.dart';
 
-
-class MyCustomRequestsPage extends StatelessWidget {
- 
-
-
+class MyCustomRequestsPage extends StatefulWidget {
   const MyCustomRequestsPage({super.key});
-   
 
+  @override
+  State<MyCustomRequestsPage> createState() => _MyCustomRequestsPageState();
+}
+
+class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
+  List<CustomRequest> _requests = [];
+  bool _isLoading = true;
+  String? _error;
+  String _currentFilter = 'All';
+  final ApiService _apiService = ApiService();
+  @override
+  void initState() {
+    super.initState();
+    _loadRequests();
+  }
+
+  // Future<void> _loadRequests() async {
+  //   setState(() {
+  //     _isLoading = true;
+  //     _error = null;
+  //   });
+
+  //   try {
+  //     final requests = await _apiService.getCustomRequests(
+  //       page: 1,
+  //       perPage: 50,
+  //       status: _currentFilter == 'All' ? 'all' : _currentFilter.toLowerCase(),
+  //     );
+
+  //     if (result['success'] == true) {
+  //       final List<dynamic> data = result['data'];
+  //       setState(() {
+  //         _requests = data.map((json) => CustomRequestResponse.fromJson(json)).toList();
+  //         _isLoading = false;
+  //       });
+  //     } else {
+  //       throw Exception(result['message'] ?? 'Failed to load requests');
+  //     }
+  //   } catch (e) {
+  //     setState(() {
+  //       _error = e.toString();
+  //       _isLoading = false;
+  //     });
+  //   }
+  //}
+  Future<void> _loadRequests() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final requests = await _apiService.getCustomRequests(
+        status: _currentFilter == 'All' ? 'all' : _currentFilter.toLowerCase(),
+      );
+
+      setState(() {
+        _requests = requests;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +94,8 @@ class MyCustomRequestsPage extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const CustomRequestScreen(
-                  requestType: "Tools",
+                builder: (context) => const doctorProfilePage(
+                  //  requestType: "Tools",
                 ),
               ),
             );
@@ -40,354 +104,487 @@ class MyCustomRequestsPage extends StatelessWidget {
         title: const Text("My Custom Requests"),
         centerTitle: true,
       ),
-      body: ListView(
-  padding: const EdgeInsets.all(16),
-  children: [
-    const _FilterDropdown(),
-    const SizedBox(height: 16),
-
-    // ✅ الكروت الجديدة (Open)
-    ...myCustomRequests.map(
-  (request) => InkWell(
-    borderRadius: BorderRadius.circular(16),
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SupplierBidsPage(),
-        ),
-      );
-    },
-    child: RequestCard(
-      status: RequestStatus.open,
-      statusColor: AppTheme.statusOpen,
-      statusBg: AppTheme.statusOpenBg,
-      title: request.products,
-      description: request.description,
-      budget: request.budget,
-      created:
-          "${request.createdOn.day}/${request.createdOn.month}/${request.createdOn.month}",
-      expires:
-          "${request.expiresOn.day}/${request.expiresOn.month}/${request.expiresOn.year}",
-    ),
-  ),
-),
-
-
-          InkWell(
-  borderRadius: BorderRadius.circular(16),
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>  SupplierBidsPage(),
-      ),
-    );
-  },
-  
-  child: RequestCard(
-     status: RequestStatus.open,
-    statusColor: AppTheme.statusOpen,
-    statusBg: AppTheme.statusOpenBg,
-    title: [
-      "Portable X-Ray Machine",
-      "Surgical Mask N95 (Box of 50)",
-    ],
-    description:
-        "Looking for a lightweight, mobile X-ray unit for emergency room use. Must be DICOM compatible.",
-    budget: "\$15,000",
-    created: "Jul 15, 2023",
-    expires: "Aug 14, 2023",
-    showNotification: true,
-  ),
-  ),
+      body: Column(
+      children: [
+        // ✅ الفلتر دايماً موجود في الأعلى (حتى لو مفيش بيانات)
+        _buildFilterDropdown(),
         
-RequestCard(
-           status: RequestStatus.cancelled,
-            statusColor: AppTheme.statusCancelled,
-            statusBg: AppTheme.statusCancelledBg,
-            title: [
-              "ECG Machine, 12-lead",
-              "Ultrasound Probe Cover (100 pack)"
-            ],
-            description:
-                "Need a portable ECG with interpretation software.",
-            budget: "\$5,000",
-            created: "Jul 05, 2023",
-            expires: "Aug 04, 2023",
-            cancelled: true,
-          ),
-         InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AcceptedSupplierDetailsPage(),
-              ),
-            );
-          },
-          child: RequestCard(
-            status: RequestStatus.applied,
-            statusColor: AppTheme.statusNegotiation,
-            statusBg: AppTheme.statusNegotiationBg,
-            title: ["Ventilator, ICU Grade"],
-            description:
-                "Requesting quotes for 5 units. Please include warranty and service options.",
-            budget: "\$50,000",
-            created: "Jul 12, 2023",
-            expires: "Aug 11, 2023",
-          ),
-         ),
-         InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AcceptedSupplierDetailsPage(),
-              ),
-            );
-          },
-          child:RequestCard(
-            status: RequestStatus.shipped,
-            statusColor: AppTheme.statusShipped,
-            statusBg: AppTheme.statusShippedBg,
-            title: ["Defibrillator Pads (10 packs)"],
-            description: "No description provided.",
-            budget: "No Budget",
-            created: "Jul 10, 2023",
-            expires: "Aug 09, 2023",
-          ),
-          ),
-          InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AcceptedSupplierDetailsPage(),
-              ),
-            );
-          },
-         child: RequestCard(
-            status: RequestStatus.delivered,
-            statusColor: AppTheme.statusDelivered,
-            statusBg: AppTheme.statusDeliveredBg,
-            title: ["Anesthesia Machine"],
-            description:
-                "Model with advanced ventilation modes required.",
-            budget: "\$22,000",
-            created: "Jun 28, 2023",
-            expires: "Jul 28, 2023",
-          ),
-          ),
+        // ✅ باقي المحتوى (تحميل، خطأ، أو قائمة)
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(_error!),
+                          SizedBox(height: 10,),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.blueAccent,
 
-          RequestCard(
-            status: RequestStatus.expired,
-            statusColor: AppTheme.statusExpired,
-            statusBg: AppTheme.statusExpiredBg,
-            title: ["Infusion Pumps (3 units)"],
-            description: "No description provided.",
-            budget: "No Budget",
-            created: "May 20, 2023",
-            expires: "Jun 19, 2023",
-          ),
-        ],
-      ),
-    );
-  }
-}
-Widget requestActions(RequestStatus status) {
-  switch (status) {
-    case RequestStatus.open:
-      return OutlinedButton(
-        onPressed: () {
-          // cancel logic
-        },
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Colors.red),
+                            ),
+
+                            onPressed: _loadRequests,
+                            child: const Text(
+                              'Retry',
+                             // style: TextStyle(color: Colors.blueAccent ),
+                              ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _requests.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.inbox, size: 80, color: Colors.grey),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No ${_currentFilter == 'All' ? '' : _currentFilter} requests found',
+                                style: const TextStyle(color: Colors.grey, fontSize: 16),
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _currentFilter = 'All';
+                                    _loadRequests();
+                                  });
+                                },
+                                child: const Text(
+                                  'Show all requests',
+                                  style: TextStyle(color: Colors.blueAccent ),
+                                  ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _requests.length,
+                          itemBuilder: (context, index) {
+                            return _buildRequestCard(_requests[index]);
+                          },
+                        ),
         ),
-        child: const Text(
-          "Cancel",
-          style: TextStyle(color: Colors.red),
-        ),
-      );
-
-    case RequestStatus.cancelled:
-    case RequestStatus.delivered:
-    case RequestStatus.expired:
-      return Row(
-        
-        mainAxisSize: MainAxisSize.min,
-        children: [
-        const SizedBox(width: 4),
-          OutlinedButton(
-            onPressed: () {},
-            child: const Text("Delete"),
-          ),
-          const SizedBox(width: 6),
-          OutlinedButton(
-  onPressed: () {},
-  style: OutlinedButton.styleFrom(
-     backgroundColor: AppTheme.primary,
-
-    side: BorderSide(color: AppTheme.primary),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-    ),
-  ),
-  child: Text(
-    "Re-request",
-    style: TextStyle(
-      color:AppTheme.statusNegotiationBg,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-),
-        ],
-      );
-        
-    case RequestStatus.applied:
-    case RequestStatus.shipped:
-      return const SizedBox();
-  }
-  
-}
-class _FilterDropdown extends StatelessWidget {
-  const _FilterDropdown();
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        prefixIcon: const Icon(Icons.filter_list),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      value: "All",
-      items: const [
-        DropdownMenuItem(value: "All", child: Text("Filter by Status: All")),
-        DropdownMenuItem(value: "Open", child: Text("Open")),
-        DropdownMenuItem(value: "Applied", child: Text("Applied")),
-        DropdownMenuItem(value: "Delivered", child: Text("Delivered")),
-        DropdownMenuItem(value: "Cancelled", child: Text("Cancelled")),
       ],
-      onChanged: (_) {},
+    ),
     );
   }
-}
-class RequestCard extends StatelessWidget {
-  final RequestStatus status;
-  final Color statusColor;
-  final Color statusBg;
-  final List<String> title;
-  final String description;
-  final String budget;
-  final String created;
-  final String expires;
-  final bool cancelled;
-  final bool showNotification;
 
-  const RequestCard({
-    super.key,
-    required this.status,
-    required this.statusColor,
-    required this.statusBg,
-    required this.title,
-    required this.description,
-    required this.budget,
-    required this.created,
-    required this.expires,
-    this.cancelled = false,
-    this.showNotification = false,
-  });
+  Widget _buildFilterDropdown() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButton<String>(
+        value: _currentFilter,
+        isExpanded: true,
+        underline: const SizedBox(),
 
-  @override
-  Widget build(BuildContext context) {
-    final textColor = cancelled ? Colors.grey : null;
+        items: const [
+          DropdownMenuItem(value: "All", child: Text("filter by Status: All")),
+          DropdownMenuItem(value: "open", child: Text("open")),
+          DropdownMenuItem(value: "in negotiation", child: Text("In negotiation")),
+          DropdownMenuItem(value: "Delivered", child: Text("Delivered")),
+          DropdownMenuItem(value: "Cancelled", child: Text("Cancelled")),
+          DropdownMenuItem(value: "Expired", child: Text("Expired")),
+        ],
 
-    return Opacity(
-      opacity: cancelled ? 0.7 : 1,
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        onChanged: (value) {
+          if (value != null && value != _currentFilter) {
+            setState(() {
+              _currentFilter = value;
+              _loadRequests();
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildRequestCard(CustomRequest request) {
+    final isOpen = request.status.toLowerCase() == 'open';
+    final isInNegotiation = request.status.toLowerCase() == 'in negotiation';
+    final isShipped = request.status.toLowerCase() == 'shipped';
+    final isDelivered = request.status.toLowerCase() == 'delivered';
+    final isCancelled = request.status.toLowerCase() == 'cancelled';
+    final isExpired = request.status.toLowerCase() == 'expired';
+
+    final showNotification = isOpen;
+    final showDelete = isDelivered || isCancelled || isExpired;
+    final showReRequest = isCancelled || isExpired || isDelivered;
+    final showCancelButton = isOpen;
+    final isCardClickable = isInNegotiation || isDelivered || isShipped;
+
+    return GestureDetector(
+      onTap: isCardClickable
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AcceptedSupplierDetailsPage(),
+                ),
+              );
+            }
+          : null,
+
+      child: Opacity(
+        opacity: isCancelled || isExpired ? 0.5 : 1.0,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Chip(
-                    label: Text(status.name),
-                    backgroundColor: statusBg,
-                    labelStyle: TextStyle(color: statusColor),
-                  ),
-                  const Spacer(),
-                  if (showNotification)
-                    Stack(
-                      children: const [
-                        Icon(Icons.notifications, color: AppTheme.primary),
-                        Positioned(
-                          right: 0,
-                          child: CircleAvatar(
-                            radius: 7,
-                            backgroundColor: Colors.red,
-                            child: Text("3",
-                                style: TextStyle(
-                                    fontSize: 9, color: Colors.white)),
+              // Header with Status and Notification Icon
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    _buildStatusChip(request.status),
+                    const Spacer(),
+                    if (showNotification)
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SupplierBidsPage(
+                                //customRequestId: request.id
+                              ),
+                            ),
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            const Icon(
+                              Icons.notifications,
+                              color: Color(0xFF0066FF),
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+
+                                child: const Text(
+                                  "3",
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Product Items
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: request.item
+                      .map(
+                        (item) => Text(
+                          item,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            decoration: isCancelled ? TextDecoration.lineThrough : null,
+                           // color: isCancelled ? Colors.grey : Colors.black,
                           ),
-                        )
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+
+              // Description
+              if (request.additionalDetails != null &&
+                  request.additionalDetails!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    request.additionalDetails!,
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ),
+                SizedBox(height: 15,),
+              // Budget
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  "Budget: ${request.budget ?? 'No Budget'}",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                     decoration: isCancelled ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+
+              // Dates
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Created: ${_formatDate(request.createdAt)}",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          Text(
+                            "Expires: ${_formatDateString(request.expiresAt)}",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (showCancelButton)
+                          SizedBox(
+                            width: 100,
+                            height: 40,
+                            child: 
+                             OutlinedButton(
+                              onPressed: () {
+                                // TODO: إلغاء الطلب
+                                _showCancelDialog(request);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.red),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                "Cancel",
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+
+                          ),
+
+                        if (showCancelButton && (showDelete || showReRequest))
+                          const SizedBox(width: 8),
+                        if (showDelete)
+                          SizedBox(
+                             width: 100,
+                          height: 40,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                // TODO: حذف الطلب
+                                _deleteRequest(request);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text("Delete"),
+                            ),
+                          ),
+                        SizedBox(width: 5),
+                        if (showReRequest)
+                          SizedBox(
+                             width: 120,
+                          height: 40,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                // TODO: إعادة الطلب
+                                // _reRequest(request);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0066FF),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                "Re-request",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ...title.map(
-                (t) => Text(
-                  t,
-                  style: TextStyle(
-                    fontFamily: "Inter",
-                    fontWeight: FontWeight.w600,
-                    decoration:
-                        cancelled ? TextDecoration.lineThrough : null,
-                    color: textColor,
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                description,
-                style: TextStyle(color: textColor),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Budget: $budget",
-                style: TextStyle(
-                  fontFamily: "Inter",
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                 crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text("Created: $created\nExpires: $expires",
-                      style: const TextStyle(fontSize: 12)),
-                    
-            requestActions(status), // الحالة بتاعة الكارد
-                  
-               ],
-              )
             ],
           ),
         ),
       ),
     );
   }
+
+
+  Widget _buildStatusChip(String status) {
+    Color bgColor;
+    Color textColor;
+
+    switch (status.toLowerCase()) {
+      case 'open':
+        bgColor = const Color(0xFFE3F2FD);
+        textColor = const Color.fromARGB(255, 22, 100, 179);
+        break;
+      case 'in negotiation':
+        bgColor = const Color(0xFFFFF3E0);
+        textColor = const Color(0xFFF57C00);
+        break;
+      case 'shipped':
+        bgColor = const Color.fromARGB(255, 248, 150, 252);
+        textColor = const Color.fromARGB(255, 152, 66, 156);
+        break;
+      case 'delivered':
+        bgColor = const Color(0xFFE8F5E9);
+        textColor = const Color(0xFF2E7D32);
+        break;
+      case 'cancelled':
+        bgColor = const Color.fromARGB(255, 198, 223, 245);
+        textColor = const Color.fromARGB(255, 129, 155, 239);
+        break;
+      case 'expired':
+        bgColor = const Color(0xFFF5F5F5);
+        textColor = const Color(0xFF9E9E9E);
+        break;
+      default:
+        bgColor = Colors.grey.shade200;
+        textColor = Colors.grey.shade700;
+    }
+    String Capitalize(String status) {
+      if (status.isEmpty) return status;
+      return status[0].toUpperCase() + status.substring(1).toLowerCase();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        Capitalize(status),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return "${date.day}/${date.month}/${date.year}";
+  }
+
+  String _formatDateString(String dateStr) {
+    final date = DateTime.parse(dateStr);
+    return "${date.day}/${date.month}/${date.year}";
+  }
+
+  void _showCancelDialog(CustomRequest request) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Request'),
+        content: const Text('Are you sure you want to cancel this request?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              // TODO: استدعاء API الإلغاء
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Request cancelled')),
+              );
+            },
+            child: const Text('Yes', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteRequest(CustomRequest request) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Request'),
+        content: const Text('Are you sure you want to delete this request?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              // TODO: استدعاء API الحذف
+              setState(() {
+                _requests.remove(request);
+              });
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Request deleted')));
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // void _reRequest(CustomRequest request) {
+  //   // TODO: فتح شاشة CustomRequestScreen مع بيانات الطلب القديم
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(content: Text('Re-request feature coming soon')),
+  //   );
+  // }
 }
-                     
+

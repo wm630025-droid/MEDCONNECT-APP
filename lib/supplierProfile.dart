@@ -28,6 +28,10 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
   Map<String, dynamic>? _supplierData;
   List<Product> _products = [];
 
+  final TextEditingController _searchController = TextEditingController();
+  List<Product> _filteredProducts = [];
+  bool _isSearching = false;
+
   // Pagination
   int _currentPage = 1;
   int _totalPages = 1;
@@ -40,6 +44,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
   void initState() {
     super.initState();
     _loadSupplierData();
+
     _loadProducts();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -49,12 +54,37 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         _loadMoreProducts();
       }
     });
+    _searchController.addListener(() {
+      _filterProducts();
+    });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  //################
+  void _filterProducts() {
+    final query = _searchController.text.toLowerCase().trim();
+    setState(() {
+      _isSearching = query.isNotEmpty;
+      if (query.isEmpty) {
+        _filteredProducts = [];
+      } else {
+        _filteredProducts = _products.where((product) {
+          return product.name.toLowerCase().contains(query) ||
+              product.brand.toLowerCase().contains(query) ||
+              (product.supplierData?['company_name']
+                      ?.toString()
+                      .toLowerCase()
+                      .contains(query) ??
+                  false);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _loadSupplierData() async {
@@ -76,6 +106,8 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         supplierId: widget.supplierId,
         page: 1,
         perPage: 10,
+
+        /// perPage: 50, // يجيب أكبر عدد عشان البحث يكون دقيق
       );
 
       setState(() {
@@ -160,6 +192,8 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         child: Column(
           children: [
             _topBar(context),
+
+            // في build، بعد الـ AppBar وقبل الـ Expanded
             Expanded(
               child: SingleChildScrollView(
                 controller: _scrollController,
@@ -169,6 +203,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
                     _aboutSection(),
                     _achievements(),
                     _certificates(),
+                    _SearchBar(),
                     _productsSection(),
                     const SizedBox(height: 20),
                   ],
@@ -204,6 +239,48 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
           ),
           const SizedBox(width: 40),
         ],
+      ),
+    );
+  }
+
+  Widget _SearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: "Search products...",
+            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.grey),
+                    onPressed: () {
+                      _searchController.clear();
+                      _filterProducts();
+                    },
+                  )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
       ),
     );
   }
@@ -387,7 +464,12 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         child: Column(
           children: [
             Text(_error!),
+            SizedBox(height: 10,),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.blueAccent,
+              ),
               onPressed: _loadProducts,
               child: const Text('Retry'),
             ),
@@ -395,8 +477,8 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         ),
       );
     }
-
-    if (_products.isEmpty) {
+    final displayList = _isSearching ? _filteredProducts : _products;
+    if (displayList.isEmpty) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(32),
@@ -411,16 +493,21 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text(
-                "All Products by this Supplier",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                _isSearching
+                    ? "Search Results (${displayList.length})"
+                    : "All Products by this Supplier",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
         ),
-        ..._products.map((product) => _productCard(product)).toList(),
-        if (_isLoadingMore)
+        ...displayList.map((product) => _productCard(product)).toList(),
+        if (_isLoadingMore && !_isSearching)
           const Padding(
             padding: EdgeInsets.all(16),
             child: CircularProgressIndicator(),
@@ -434,7 +521,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
 
     bool isOutOfStock = product.stock == 0;
     final wishlistProvider = context.watch<WishlistProvider>();
-  
+
     final isInWishlist = wishlistProvider.isInWishlist(product.id);
 
     return GestureDetector(
@@ -530,17 +617,12 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
                     ),
                     //// equipment list botton
                     IconButton(
-                      icon: Icon(
-                         Icons.bookmark_border,
-                    
-                      ),
-                      onPressed: () {
-                       
-                      },
+                      icon: Icon(Icons.bookmark_border),
+                      onPressed: () {},
                     ),
                   ],
                 ),
-                
+
                 _buildProductButton(product),
               ],
             ),
