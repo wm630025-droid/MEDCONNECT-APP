@@ -3,7 +3,8 @@ import 'package:medconnect_app/core/app_colorCustom.dart';
 import 'package:medconnect_app/myCustomRequests.dart';
 import 'package:medconnect_app/doctorAccount.dart';
 import 'package:medconnect_app/models/custom_request_model.dart';
-import 'package:medconnect_app/data/custom_request_store.dart';
+//import 'package:medconnect_app/data/custom_request_store.dart';
+import 'package:medconnect_app/services/api_service.dart';
 
 
 class CustomRequestScreen extends StatefulWidget {
@@ -20,6 +21,10 @@ final TextEditingController budgetController = TextEditingController();
 
 
 class _CustomRequestScreenState extends State<CustomRequestScreen> {
+
+
+
+  final ApiService _apiService = ApiService();
   bool _validateForm() {
   if (products.isEmpty) {
     _showError("Please add at least one product");
@@ -30,6 +35,26 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
     _showError("Please select request expiry date");
     return false;
   }
+  
+  if (widget.requestType == "Rent devices") {
+    if (rentalStartDate == null) {
+      _showError("Please select rental start date");
+      return false;
+    }
+    if (rentalEndDate == null) {
+      _showError("Please select rental end date");
+      return false;
+    }
+    if (rentalEndDate!.isBefore(rentalStartDate!)) {
+      _showError("End date must be after start date");
+      return false;
+    }
+    if(rentalEndDate!.isBefore(selectedDate!)){
+      _showError("Rental end date must be after or equil to requst expiry date");
+      return false;
+    }
+  }
+
 
   return true;
 }
@@ -44,10 +69,7 @@ void _showError(String message) {
 
 
 
-final List<String> products = [
-    "ECG Machine, 12-channel",
-    "Ultrasound Probe Cover (Pack of 100)",
-  ];
+final List<String> products = [];
   final TextEditingController 
 productController = TextEditingController();
 
@@ -311,6 +333,9 @@ Widget datePickerField({
             if (date != null) {
               setState(() {
                 rentalStartDate = date;
+                if(rentalEndDate != null && rentalEndDate!.isBefore(date)){
+                  rentalEndDate = null;
+                }
               });
             }
           },
@@ -322,6 +347,11 @@ Widget datePickerField({
           label: "Rental End Date",
           value: rentalEndDate,
           onTap: () async {
+
+            if(rentalStartDate==null){
+              _showError('please select start date first');
+              return;
+            }
             final date = await showDatePicker(
               context: context,
               firstDate: rentalStartDate ?? DateTime.now(),
@@ -340,11 +370,12 @@ Widget datePickerField({
   ),
   const SizedBox(height: 20),
 ],
+          
 
             
             // ---------- DATE ----------
             const Text(
-              "Request Expires On *",
+              "Request Expires Date *",
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -381,27 +412,6 @@ Widget datePickerField({
             ),
 
             const SizedBox(height: 20),
-
-            // ---------- ATTACH ----------
-
-            ListTile(
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.attach_file),
-              ),
-              title: const Text("Attach Files"),
-              trailing: const Icon(Icons.chevron_right),
-
-             onTap: ()  {},
-
-
-            ),
-            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -417,32 +427,85 @@ Widget datePickerField({
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          onPressed: () {
+onPressed: () async {
   if (!_validateForm()) return;
 
-  final newRequest = CustomRequestModel(
-    type: widget.requestType,
-    products: List.from(products),
-    description: detailsController.text.isEmpty
-        ? "No description provided."
-        : detailsController.text,
-    budget: budgetController.text.isEmpty
-        ? "No Budget"
-        : "\$${budgetController.text}",
-    createdOn: DateTime.now(),
-    expiresOn: selectedDate!,
-  );
+  
+String _formatDateForPrint(DateTime date) {
+  return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
+}
+  print ('-------------------------------------');
+  print('📤 Sending rental dates:');
+print('   Start Date (raw): $rentalStartDate');
+print('   End Date (raw): $rentalEndDate');
 
-  myCustomRequests.insert(0, newRequest);
+if (rentalStartDate != null && rentalEndDate != null) {
+  print('   Start Date (formatted): ${_formatDateForPrint(rentalStartDate!)}');
+  print('   End Date (formatted): ${_formatDateForPrint(rentalEndDate!)}');
+  print('   Is after or equal? ${rentalEndDate!.isAfter(rentalStartDate!) || rentalEndDate!.isAtSameMomentAs(rentalStartDate!)}');
+}
 
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const MyCustomRequestsPage(),
-    ),
+String formatDate(DateTime date) {
+    return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
+  }
+  String _getRequestTypeForApi(String requestType) {
+  switch (requestType.toLowerCase()) {
+    case 'rent devices':
+    case 'rental':
+      return 'rental';
+    case 'tools':
+      return 'tools';
+    case 'paid devices':
+      return 'paid devices';
+    default:
+      return 'tools'; // default
+  }
+}
+  // ✅ استخدام الموديل الموحد
+  final request = CustomRequest(
+    id: 0, // مؤقت، لأن API هو اللي هيولده
+    doctorId: 0, // مؤقت
+    type: _getRequestTypeForApi(widget.requestType),
+    item: List.from(products),
+    expiresAt: formatDate(selectedDate!),
+    rentStartDate: widget.requestType == "Rent devices" && rentalStartDate != null
+        ? formatDate(rentalStartDate!)
+        : null,
+    rentEndDate: widget.requestType == "Rent devices" && rentalEndDate != null
+        ? formatDate(rentalEndDate!)
+        : null,
+    status: 'open', // مؤقت
+    additionalDetails: detailsController.text.isEmpty ? null : detailsController.text,
+    budget: budgetController.text.isEmpty ? null : budgetController.text,
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
   );
+// بعد ما تعملي final request = ...
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+print('📦 Full Request Body:');
+print('   type: ${request.type}');
+print('   item: ${request.item}');
+print('   expires_at: ${request.expiresAt}');
+print('   rent_start_date: ${request.rentStartDate}');
+print('   rent_end_date: ${request.rentEndDate}');
+print('   additionalDetails: ${request.additionalDetails}');
+print('   budget: ${request.budget}');
+print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  try {
+    final createdRequest = await _apiService.createCustomRequest(request);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Request posted successfully!')),
+    );
+    
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => MyCustomRequestsPage()),
+    );
+  } catch (e) {
+    _showError(e.toString());
+  }
 },
-
 
           child: const Text(
             "Post Request",

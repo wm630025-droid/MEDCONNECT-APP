@@ -4,6 +4,8 @@ import 'package:medconnect_app/splashScreen.dart';
 import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/wishList.dart';
+import 'package:medconnect_app/providers/wishlist_provider.dart';
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +18,9 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return ChangeNotifierProvider(
+      create: (_) => WishlistProvider(),
+      child: MaterialApp(
       routes: {
   '/home': (_) => const HomeScreen(),
   '/cart': (_) => const CartPage(),
@@ -25,7 +29,10 @@ class MyApp extends StatelessWidget {
 
       debugShowCheckedModeBanner: false,
       home: const MedConnectSplash(),
+    ),
     );
+    
+    
     
     
   }

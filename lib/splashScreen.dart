@@ -1,7 +1,10 @@
 // ===================== Splash Screen =====================
 import 'package:flutter/material.dart';
+import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/introScreen.dart';
 import 'package:medconnect_app/main.dart';
+import 'package:medconnect_app/mainScreen.dart';
+import 'package:medconnect_app/services/api_service.dart';
 class MedConnectSplash extends StatefulWidget {
   const MedConnectSplash({super.key});
 
@@ -25,12 +28,22 @@ class _MedConnectSplashState extends State<MedConnectSplash>
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const IntroScreen()),
+          MaterialPageRoute(builder: (_) =>  _getInitialScreen()),
         );
       }
+
+     
     });
   }
-
+  Widget _getInitialScreen() {
+    if (ApiService.isLoggedIn) {
+      // لو فيه توكن، يروح للـ Home مباشرة
+      return const MainScreen();
+    } else {
+      // لو مفيش توكن، يروح لشاشة Login
+      return const IntroScreen();
+    }
+  }
   @override
   void dispose() {
     _controller.dispose();
