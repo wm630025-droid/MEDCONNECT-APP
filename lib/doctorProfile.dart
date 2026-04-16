@@ -1,595 +1,832 @@
 import 'package:flutter/material.dart';
-//import 'package:medconnect_app/acceptedSupplier.dart';
-import 'package:medconnect_app/customRequest.dart';
-import 'package:medconnect_app/mainScreen.dart';
-import 'package:medconnect_app/massegesScreen.dart';
-import 'package:medconnect_app/myCustomRequests.dart';
-import 'package:medconnect_app/core/app_colorDoctor.dart';
-//import 'package:medconnect_app/homeScreen.dart';
+import 'package:flutter/services.dart';
+import 'package:medconnect_app/services/Get_Doctor_Profile.dart';
 
- 
- @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Inter',
-        scaffoldBackgroundColor: AppColors.bgLight,
-        useMaterial3: true,
-      ),
-      home: const doctorProfilePage(),
-    );
-  }
+void main() {
+  runApp(const MyApp());
+}
 
-// ================= COLORS =================
-
-
-// ================= SCREEN =================
-class doctorProfilePage extends StatelessWidget {
-  const doctorProfilePage({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-     // bottomNavigationBar: const BottomNavBar(),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 120),
-          children: const [
-            DashboardHeader(),
-            RecentOrdersSection(),
-            DiscountsSection(),
-            SavedListsTile(),
-            OldChatsSection(),
-            CustomRequestsSection(requestType: "", selectedType: "",),
-          ],
+    return MaterialApp(
+      title: 'MedEquip - Doctor Profile',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.light,
+        fontFamily: 'Inter',
+        useMaterial3: true,
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF005A9C),
+          secondary: Color(0xFF4DBAC0),
+          surface: Color(0xFFFFFFFF),
+          onSurface: Color(0xFF212529),
+          onSurfaceVariant: Color(0xFF6C757D),
+          outline: Color(0xFFE5E7EB),
         ),
+        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        fontFamily: 'Inter',
+        useMaterial3: true,
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF005A9C),
+          secondary: Color(0xFF4DBAC0),
+          surface: Color(0xFF1F2937),
+          onSurface: Color(0xFFFFFFFF),
+          onSurfaceVariant: Color(0xFF9CA3AF),
+          outline: Color(0xFF374151),
+        ),
+        scaffoldBackgroundColor: const Color(0xFF101C22),
+      ),
+      themeMode: ThemeMode.system,
+      home: const DoctorProfilePage(),
     );
   }
 }
 
-// ================= HEADER =================
-class DashboardHeader extends StatelessWidget {
-  const DashboardHeader({super.key});
+class DoctorProfilePage extends StatefulWidget {
+  const DoctorProfilePage({super.key});
 
   @override
+  State<DoctorProfilePage> createState() => _DoctorProfilePageState();
+  
+}
+
+class _DoctorProfilePageState extends State<DoctorProfilePage> {
+  // Selected bottom navigation index
+  int _selectedIndex = 3; // Profile is selected
+
+  // Address field that can be edited
+String fullname = '';
+String email = '';
+String phone = '';
+String licenseNumber = '';
+String address = '';
+String governorate = '';
+String issueAuthority = '';
+bool isLoading = true;
+
+
+
+  // 👇 حط الفنكشن هنا
+  Future<void> getProfileData() async {
+    final result = await GetDoctorProfile.doctorProfile();
+
+    if (result['success']) {
+      final data = result['data'];
+
+      setState(() {
+        fullname = data['fullname'] ?? '';
+        email = data['email'] ?? '';
+        phone = data["doctor"]['phone'] ?? '';
+        licenseNumber = data["doctor"]["doctor_license"]['license_number'] ?? '';
+        address = data['address'] ?? '';
+        governorate = data['governorate'] ?? '';
+        issueAuthority = data["doctor"]["doctor_license"]['issue_authority'] ?? '';
+
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+  @override
+void initState() {
+  super.initState();
+  getProfileData(); // 👈 دي أهم سطر
+}
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    if (isLoading) {
+  return const Scaffold(
+    body: Center(child: CircularProgressIndicator()),
+  );
+}
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      body: Stack(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, size: 30),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainScreen(),
-                    ),
-                  );
-                },
+          // Main Content
+          CustomScrollView(
+            slivers: [
+              // Sticky Header
+              SliverAppBar(
+                expandedHeight: 0,
+                floating: true,
+                pinned: true,
+                backgroundColor: colorScheme.surface,
+                surfaceTintColor: Colors.transparent,
+                elevation: 1,
+                shadowColor: Colors.black.withOpacity(0.05),
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
+                  color: colorScheme.onSurface,
+                ),
+                title: const Text(
+                  'My Profile',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                centerTitle: true,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.settings),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Settings coming soon'),
+                          behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                    color: colorScheme.onSurface,
+                  ),
+                ],
               ),
-              CircleAvatar(
-                backgroundColor: AppColors.secondary.withOpacity(.2),
-                child: const Icon(Icons.person),
+
+              // Main Profile Content
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const SizedBox(height: 16),
+                    _buildProfileHeader(isDark, colorScheme),
+                    const SizedBox(height: 24),
+                    _buildPersonalInfoSection(isDark, colorScheme),
+                    const SizedBox(height: 20),
+                    _buildProfessionalCredentialsSection(isDark, colorScheme),
+                    const SizedBox(height: 20),
+                    _buildAddressSection(isDark, colorScheme),
+                    const SizedBox(height: 20),
+                    _buildChangePasswordButton(isDark, colorScheme),
+                    const SizedBox(height: 80), // Bottom padding for fixed navbar
+                  ]),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Text(
-            "Good morning, Dr. Emily",
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+
+          // Fixed Bottom Navigation Bar
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 80,
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
+                  ),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home,
+                      label: 'Home',
+                      index: 0,
+                      isDark: isDark,
+                      colorScheme: colorScheme,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.receipt_outlined,
+                      activeIcon: Icons.receipt,
+                      label: 'Orders',
+                      index: 1,
+                      isDark: isDark,
+                      colorScheme: colorScheme,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.chat_bubble_outline,
+                      activeIcon: Icons.chat_bubble,
+                      label: 'Messages',
+                      index: 2,
+                      isDark: isDark,
+                      colorScheme: colorScheme,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.person_outline,
+                      activeIcon: Icons.person,
+                      label: 'Profile',
+                      index: 3,
+                      isDark: isDark,
+                      colorScheme: colorScheme,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
       ),
     );
   }
-}
 
-
-
-
-
-class ReorderCard extends StatelessWidget {
-  final String title, price, imageUrl;
-
-  const ReorderCard({
-    super.key,
-    required this.title,
-    required this.price,
-    required this.imageUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 220,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
-      ),
+  Widget _buildProfileHeader(bool isDark, ColorScheme colorScheme) {
+    return Center(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Image.network(imageUrl,
-                height: 140, width: double.infinity, fit: BoxFit.cover),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(price, style: const TextStyle(color: Colors.grey)),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary.withOpacity(.1),
-                    foregroundColor: AppColors.primary,
+          // Profile Image with Edit Button
+          Stack(
+            children: [
+              Container(
+                width: 128,
+                height: 128,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDark
+                        ? [Colors.grey[700]!, Colors.grey[800]!]
+                        : [const Color(0xFFDBEAFE), const Color(0xFFEFF6FF)],
                   ),
-                  onPressed: () {},
-                  child: const Text("Re-order"),
+                  border: Border.all(
+                    color: isDark ? Colors.grey[800]! : Colors.white,
+                    width: 4,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.person,
+                    size: 64,
+                    color: isDark
+                        ? Colors.white.withOpacity(0.4)
+                        : colorScheme.primary.withOpacity(0.4),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondary,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? Colors.grey[800]! : Colors.white,
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.edit,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            fullname,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+         
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonalInfoSection(bool isDark, ColorScheme colorScheme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.verified_user,
+                  size: 20,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Personal Information',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ================= RECENT ORDERS =================
-class RecentOrdersSection extends StatelessWidget {
-  const RecentOrdersSection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return sectionCard(
-      title: "Recent Orders",
-      child: Column(
-        children: [
-          const OrderRow(
-            "Order #11234",
-            "EKG Machine",
-            "\$3,500",
-            "Delivered",
-            Colors.green,
-          ),
-          const Divider(),
-
-          const OrderRow(
-            "Order #11233",
-            "Defibrillator",
-            "\$2,800",
-            "Shipped",
-            Colors.orange,
-          ),
-          const Divider(),
-
-          const OrderRow(
-            "Order #11232",
-            "Surgical Kit",
-            "\$850",
-            "Processing",
-            Colors.grey,
-          ),
-
-          const SizedBox(height: 12),
-
-          // 🔵 View All Orders Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              onPressed: () {
-                // TODO: Navigate to All Orders Screen
-                // Navigator.push(context, MaterialPageRoute(
-                //   builder: (_) => const AllOrdersScreen(),
-                // ));
-              },
-              child: const Text(
-                "View All Orders",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            _buildLockedInfoField(
+              label: 'fullname',
+              value: fullname,
+              isDark: isDark,
+              colorScheme: colorScheme,
             ),
+            const SizedBox(height: 16),
+            _buildLockedInfoField(
+              label: 'email',
+              value: email,
+              isDark: isDark,
+              colorScheme: colorScheme,
+            ),
+            const SizedBox(height: 16),
+            _buildLockedInfoField(
+              label: 'phone',
+              value: phone,
+              isDark: isDark,
+              colorScheme: colorScheme,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfessionalCredentialsSection(bool isDark, ColorScheme colorScheme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.badge,
+                  size: 20,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Professional Credentials',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            _buildLockedInfoField(
+              label: 'licenseNumber',
+              value: licenseNumber,
+              isDark: isDark,
+              colorScheme: colorScheme,
+            ),
+           
+
+            const SizedBox(height: 16),
+            _buildLockedInfoField(
+              label: 'issueAuthority',
+              value: issueAuthority,
+              isDark: isDark,
+              colorScheme: colorScheme,
+            ),
+          ],
+        ),
+      ),
     );
   }
-}
 
-
-class OrderRow extends StatelessWidget {
-  final String id, item, price, status;
-  final Color statusColor;
-
-  const OrderRow(this.id, this.item, this.price, this.status, this.statusColor,
-      {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(id, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(item),
-      trailing: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(price, style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(status, style: TextStyle(color: statusColor)),
+  Widget _buildAddressSection(bool isDark, ColorScheme colorScheme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
-    );
-  }
-}
-
-// ================= DISCOUNTS =================
-class DiscountsSection extends StatelessWidget {
-  const DiscountsSection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return sectionCard(
-      title: "Discounts For You",
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.secondary.withOpacity(.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(Icons.sell, color: AppColors.secondary),
-        ),
-        title: const Text("15% off on GE Healthcare",
-            style: TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: const Text("Expires in 5 days"),
-        trailing: const Text("Apply",
-            style: TextStyle(
-                color: AppColors.primary, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-}
-
-// ================= SAVED LISTS =================
-class SavedListsTile extends StatelessWidget {
-  const SavedListsTile({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return sectionCard(
-      title: "My Saved Lists",
-      child: ListTile(
-        leading: const Icon(Icons.list_alt),
-        title: const Text("2 Total Saved Lists",
-            style: TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: const Text("Tap to view your lists"),
-        trailing: const Icon(Icons.chevron_right),
-      ),
-    );
-  }
-}
-
-// ================= CHATS =================
-class OldChatsSection extends StatelessWidget {
-  const OldChatsSection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        sectionCard(
-          title: "Old Chats with Vendors",
-          child: Column(
-            children: [
-              ListTile(
-            
-            leading: const Icon(Icons.forum),
-            title: const Text("Medtronic Rep",
-                style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text("Re: Anesthesia Machine"),
-            trailing: const Text("2d ago"),
-            
-          ),
-          const SizedBox(height: 8),
-            ]
-          ),
-        ),
-              // 🔵 View All chats Button
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 20,
+                      color: colorScheme.primary,
                     ),
-                    onPressed: () {
-                       Navigator.push(context, MaterialPageRoute(
-                         builder: (_) => MessagesScreen(),
-                       ));
-                    },
-                    child: const Text(
-                      "View All Chats",
+                    const SizedBox(width: 8),
+                    Text(
+                      'address',
+                      
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.edit,
+                    size: 20,
+                    color: colorScheme.secondary,
+                  ),
+                  onPressed: () => _showEditAddressDialog(isDark, colorScheme),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  splashRadius: 20,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[900] : Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      address,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-        
-            ],
-        
-           
-        
-      
+            ),
+          ],
+        ),
+      ),
     );
   }
-}
 
-// ================= CUSTOM REQUESTS =================
-class CustomRequestsSection extends StatelessWidget {
-    final String requestType;
-    final String selectedType;
-
-  const CustomRequestsSection({super.key, required this.requestType,required this.selectedType});
-
-
-  void showCustomRequestOptions(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (ctx) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _optionItem(
-              title: "Rent devices",
-              onTap: () {
-                Navigator.pop(ctx); // اقفل الـ bottom sheet
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CustomRequestScreen(
-                      requestType: "Rent devices",
+  Widget _buildChangePasswordButton(bool isDark, ColorScheme colorScheme) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Change password feature coming soon'),
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[800] : Colors.grey[100],
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.lock_reset,
+                  size: 20,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Change Password',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _optionItem(
-              title: "Tools",
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CustomRequestScreen(
-                      requestType: "Tools",
+                    const SizedBox(height: 2),
+                    Text(
+                      'Password verification required',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _optionItem(
-              title: "Buy devices",
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CustomRequestScreen(
-                      requestType: "Buy devices",
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
-
-  Widget _optionItem({
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: double.infinity,
-        height: 52,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildLockedInfoField({
+    required String label,
+    required String value,
+    required bool isDark,
+    required ColorScheme colorScheme,
+  }) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // الكارد الأبيض
-        sectionCard(
-          title: "Custom Requests",
-          child: ListTile(
-            leading: const Icon(Icons.edit_note),
-            title: const Text(
-              "Request #CR-004",
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: const Text("3 quotes received"),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const MyCustomRequestsPage(),
-                ),
-              );
-            },
-            trailing: const Text(
-              "Manage",
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
-
-        const SizedBox(height: 12), // المسافة اللي في الصورة
-
-        // الزر الأزرق لوحده
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey[900] : Colors.grey[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
             ),
-            onPressed: () {
-           showCustomRequestOptions(context);
-          if (selectedType.isNotEmpty) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CustomRequestScreen(requestType: selectedType),
-
-                ),
-
-              );
-            };
-            },
-            icon: const Icon(Icons.add),
-            label: const Text("Make A New Custom Request",
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.lock_outline,
+                size: 18,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(width: 8),
+              Text(
+                value,
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                )),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
-}
 
-// ================= BOTTOM NAV =================
-// class BottomNavBar extends StatelessWidget {
-//   const BottomNavBar({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return BottomNavigationBar(
-//       currentIndex: 0,
-//       selectedItemColor: AppColors.primary,
-//       unselectedItemColor: AppColors.textSecondary,
-//       items: const [
-//         BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-//         BottomNavigationBarItem(icon: Icon(Icons.receipt), label: "Orders"),
-//         BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Messages"),
-//         BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-//       ],
-//     );
-//   }
-//}
-
-// ================= HELPERS =================
-Widget sectionTitle(String text) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Text(text,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-    );
-
-Widget sectionCard({required String title, required Widget child}) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  Widget _buildNavItem({
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required int index,
+    required bool isDark,
+    required ColorScheme colorScheme,
+  }) {
+    final isSelected = _selectedIndex == index;
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedIndex = index;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Navigating to $label'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      },
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(color: Colors.black12, blurRadius: 8)
-              ],
+          Icon(
+            isSelected ? activeIcon : icon,
+            color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
             ),
-            child: child,
           ),
         ],
       ),
     );
+  }
+
+  void _showEditAddressDialog(bool isDark, ColorScheme colorScheme) {
+    final TextEditingController controller = TextEditingController(text: address);
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Edit Practice Address',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Enter your practice address',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                   onPressed: () async {
+  final newAddress = controller.text;
+
+  // loading
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: CircularProgressIndicator()),
+  );
+
+   final Map<String,dynamic> result = await GetDoctorProfile.updateAddress(newAddress);
+
+  Navigator.pop(context); // close loading
+
+  if (result['success'] == true) {
+    setState(() {
+      address = newAddress; // تحديث UI
+    });
+
+    Navigator.pop(context); // close dialog
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Address updated successfully")),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result['message'] ?? "Update failed")),
+    );
+  }
+},
+                     
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.secondary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ), 
+    );
+  }
+}
