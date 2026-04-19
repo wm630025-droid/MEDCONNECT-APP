@@ -18,13 +18,11 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
 
+  final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _isLoading = false;
   // String _selectedRole = 'doctor'; // doctor, supplier, admin
-  String? _emailError;
-  String? _passwordError;
 
   final ApiService _apiService = ApiService();
 
@@ -43,11 +41,7 @@ class _SignInScreenState extends State<SignInScreen> {
     }
 
     // 2. Loading
-    setState((){
-      _emailError =null;
-      _passwordError = null;
-      _isLoading = true;
-    }) ;
+    setState(() => _isLoading = true);
 
     // 3. API Call
     final result = await _apiService.login(
@@ -70,45 +64,28 @@ class _SignInScreenState extends State<SignInScreen> {
           duration: Duration(seconds: 2),
         ),
       );
-      await Future.delayed(Duration(milliseconds: 300));
+      await Future.delayed(Duration(milliseconds: 500));
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => MainScreen()),
       );
     } else {
-      // ❌ فشل - نحدد الخطأ تحت أي حقل
-      final errorMessage = result['error'].toString().toLowerCase();
-      
-      setState(() {
-        if (errorMessage.contains('email') || errorMessage.contains('البريد')) {
-          _emailError = result['error'];
-        } else if (errorMessage.contains('password') || errorMessage.contains('كلمة المرور')) {
-          _passwordError = result['error'];
-        } else if (errorMessage.contains('credentials') || errorMessage.contains('بيانات')) {
-          // لو الخطأ عام (زي "incorrect credentials")
-          _emailError = 'Invalid email or password';
-          _passwordError = 'Invalid email or password';
-        } else {
-          // خطأ عام
-          _emailError = result['error'];
-      // _showErrorDialog(result['error']);
-        }
-    });
-  }
+      _showErrorDialog(result['error']);
     }
+  }
 
-  // void _showErrorDialog(String message) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (ctx) => AlertDialog(
-  //       title: Text('Error'),
-  //       content: Text(message),
-  //       actions: [
-  //         TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Ok')),
-  //       ],
-  //     ),
-  //   );
-  // }
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Ok')),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,148 +143,118 @@ class _SignInScreenState extends State<SignInScreen> {
 
                 child: Column(
                   children: [
-                    //const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
                     // Avatar (كما هو)
-                    // Row(
-                    //   mainAxisAlignment: MainAxisAlignment.end,
-                    //   children: [
-                    //     Stack(
-                    //       children: [
-                    //         CircleAvatar(
-                    //           radius: 50,
-                    //           backgroundColor: Colors.white,
-                    //           child: CircleAvatar(
-                    //             radius: 47,
-                    //             backgroundColor: Colors.grey[300],
-                    //             child: const Icon(
-                    //               Icons.person,
-                    //               size: 60,
-                    //               color: Colors.white70,
-                    //             ),
-                    //           ),
-                    //         ),
-                    //         Positioned(
-                    //           bottom: 0,
-                    //           right: 0,
-                    //           child: CircleAvatar(
-                    //             radius: 18,
-                    //             backgroundColor: const Color(0xFF0066FF),
-                    //             child: IconButton(
-                    //               icon: const Icon(
-                    //                 Icons.camera_alt,
-                    //                 size: 18,
-                    //                 color: Colors.white,
-                    //               ),
-                    //               onPressed: () {},
-                    //             ),
-                    //           ),
-                    //         ),
-                    //       ],
-                    //     ),
-                    //   ],
-                    // ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Colors.white,
+                              child: CircleAvatar(
+                                radius: 47,
+                                backgroundColor: Colors.grey[300],
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 60,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFF0066FF),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.camera_alt,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {},
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
 
                     const SizedBox(height: 50),
 
                     // ---------------- EMAIL ----------------
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextFormField(
-                          controller: _identifierController,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                            hintText: 'Email',
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 22,
-                              horizontal: 28,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                          
-                          errorText:_emailError,
-                          errorStyle: const TextStyle(
-                            fontSize: 12,
-                            color:Colors.red,
-                          ),
+                    TextFormField(
+                      controller: _identifierController,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        hintText: 'Email',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 22,
+                          horizontal: 28,
                         ),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return "Email is Required";
-                            if (!RegExp(
-                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                            ).hasMatch(v)) {
-                              return "Enter a valid email";
-                            }
-                            return null;
-                          },
-                          onChanged: (_){
-                            if(_emailError != null){
-                              setState(() => _emailError=null);
-                            }
-                          },
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide.none,
                         ),
-                      ],
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return "Required";
+                        if (!RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(v)) {
+                          return "Invalid email";
+                        }
+                        return null;
+                      },
                     ),
 
                     const SizedBox(height: 24),
 
                     // ---------------- PASSWORD ----------------
-                    Column(
-                      children: [
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                            hintText: 'Password',
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: const Color(0xFF0066FF),
-                              ),
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 22,
-                              horizontal: 28,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorText: _passwordError,
-                            errorStyle: const TextStyle(
-                              fontSize:  12,
-                              color: Colors.red,
-                            )
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        hintText: 'Password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: const Color(0xFF0066FF),
                           ),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Password is Required';
-                            if (v.length < 8) return 'At least 8 characters';
-                            if (!RegExp(
-                              r'^(?=.*[A-Za-z])(?=.*[\d@#$!%*?&]).+$',
-                            ).hasMatch(v)) {
-                              return 'Letters + numbers/symbols';
-                            }
-                            return null;
-                          },
-                            onChanged: (_){
-                            if(_passwordError != null){
-                              setState(() => _passwordError=null);
-                            }
-                          },
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
-                      ],
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 22,
+                          horizontal: 28,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Required';
+                        if (v.length < 8) return 'At least 8 characters';
+                        if (!RegExp(
+                          r'^(?=.*[A-Za-z])(?=.*[\d@#$!%*?&]).+$',
+                        ).hasMatch(v)) {
+                          return 'Letters + numbers/symbols';
+                        }
+                        return null;
+                      },
                     ),
 
                     const SizedBox(height: 16),

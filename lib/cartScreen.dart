@@ -319,7 +319,7 @@ onPressed: () {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.network(path, fit: BoxFit.contain),
+        child: Image.asset(path, fit: BoxFit.contain),
       ),
     );
   }

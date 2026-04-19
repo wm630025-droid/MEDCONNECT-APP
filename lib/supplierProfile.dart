@@ -1,188 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/core/app_colorSupplier.dart';
-import 'package:medconnect_app/models/product.dart';
-import 'package:medconnect_app/productDetails.dart';
-import 'package:medconnect_app/providers/wishlist_provider.dart';
-import 'package:medconnect_app/services/api_service.dart';
-import 'package:provider/provider.dart';
+import 'package:medconnect_app/models/supplier_product.dart';
 
-class SupplierProfileScreen extends StatefulWidget {
-  final int supplierId;
-  final String supplierName;
+class SupplierProfileScreen extends StatelessWidget {
+  SupplierProfileScreen({super.key});
 
-  const SupplierProfileScreen({
-    super.key,
-    required this.supplierId,
-    required this.supplierName,
-  });
-
-  @override
-  State<SupplierProfileScreen> createState() => _SupplierProfileScreenState();
-}
-
-class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
-  bool _isLoading = true;
-  String? _error;
-
-  // بيانات المورد
-  Map<String, dynamic>? _supplierData;
-  List<Product> _products = [];
-
-  final TextEditingController _searchController = TextEditingController();
-  List<Product> _filteredProducts = [];
-  bool _isSearching = false;
-
-  // Pagination
-  int _currentPage = 1;
-  int _totalPages = 1;
-  bool _isLoadingMore = false;
-  final ScrollController _scrollController = ScrollController();
-
-  final ApiService _apiService = ApiService();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSupplierData();
-
-    _loadProducts();
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent - 100 &&
-          _currentPage <= _totalPages &&
-          !_isLoadingMore) {
-        _loadMoreProducts();
-      }
-    });
-    _searchController.addListener(() {
-      _filterProducts();
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  //################
-  void _filterProducts() {
-    final query = _searchController.text.toLowerCase().trim();
-    setState(() {
-      _isSearching = query.isNotEmpty;
-      if (query.isEmpty) {
-        _filteredProducts = [];
-      } else {
-        _filteredProducts = _products.where((product) {
-          return product.name.toLowerCase().contains(query) ||
-              product.brand.toLowerCase().contains(query) ||
-              (product.supplierData?['company_name']
-                      ?.toString()
-                      .toLowerCase()
-                      .contains(query) ??
-                  false);
-        }).toList();
-      }
-    });
-  }
-
-  Future<void> _loadSupplierData() async {
-    // هنضيف API لجلب بيانات المورد بعدين
-    // حالياً هنستخدم البيانات اللي جاية مع المنتج
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _loadProducts() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final result = await _apiService.fetchProductsBySupplierId(
-        supplierId: widget.supplierId,
-        page: 1,
-        perPage: 10,
-
-        /// perPage: 50, // يجيب أكبر عدد عشان البحث يكون دقيق
-      );
-
-      setState(() {
-        _products = result['products'];
-        _totalPages = result['lastPage'];
-        _currentPage = 2;
-        _isLoading = false;
-        print('🔄 Load products - current page: $_currentPage');
-        print('🔄 Products before: ${_products.length}');
-
-        if (_products.isNotEmpty && _products.first.supplierData != null) {
-          _supplierData = _products.first.supplierData;
-          print('✅ Supplier data loaded: ${_supplierData?['company_name']}');
-          print('✅ Image URL: ${_supplierData?['company_image_url']}');
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadMoreProducts() async {
-    if (_currentPage > _totalPages) {
-      print('⚠️ No more pages: $_currentPage > $_totalPages');
-      return;
-    }
-    if (_isLoadingMore) {
-      print('⚠️ Already loading more');
-      return;
-    }
-
-    print('🔄 Loading more products - page $_currentPage of $_totalPages');
-
-    setState(() {
-      _isLoadingMore = true;
-    });
-
-    try {
-      final result = await _apiService.fetchProductsBySupplierId(
-        supplierId: widget.supplierId,
-        page: _currentPage,
-        perPage: 10,
-      );
-
-      setState(() {
-        // _products.addAll(result['products']);
-
-        for (var newProduct in result['products']) {
-          if (!_products.any((p) => p.id == newProduct.id)) {
-            _products.add(newProduct);
-          } else {
-            print(
-              '⚠️ Duplicate product skipped: ${newProduct.id} - ${newProduct.name}',
-            );
-          }
-        }
-        _totalPages = result['lastPage'];
-        _currentPage++;
-        _isLoadingMore = false;
-
-        print('🔄 Load more - page: $_currentPage');
-        print('🔄 Products before add: ${_products.length}');
-        print('➕ Adding ${result['products'].length} products');
-
-        print('🔄 Products after add: ${_products.length}');
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingMore = false;
-      });
-    }
-  }
+  final List<SupplierProduct> supplierProducts = [
+    SupplierProduct(
+      name: "Ultrasound Machine",
+      category: "Diagnostic Imaging",
+      price: "\$15,000",
+      image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuAm0WYodkvY4uV9HPe2XSEhue_52XPtKxVm1n9DCdJcCboff6BZw3UKLAJdzgREaJpgO_CMUKwcDCMo1pmV6ynKDSpXVFMNTYQ3ReG1a57cE79L8O6WMbjAuuw3Tso2Lapth76Wd98siwZGPEEM_7QVnBnaJtlXiqOGj4v6MIctb39B_tieZzj7l42QMvmc6-GqUqrRQoi_rX3KT0s9g8BWO15xHsTPBQw-gbtFBlrQPFMWuLPRZZj9R2eaP_75t1j27IYVQFHBDa0",
+      action: ProductAction.addToCart,
+    ),
+    SupplierProduct(
+      name: "ECG Monitor",
+      category: "Patient Monitoring",
+      price: "Available in 2 days",
+      image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuBaHb2WHaBpbz4e7WZauL8XP1Tl27alU5YxUYOfrp0hvYqrERXrS9Yv-wNS-dg4jhta88NyIgtw0T84IHe742ddjXjaHDiN2w8cMx2wTljLQ0fmQKAmdaNUUd6xwtX2WuAq0g-PogYXdWhYSRwzrnOkwKpmOxfNKhAbPBnWJbPMX3K4ZHBv9GpL-kMNzTogOFdcab9wagu9A41JYWDa2jvDCq_C-iy20xODVW09BWicm_c8z3UyScwpkUGdjUQByQdzC9fb7v7CmSA",
+      action: ProductAction.notify,
+    ),
+    SupplierProduct(
+      name: "Surgical Lights",
+      category: "Operating Room",
+      price: "\$4,500",
+      subtitle: "or \$800/mo",
+      image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuCnrlF8dIQzoB8FCdsCdYUCS83eyJ4lLhu-oi1Q7KkuxMt99R03LizzgU3BgPTCQwPKmCESpYd56oJUYPW1bJ5mT2xEgeYRknNTQT1Oiw7NVy8_llimxcCmQl_-AUIDWFEufj_kkcYxOYTzHng1CC407plg6fnFIVKa116zeY1bxJGBiEj7ujAScqnncCqS_Tp0erzCsNscbJiJa9otrIrPSROdi46LqGHDiY884KL5nPr2znLOB5MUm765IexJvaJY32_JW4dpXds",
+      action: ProductAction.rentBuy,
+    ),
+    SupplierProduct(
+      name: "Anesthesia Machine",
+      category: "Surgical Equipment",
+      price: "\$22,000",
+      image:
+          "https://lh3.googleusercontent.com/aida-public/AB6AXuBUJ97EQNRgw4iWB8PExb274u5BeHNzwvk9oxAofMtFEbktJwH6iJf-vKzZ3t3Pswd7kNoIg7mz_Me5picTmVZ0FkKSirmm8_nsLewQYwITq5-bHlwzmb0a-CbkU5nIfVR6Tom54eAa9561f9b7Z0QKrePWVYIY4jI0D4AXNlBi0UNrIYI59VgeeECHBUndzsetPKdSGwnJHZINKvob0obhjDVNY8_aehqDGFu5aJTd7uFGOFg4lJWmW6YQU1L68t3691_qugIKz_Y",
+      action: ProductAction.addToCart,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -192,20 +49,15 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         child: Column(
           children: [
             _topBar(context),
-
-            // في build، بعد الـ AppBar وقبل الـ Expanded
             Expanded(
               child: SingleChildScrollView(
-                controller: _scrollController,
                 child: Column(
                   children: [
                     _supplierHeader(),
                     _aboutSection(),
                     _achievements(),
                     _certificates(),
-                    _SearchBar(),
                     _productsSection(),
-                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -242,94 +94,29 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
       ),
     );
   }
-
-  Widget _SearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            hintText: "Search products...",
-            prefixIcon: const Icon(Icons.search, color: Colors.grey),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
-                    onPressed: () {
-                      _searchController.clear();
-                      _filterProducts();
-                    },
-                  )
-                : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-        ),
-      ),
-    );
-  }
-
   // ---------------- HEADER ----------------
   Widget _supplierHeader() {
-    // لو فيه supplierData من API
-    final imageUrl = _supplierData != null
-        ? _supplierData!['company_image_url'] ?? ''
-        : '';
-    final companyName = widget.supplierName;
-
-    print('🔍 Supplier Header - Image URL: $imageUrl');
-    print('🔍 Supplier Header - Company: $companyName');
-
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 56,
-            backgroundColor: Colors.grey.shade200,
-            child: imageUrl.isNotEmpty
-                ? ClipOval(
-                    child: Image.network(
-                      imageUrl,
-                      width: 112,
-                      height: 112,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        print('❌ Failed to load image: $imageUrl');
-                        return const Icon(
-                          Icons.business,
-                          size: 56,
-                          color: Colors.grey,
-                        );
-                      },
-                    ),
-                  )
-                : const Icon(Icons.business, size: 56, color: Colors.grey),
+            backgroundImage: NetworkImage(
+              "https://lh3.googleusercontent.com/aida-public/AB6AXuB8BwL71-RHv3rXvf-HKFlFKMs35aXimftEGW17kNnyokeW_eVI3I8XG2wqaDRQNkqkaTlQ7XryvkmIEEWK6h8AKsPjALIEFuoSZNP2niRm61MSToXhy5Zy94-STbAXfd6meGtSED2zmuk34Zzowla0tX9pu4Pu-D02OE9tro7Qg2GbI2As9zmUqX31IHjFyR69ktYbApJQtWtJWiyZYC-SIPcjpcLBuQYTaPM4zriiWlhhxINRTcTBeT0IwIWTyESig5Q2ttvWkg0",
+            ),
           ),
           const SizedBox(height: 12),
-          Text(
-            companyName,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          const Text(
+            "MediTech Solutions Inc.",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
-
+          const Text(
+            "Innovating Medical Technology since 1998",
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -344,10 +131,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
               onPressed: () {},
               child: const Text(
                 "Chat with Vendor",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold , color: Colors.white),
               ),
             ),
           ),
@@ -355,8 +139,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
       ),
     );
   }
-
-  // ---------------- ABOUT ----------------
+ // ---------------- ABOUT ----------------
   Widget _aboutSection() {
     return _card(
       title: "About Us",
@@ -380,13 +163,12 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
       ),
     );
   }
-
-  Widget _achievementItem(String value, String label) {
+   Widget _achievementItem(String value, String label) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
+          color: AppColors.primary.withOpacity(.1),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -410,279 +192,137 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
       ),
     );
   }
-
   // ---------------- CERTIFICATES ----------------
   Widget _certificates() {
-    // جلب أسماء الشهادات من supplierData
-    List<String> certificates = [];
-
-    if (_supplierData != null) {
-      // لو كان certificate_name عبارة عن List
-      if (_supplierData!['certificate_name'] is List) {
-        certificates = List<String>.from(_supplierData!['certificate_name']);
-      }
-      // لو كان certificate_name string واحد
-      else if (_supplierData!['certificate_name'] != null) {
-        certificates.add(_supplierData!['certificate_name'].toString());
-      }
-    }
-
-    // لو مفيش بيانات من API، نستخدم بيانات افتراضية
-    if (certificates.isEmpty) {
-      certificates = [" "];
-    }
-
     return _card(
       title: "Certificates",
       child: Column(
-        children: certificates.map((cert) => _certificateItem(cert)).toList(),
-      ),
-    );
-  }
-
-  Widget _certificateItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          const Icon(Icons.verified, color: AppColors.primary, size: 20),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text)),
+        children: const [
+          certificateItem("ISO 13485 Certified"),
+          certificateItem("CE Marking for Medical Devices"),
+          certificateItem("FDA 510(k) Clearance"),
         ],
       ),
     );
   }
 
+
   // ---------------- PRODUCTS ----------------
   Widget _productsSection() {
-    if (_isLoading && _products.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          children: [
-            Text(_error!),
-            SizedBox(height: 10,),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.blueAccent,
-              ),
-              onPressed: _loadProducts,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-    final displayList = _isSearching ? _filteredProducts : _products;
-    if (displayList.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text('No products available from this supplier'),
-        ),
-      );
-    }
-
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+            children: const [
               Text(
-                _isSearching
-                    ? "Search Results (${displayList.length})"
-                    : "All Products by this Supplier",
-                style: const TextStyle(
-                  fontSize: 18,
+                "All Products by this Supplier",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                "See all",
+                style: TextStyle(
+                  color: AppColors.primary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
         ),
-        ...displayList.map((product) => _productCard(product)).toList(),
-        if (_isLoadingMore && !_isSearching)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: CircularProgressIndicator(),
-          ),
+        ...supplierProducts
+            .map((product) => _productCard(product))
+            .toList(),
       ],
     );
   }
 
-  Widget _productCard(Product product) {
-    print('🃏 Product card: ${product.id} - ${product.name}');
-
-    bool isOutOfStock = product.stock == 0;
-    final wishlistProvider = context.watch<WishlistProvider>();
-
-    final isInWishlist = wishlistProvider.isInWishlist(product.id);
-
-    return GestureDetector(
-      onTap: () {
-        // ✅ التنقل لصفحة تفاصيل المنتج
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProductDetailsPage(
-              productId: product.id,
-              product: product, // ✅ تمرير المنتج للـ cache
+  Widget _productCard(SupplierProduct product) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              product.image,
+              width: 90,
+              height: 90,
+              fit: BoxFit.cover,
             ),
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                product.imagePath,
-                width: 90,
-                height: 90,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 90,
-                    height: 90,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.broken_image, size: 40),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "\$${product.price}",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isOutOfStock ? Colors.red : AppColors.primary,
-                    ),
-                  ),
-                  if (isOutOfStock)
-                    const Text(
-                      "Out of Stock",
-                      style: TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                ],
-              ),
-            ),
-
-            Column(
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        isInWishlist ? Icons.favorite : Icons.favorite_border,
-                        color: isInWishlist ? Colors.red : Colors.grey,
-                      ),
-                      onPressed: () {
-                        wishlistProvider.toggleWishlist(product.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              wishlistProvider.isInWishlist(product.id)
-                                  ? "${product.name} removed from wishlist"
-                                  : "${product.name} added to wishlist",
-                            ),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                    ),
-                    //// equipment list botton
-                    IconButton(
-                      icon: Icon(Icons.bookmark_border),
-                      onPressed: () {},
-                    ),
-                  ],
+                Text(product.category,
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary)),
+                Text(product.name,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 6),
+                Text(
+                  product.price,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: product.action == ProductAction.notify
+                        ? Colors.amber
+                        : AppColors.primary,
+                  ),
                 ),
-
-                _buildProductButton(product),
+                if (product.subtitle != null)
+                  Text(
+                    product.subtitle!,
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary),
+                  ),
               ],
             ),
-          ],
-        ),
+          ),
+          productActionButton(product.action),
+        ],
       ),
     );
   }
 
-  Widget _buildProductButton(Product product) {
-    if (product.stock == 0 && product.restockDate == null) {
-      return ElevatedButton(
-        onPressed: null,
-
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-        child: const Text(
-          "Out of Stock",
-          style: TextStyle(color: Colors.white),
-        ),
-      );
+  Widget productActionButton(ProductAction action) {
+    switch (action) {
+      case ProductAction.addToCart:
+        return ElevatedButton(
+          onPressed: () {},
+          child: const Text("Add to Cart", style: TextStyle(color: Colors.white)),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+        );
+      case ProductAction.notify:
+        return ElevatedButton(
+          onPressed: () {},
+          child: const Text("Notify Me", style: TextStyle(color: Colors.black)),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+        );
+      case ProductAction.rentBuy:
+        return Column(
+          children: [
+            ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white70),
+                      onPressed: () {},
+                      child: const Text("Rent", style: TextStyle(color: Colors.blue)),
+            ),
+            const SizedBox(height: 6),
+            ElevatedButton(onPressed: () {},
+            child: const Text("Buy", style: TextStyle(color: Colors.white)), style: ElevatedButton.styleFrom(backgroundColor: Colors.blue)),
+          ],
+        );
     }
-
-    if (product.stock == 0 && product.restockDate != null) {
-      return ElevatedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("We'll notify you when available")),
-          );
-        },
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-        child: const Text("Notify Me", style: TextStyle(color: Colors.black)),
-      );
-    }
-
-    if (product.isRentable) {
-      return Column(
-        children: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white70),
-            onPressed: () {},
-            child: const Text("Rent", style: TextStyle(color: Colors.blue)),
-          ),
-          const SizedBox(height: 6),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            child: const Text("Buy", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      );
-    }
-
-    return ElevatedButton(
-      onPressed: () {},
-      child: const Text("Add to Cart", style: TextStyle(color: Colors.white)),
-      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-    );
   }
-
-  // ---------------- COMMON CARD ----------------
+}
+// ---------------- COMMON CARD ----------------
   Widget _card({required String title, required Widget child}) {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -694,34 +334,33 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+          Text(title,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 8),
           child,
         ],
       ),
     );
   }
-}
+
 
 // ---------------- CERTIFICATE ITEM ----------------
-// class _CertificateItem extends StatelessWidget {
-//   final String text;
-//   const _CertificateItem(this.text);
+class certificateItem extends StatelessWidget {
+  final String text;
+  const certificateItem(this.text);
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: const EdgeInsets.only(bottom: 8),
-//       child: Row(
-//         children: [
-//           const Icon(Icons.verified, color: AppColors.primary, size: 20),
-//           const SizedBox(width: 8),
-//           Expanded(child: Text(text)),
-//         ],
-//       ),
-//     );
-//   }
-// }
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.verified, color: AppColors.primary, size: 20),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}

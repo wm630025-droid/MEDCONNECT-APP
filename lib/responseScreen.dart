@@ -6,12 +6,7 @@ import 'package:medconnect_app/acceptedSupplier.dart';
 
 
 class SupplierBidsPage extends StatelessWidget {
-  const SupplierBidsPage({
-    
-    
-    
-    super.key,  //required int customRequestId
-    });
+  const SupplierBidsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
