@@ -12,6 +12,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:medconnect_app/models/category.dart';
 import 'package:medconnect_app/models/custom_request_model.dart';
+import 'package:medconnect_app/models/offer_request.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -576,6 +577,117 @@ Future<List<CustomRequest>> getCustomRequests({
     throw e.toString().replaceAll('Exeption', '').trim();
     }
     rethrow;
+  }
+}
+
+
+
+// ------------------- Cancel Custom Request -------------------
+Future<Map<String, dynamic>> cancelCustomRequest(int requestId) async {
+  try {
+    if (_token == null) throw Exception('Please login first');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/v1/customRequest/cancel/$requestId'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $_token',
+      },
+    );
+
+    print('📦 Cancel Request Response (${response.statusCode}): ${response.body}');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final data = jsonDecode(response.body);
+      throw data['error'] ?? 'Failed to cancel request';
+    }
+  } catch (e) {
+    print('❌ Error cancelling request: $e');
+    throw 'Error: $e';
+  }
+}
+
+// ------------------- Delete Custom Request -------------------
+Future<Map<String, dynamic>> deleteCustomRequest(int requestId) async {
+  try {
+    if (_token == null) throw Exception('Please login first');
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/v1/customRequest/delete/$requestId'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $_token',
+      },
+    );
+
+    print('📦 Delete Request Response (${response.statusCode}): ${response.body}');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final data = jsonDecode(response.body);
+      throw data['error'] ?? 'Failed to delete request';
+    }
+  } catch (e) {
+    print('❌ Error deleting request: $e');
+    throw 'Error: $e';
+  }
+}
+
+// ------------------- Get Offer Requests by Custom Request ID -------------------
+Future<List<OfferRequest>> getOfferRequests(int customRequestId) async {
+  try {
+    if (_token == null) throw Exception('Please login first');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/v1/offerRequest/doctor/show/$customRequestId'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $_token',
+      },
+    );
+
+    print('📦 Offer Requests Response (${response.statusCode}): ${response.body}');
+String cleanBody = response.body;
+    
+    // لو في حروف قبل {، نشيلهم
+    final startIndex = cleanBody.indexOf('{');
+    if (startIndex > 0) {
+      cleanBody = cleanBody.substring(startIndex);
+      print('🧹 Cleaned Response Body: $cleanBody');
+    }
+
+    final data = jsonDecode(cleanBody);
+    
+    print('📦 Offer Requests Response (${response.statusCode}): $data');
+    if (response.statusCode == 200) {
+     // final data = jsonDecode(response.body);
+     
+
+      if (data['success'] == true) {
+         List<dynamic> offersData = [];
+      if (data['data'] is List) {
+          offersData = data['data'];
+        } else if (data['data'] is Map && data['data'].containsKey('id')) {
+          // لو كانت { "id": [] }، نعتبرها قائمة فاضية
+          offersData = [];
+        } else if (data['data'] is Map) {
+          // لو كانت Object عادي (مش قائمة)
+          offersData = [data['data']];
+        }
+        
+        return offersData.map((json) => OfferRequest.fromJson(json)).toList();
+      } else {
+        throw data['message'] ?? 'Failed to fetch offers';
+      }
+    } else {
+      throw 'Failed to fetch offers';
+    }
+  } catch (e) {
+    print('❌ Error fetching offers: $e');
+    throw 'Error: $e';
   }
 }
 //##################################

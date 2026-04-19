@@ -17,12 +17,12 @@ class AcceptedSupplierDetailsPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SupplierBidsPage(),
-              ),
-            );
+            // Navigator.push(
+            //   context,
+            //   MaterialPageRoute(
+            //     builder: (context) => const SupplierBidsPage(),
+            //   ),
+            // );
           },
         ),
         title: const Text(

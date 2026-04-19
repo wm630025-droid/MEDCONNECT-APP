@@ -1,17 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/core/app_colorResponse.dart';
+import 'package:medconnect_app/models/offer_request.dart';
 import 'package:medconnect_app/models/supplierBid.dart';
 import 'package:medconnect_app/myCustomRequests.dart';
 import 'package:medconnect_app/acceptedSupplier.dart';
+import 'package:medconnect_app/services/api_service.dart';
 
+class SupplierBidsPage extends StatefulWidget {
+  final int customRequestId;
+  const SupplierBidsPage({super.key, required this.customRequestId});
 
-class SupplierBidsPage extends StatelessWidget {
-  const SupplierBidsPage({
-    
-    
-    
-    super.key,  //required int customRequestId
+  @override
+  State<SupplierBidsPage> createState() => _SupplierBidsPageState();
+}
+
+class _SupplierBidsPageState extends State<SupplierBidsPage> {
+  List<OfferRequest> _offers = [];
+  bool _isLoading = true;
+  String? _error;
+  final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOffers();
+  }
+
+  Future<void> _loadOffers() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
     });
+
+    try {
+      final offers = await _apiService.getOfferRequests(widget.customRequestId);
+      setState(() {
+        _offers = offers;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,70 +58,62 @@ class SupplierBidsPage extends StatelessWidget {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) =>  MyCustomRequestsPage(),
-              ),
+              MaterialPageRoute(builder: (context) => MyCustomRequestsPage()),
             );
           },
         ),
-        title: const Text(
-          "Responses for X-Ray Machine Request",
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: const Text("Supplier Bids", overflow: TextOverflow.ellipsis),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SupplierBidCard(
-            bid: SupplierBid(
-              name: "MedEquip Solutions",
-              image:
-                  "https://lh3.googleusercontent.com/aida-public/AB6AXuDY0A03UFPI3HPKF2XWTUUVv8fTQL3_C8hjmtRRL2sVFU9bbKMGx-Vnu-za2X9KkQB7mUP6XjxtRFDfMrcqp8ZtgLNzHKTgn2g7zxx1l_p7s9mlq8g688wirH5TTAWfcseOu3Hs_JJjg-bE3xLbW9FVhRfzjC_6-oHY6LfI8ueJpxNvlJ3ZIX9tYp-xsiuaT1PdN6MyUMtBW9lP1UJcY1wt-dFa71z9wRp6vh-Ou_qZ-BDcw0XMXHtLovSPub16wqx6eRkx6k_sw5E",
-              note:
-                  "We have the RX-200 model in stock, which perfectly matches your requirements. It's brand new and comes with a 3-year warranty. We can arrange for delivery within 5 business days.",
-              supplierPrice: "\$14,500",
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(_error!),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadOffers,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          : _offers.isEmpty
+          ? const Center(child: Text('No offers yet'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _offers.length,
+              itemBuilder: (context, index) {
+                return SupplierBidCard(
+                  offer: _offers[index],
+                  initiallyExpanded: index == 0,
+                );
+              },
             ),
-            initiallyExpanded: true,
-          ),
-          SupplierBidCard(
-            bid: SupplierBid(
-              name: "Healthcare Logistics",
-              image:
-                  "https://lh3.googleusercontent.com/aida-public/AB6AXuAAhorPliCO_uyCi8mKpuWfKrxWsfUmICzlW-95EC42rjN1HpxAGwWrdxVWxTPsQXlrcV9wyXaQDBvDP2svmkuLMHy_FP-eHZXKEnAUsaVd_AqbcI3vgLVFAMOzxpWVWt14IrQdP4Vpx3pn5ZpXXbGDi9iwtftHzThWqQXTi7Vy7ex7p8sHu4SL5RTwrlrtjVeXSaBPT_zjZffRxFAx6Jy59DGZkM7TdY_vwDWi_tmJ0lZCPys-Hsse7OtU0OdDNjQNk4cBBjJKHxY",
-              supplierPrice: "\$15,000",
-            ),
-          ),
-          SupplierBidCard(
-            bid: SupplierBid(
-              name: "Surgical Supplies Inc.",
-              image:
-                  "https://lh3.googleusercontent.com/aida-public/AB6AXuARzxRsTqfQlNJyAcUniyLLJV_agzpDoUByBlbf8D92neDvU3od6BT-Ik-4zSBGcJ32Ae08iOFDc4s3PDZwXOGfbvlkpVVcMM_a0dVMyhzODl39GCO4m7EBjEpS1nHQdlfv9OV-rj3v2St9rlFfvtQBfurG7yM6GV0tFY7GXXLfBmPcn4_XL8U0DzAZNiBbzHP9prNJDcwk6NwbYjp4kFEUne_eFssbNbMceoP2FQqh29L6DV5Wsz7DnXy34Cs_a-vmEmyV3jrd7mQ",
-              note:
-                  "We can offer a certified refurbished model for a significant discount. It includes a 1-year warranty and has been fully tested by our technicians.",
-              supplierPrice: "\$12,800",
-              cancelled: true,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
+
 class SupplierBidCard extends StatelessWidget {
-  final SupplierBid bid;
+  final OfferRequest offer;
   final bool initiallyExpanded;
 
   const SupplierBidCard({
     super.key,
-    required this.bid,
+    required this.offer,
     this.initiallyExpanded = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isPending = offer.status.toLowerCase() == 'pending';
+    final isCancelled = offer.status.toLowerCase() == 'cancelled';
+    final isAccepted = offer.status.toLowerCase() == 'accepted';
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -99,20 +124,25 @@ class SupplierBidCard extends StatelessWidget {
         title: Row(
           children: [
             CircleAvatar(
-              backgroundImage: NetworkImage(bid.image),
+              backgroundImage: offer.supplier.companyImageUrl != null
+                  ? NetworkImage(offer.supplier.companyImageUrl!)
+                  : null,
+              child: offer.supplier.companyImageUrl == null
+                  ? const Icon(Icons.business)
+                  : null,
               radius: 20,
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                bid.name,
+                offer.supplier.companyName,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ],
         ),
         children: [
-          if (bid.note != null)
+          if (offer.notes != null)
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -129,27 +159,50 @@ class SupplierBidCard extends StatelessWidget {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
-                  Text(bid.note!),
+                  Text(offer.notes!),
                 ],
               ),
             ),
           const SizedBox(height: 12),
-          _budgetRow("Your Budget:", "\$15,000", strike: true),
+          _budgetRow("Delivery Days:", "${offer.deliveryDays} days"),
           const SizedBox(height: 6),
           _budgetRow(
-            "Supplier's Bid Budget:",
-            bid.supplierPrice,
+            "Supplier's Bid :",
+            "\$${offer.price}",
             highlight: true,
           ),
           const SizedBox(height: 16),
-          bid.cancelled ? _cancelledButtons() : _activeButtons(context),
+          if (isPending) _pendingButtons(context),
+          if (isAccepted) _acceptedButtons(),
+          if (isCancelled) _cancelledButtons(),
         ],
       ),
     );
   }
 
-  Widget _budgetRow(String label, String value,
-      {bool strike = false, bool highlight = false}) {
+  // Widget _budgetRow(
+  //   String label,
+  //   String value, {
+  //   bool strike = false,
+  //   bool highlight = false,
+  // }) {
+  //   return Row(
+  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //     children: [
+  //       Text(label),
+  //       Text(
+  //         value,
+  //         style: TextStyle(
+  //           fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
+  //           fontSize: highlight ? 18 : 14,
+  //           color: highlight ? AppColors.primary : null,
+  //           decoration: strike ? TextDecoration.lineThrough : null,
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+  Widget _budgetRow(String label, String value, {bool highlight = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -160,43 +213,86 @@ class SupplierBidCard extends StatelessWidget {
             fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
             fontSize: highlight ? 18 : 14,
             color: highlight ? AppColors.primary : null,
-            decoration: strike ? TextDecoration.lineThrough : null,
+          ),
+        ),
+      ],
+    );
+  }
+Widget _pendingButtons(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () {
+              // TODO: رفض العرض
+            },
+            child: const Text("Decline"),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () {
+              // TODO: فتح شات مع المورد
+            },
+            child: const Text("Chat"),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ElevatedButton(onPressed: () {
+              // TODO: قبول العرض
+              _showAcceptDialog(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+            ),
+            child: const Text(
+              "Accept",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _activeButtons(BuildContext context) {
+  void _showAcceptDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Accept Offer'),
+        content: const Text('Are you sure you want to accept this offer?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              // TODO: استدعاء API قبول العرض
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Offer accepted!')),
+              );
+            },
+            child: const Text('Accept', style: TextStyle(color: Colors.green)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _acceptedButtons() {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(onPressed: () {}, child: const Text("Cancel")),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () {},
-            child: const Text("Chat"),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AcceptedSupplierDetailsPage(),
-                ),
-              );
-            },
+            onPressed: null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: Colors.green,
             ),
-           
-            child: const Text("Accept",
-            style: TextStyle(color: Colors.white),),
+            child: const Text("Accepted", style: TextStyle(color: Colors.white)),
           ),
         ),
       ],
@@ -207,25 +303,71 @@ class SupplierBidCard extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.cancelled,
-            ),
-            child: const Text("Cancel Offer"),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
           child: ElevatedButton(
             onPressed: null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.cancelled,
+              backgroundColor: Colors.grey,
             ),
-            child: const Text("Offer Cancelled"),
+            child: const Text("Offer Cancelled", style: TextStyle(color: Colors.white)),
           ),
         ),
       ],
     );
   }
 }
+  // Widget _activeButtons(BuildContext context) {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: OutlinedButton(onPressed: () {}, child: const Text("Cancel")),
+  //       ),
+  //       const SizedBox(width: 8),
+  //       Expanded(
+  //         child: OutlinedButton(onPressed: () {}, child: const Text("Chat")),
+  //       ),
+  //       const SizedBox(width: 8),
+  //       Expanded(
+  //         child: ElevatedButton(
+  //           onPressed: () {
+  //             Navigator.push(
+  //               context,
+  //               MaterialPageRoute(
+  //                 builder: (context) => const AcceptedSupplierDetailsPage(),
+  //               ),
+  //             );
+  //           },
+  //           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+
+  //           child: const Text("Accept", style: TextStyle(color: Colors.white)),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+
+  // Widget _cancelledButtons() {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: OutlinedButton(
+  //           onPressed: () {},
+  //           style: OutlinedButton.styleFrom(
+  //             foregroundColor: AppColors.cancelled,
+  //           ),
+  //           child: const Text("Cancel Offer"),
+  //         ),
+  //       ),
+  //       const SizedBox(width: 8),
+  //       Expanded(
+  //         child: ElevatedButton(
+  //           onPressed: null,
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: AppColors.cancelled,
+  //           ),
+  //           child: const Text("Offer Cancelled"),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+
