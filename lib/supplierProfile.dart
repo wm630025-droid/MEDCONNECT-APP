@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/core/app_colorSupplier.dart';
+import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/productDetails.dart';
 import 'package:medconnect_app/providers/wishlist_provider.dart';
 import 'package:medconnect_app/services/api_service.dart';
+import 'package:medconnect_app/services/cart_services.dart';
 import 'package:provider/provider.dart';
 
 class SupplierProfileScreen extends StatefulWidget {
@@ -464,7 +467,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         child: Column(
           children: [
             Text(_error!),
-            SizedBox(height: 10,),
+            SizedBox(height: 10),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
@@ -631,55 +634,136 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
       ),
     );
   }
-
+final CartService _cartService = CartService();
   Widget _buildProductButton(Product product) {
-    if (product.stock == 0 && product.restockDate == null) {
-      return ElevatedButton(
-        onPressed: null,
+    // if (product.stock == 0 && product.restockDate == null) {
+    //   return ElevatedButton(
+    //     onPressed: null,
 
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-        child: const Text(
-          "Out of Stock",
-          style: TextStyle(color: Colors.white),
-        ),
-      );
-    }
+    //     style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+    //     child: const Text(
+    //       "Out of Stock",
+    //       style: TextStyle(color: Colors.white),
+    //     ),
+    //   );
+    //  }
 
-    if (product.stock == 0 && product.restockDate != null) {
-      return ElevatedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("We'll notify you when available")),
-          );
-        },
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-        child: const Text("Notify Me", style: TextStyle(color: Colors.black)),
-      );
-    }
+    // if (product.stock == 0 && product.restockDate != null) {
+    //   return ElevatedButton(
+    //     onPressed: () {
+    //       ScaffoldMessenger.of(context).showSnackBar(
+    //         const SnackBar(content: Text("We'll notify you when available")),
+    //       );
+    //     },
+    //     style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+    //     child: const Text("Notify Me", style: TextStyle(color: Colors.black)),
+    //   );
+    // }
 
-    if (product.isRentable) {
-      return Column(
-        children: [
+    return Column(
+      children: [
+        if (product.stock == 0 && product.restockDate == null)
+          ElevatedButton(
+            onPressed: null,
+
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+            child: const Text(
+              "Out of Stock",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        if (product.stock == 0 && product.restockDate != null)
+          ElevatedButton(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("We'll notify you when available"),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+            child: const Text(
+              "Notify Me",
+              style: TextStyle(color: Colors.black),
+            ),
+          ),
+
+        if (product.isRentable && product.stock > 0)
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white70),
             onPressed: () {},
             child: const Text("Rent", style: TextStyle(color: Colors.blue)),
           ),
-          const SizedBox(height: 6),
+        const SizedBox(height: 6),
+        if (product.stock > 0)
+        
           ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            child: const Text("Buy", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      );
-    }
+            onPressed: () async {  //there is change by mohamed
+              final result = await _cartService.addToCart(
+                productId: product.id,
+                quantity: 1,
+                type: "sale",
+              );
 
-    return ElevatedButton(
-      onPressed: () {},
-      child: const Text("Add to Cart", style: TextStyle(color: Colors.white)),
-      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              if (result['success'] != false) {
+                // ✅ ضيفه local برضو لو عايز
+                cartItemsGlobal.add(
+                  CartItem(
+                    daily_rent: 0,
+                    name: product.name,
+                    image: product.imagePath,
+                    quantity: 1,
+                    price: product.price,
+                    type: 'sale',
+                    dateRange: '',
+                    id: product.id,
+                    productId: product.id,
+                  ),
+                );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("${product.name} added to cart ✅"),
+                    duration: const Duration(seconds: 2),
+                  backgroundColor: Colors.blue,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  action: SnackBarAction(
+                    label: "View Cart",
+                    textColor: Colors.white,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => CartPage()),
+                      );
+                    },
+                  ),
+                  
+                  
+                  ),
+                );
+              } else { //there is change by mohamed
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(result['message'] ?? "Error")),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+            child: const Text(
+              "Add to Cart",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+      ],
     );
+
+    // return ElevatedButton(
+    //   onPressed: () {},
+    //   style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+    //   child: const Text("buy", style: TextStyle(color: Colors.white)),
+    // );
   }
 
   // ---------------- COMMON CARD ----------------

@@ -1,9 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/checkoutSummary.dart';
+import 'package:medconnect_app/homeScreen.dart';
+import 'package:medconnect_app/models/rental_item.dart';
 import 'package:medconnect_app/services/Get_Doctor_Profile.dart';
 
 class CheckoutAddressPage extends StatefulWidget {
+
+final bool isRentalMode;
+  final RentalItem? rentalItem;
+
+
+
+   final List<CartItem> ?cartItems;
+
+
+  const CheckoutAddressPage({super.key
+  , this.cartItems,
+    this.isRentalMode = false,
+    this.rentalItem,
   final List<CartItem> cartItems;
 
   const CheckoutAddressPage({
@@ -86,6 +101,29 @@ Future<Map<String, dynamic>> updateAddress(String newAddress) async {
   }
 }
 
+
+List<CartItem> get cartItemsForCheckout {
+  if (widget.isRentalMode && widget.rentalItem != null) {
+    return [
+      CartItem(
+        id: widget.rentalItem!.productId,
+        name: widget.rentalItem!.name,
+        image: widget.rentalItem!.image,
+        quantity: widget.rentalItem!.quantity,
+        price: widget.rentalItem!.price,
+        type: 'rent',
+        daily_rent: widget.rentalItem!.price / 30,
+         productId: widget.rentalItem!.productId,
+      ),
+    ];
+  }
+  return widget.cartItems ?? cartItemsGlobal;
+}
+
+
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,71 +157,29 @@ Future<Map<String, dynamic>> updateAddress(String newAddress) async {
                     "Delivery Information",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 16),
-
-                  // عرض العنوان الوحيد
-                  _buildAddressCard(),
-
-                  const Spacer(),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0A4C8B),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {
-                        if (address.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please add your address first"),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                          return;
-                        }
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CheckoutSummaryPage(
-                              cartItems: widget.cartItems,
-                              subtotal: widget.cartItems.fold(
-                                0.0,
-                                (sum, item) => sum + (item.price * item.quantity),
-                              ),
-                              taxes: 0.0,
-                              total: 0.0,
-                              selectedAddress: {
-                                "title": "Delivery Address",
-                                "address": address,
-                                "icon": "location",
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                      child: isUpdating
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              "Continue To Summary",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CheckoutSummaryPage(
+                        cartItems: cartItemsForCheckout,
+                        subtotal: cartItemsForCheckout.fold(0.0, (sum, item) => sum + (item.price * item.quantity)),
+                        taxes: 0.0,
+                        total: 0.0,
+                        selectedAddress: addresses[selectedAddress],
+                        isRentablMode:widget.isRentalMode,
+                        rentalItem:widget.rentalItem,
+                     ),
+                    )
+                  );
+                },
+                child: const Text(
+                  "Continue To Summary",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                   const SizedBox(height: 16),
                 ],

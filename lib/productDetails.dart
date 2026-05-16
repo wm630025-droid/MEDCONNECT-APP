@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
+import 'package:medconnect_app/checkoutAddress.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/homeScreen.dart';
+import 'package:medconnect_app/models/rental_item.dart';
 import 'package:medconnect_app/models/review.dart';
 import 'package:medconnect_app/services/api_service.dart';
+import 'package:medconnect_app/services/cart_services.dart';
 import 'package:medconnect_app/supplierProfile.dart';
 import 'package:provider/provider.dart';
 import '../providers/wishlist_provider.dart';
@@ -13,7 +16,8 @@ import '../providers/wishlist_provider.dart';
 class ProductDetailsPage extends StatefulWidget {
   final int productId;
   final Product? product;
-  const ProductDetailsPage({super.key, required this.productId, this.product});
+    final bool openRentTab; 
+  const ProductDetailsPage({super.key, required this.productId, this.product,this.openRentTab = false});
 
   @override
   State<ProductDetailsPage> createState() => _ProductDetailsPageState();
@@ -26,6 +30,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Product? _product;
   bool isLoading = true;
   String? _error;
+bool _isNotified = false;
 
 List<Review> get reviews => _product?.reviews ?? [];
   final ApiService _apiService = ApiService();
@@ -34,6 +39,9 @@ List<Review> get reviews => _product?.reviews ?? [];
   void initState() {
     super.initState();
     _loadProduct();
+      if (widget.openRentTab) {
+    selectedPurchase = 0; // يفتح على تبويب Rent
+  }
   }
 
   Future<void> _loadProduct() async {
@@ -44,7 +52,7 @@ List<Review> get reviews => _product?.reviews ?? [];
         isLoading = false;
       });
     }
-
+  await _checkNotificationStatus();
     // // لو محتاجين نجيب من API
     // setState(() {
     //   _isLoading = true;
@@ -53,10 +61,51 @@ List<Review> get reviews => _product?.reviews ?? [];
     //print(" product config : ${_product!.configuration}");
     try {
       final freshproduct = await _apiService.fetchProductById(widget.productId);
+      final reviews = await _apiService.getProductReviews(widget.productId);
+    reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // الأحدث أولاً
+      final updatedReviews = reviews.map((r){
+        return Review(id: r.id,
+         doctorId: r.doctorId,
+          rating: r.rating,
+           comment: r.comment, 
+           createdAt: r.createdAt,
+            productId: r.productId,
+            doctorName: r.doctorName,
+            canDelete: r.doctorId==ApiService.doctorId,
+            
+            
+            );
+        
+
+
+      }).toList();
+
       setState(() {
         _product = freshproduct;
+        _product = Product(
+        id: freshproduct.id,
+        supplierId: freshproduct.supplierId,
+        name: freshproduct.name,
+        brand: freshproduct.brand,
+        price: freshproduct.price,
+        imagePath: freshproduct.imagePath,
+        stock: freshproduct.stock,
+        isRentable: freshproduct.isRentable,
+        restockDate: freshproduct.restockDate,
+        status: freshproduct.status,
+        images: freshproduct.images,
+        description: freshproduct.description,
+        specification: freshproduct.specification,
+        warranty: freshproduct.warranty,
+        setupDuration: freshproduct.setupDuration,
+        supplierData: freshproduct.supplierData,
+        reviews: updatedReviews, // ✅ من API منفصل
+      );
         isLoading = false;
       });
+
+ await _checkNotificationStatus();
+
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -65,9 +114,20 @@ List<Review> get reviews => _product?.reviews ?? [];
     }
   }
 
+// ✅ دالة منفصلة عشان نجيب isNotified
+Future<void> _checkNotificationStatus() async {
+  if (_product == null) return;
+  final isNotified = await _apiService.isNotified(_product!.id);
+  if (mounted) {
+    setState(() {
+      _isNotified = isNotified;
+    });
+  }
+}
   // -------- Rent --------
   DateTime? rentStartDate;
   DateTime? rentEndDate;
+  int rentQuantity = 1; 
 
   // -------- Buy --------
   String selectedConfig = "Standard Unit";
@@ -95,7 +155,76 @@ double get averageRating {
 
   bool isInWishlist = false;
   bool isInEquipmentList = false;
+
+
+
+Future<void> _rentNow() async {
+  String formatDate(DateTime date) {
+     return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
+
+    //return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
+  print('sending rent validation');
+  print(' productId : ${_product!.id}');
+  print('quantity: $rentQuantity');
+  print("start date : ${formatDate(rentStartDate!)}");
+   print("end date : ${formatDate(rentEndDate!)}");
+
+  try{
+
+  final isValid = await _apiService.validateRent(
+    productId: _product!.id,
+    quantity: rentQuantity,
+    startDate: formatDate(rentStartDate!),
+    endDate: formatDate(rentEndDate!),
+  );
+
+  if (isValid) {
+    final rentalItem = RentalItem(
+      productId: _product!.id,
+      name: _product!.name,
+      price: _product!.price,
+      image: _product!.imagePath,
+      quantity: rentQuantity,
+      startDate: formatDate(rentStartDate!),
+      endDate: formatDate(rentEndDate!),
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CheckoutAddressPage(
+          isRentalMode: true,
+          rentalItem: rentalItem,
+        ),
+      ),
+    );
+  } 
+  } catch(e){
+    // ✅ عرض رسالة الخطأ من الـ API
+    String errorMessage = e.toString().replaceAll('Exception:', '').trim();
+    
+    // لو الخطأ من الـ API نفسه (زي "not rentable" أو "Insufficient stock for rent")
+    if (errorMessage.contains('not rentable')) {
+      errorMessage = 'This product is not available for rent';
+    } else if (errorMessage.contains('Insufficient stock')) {
+      errorMessage = 'Not enough stock available for rent';
+    }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+}
+
   // ---------------- UI ----------------
+
   @override
   Widget build(BuildContext context) {
     (_isLoading) {
@@ -578,6 +707,8 @@ double get averageRating {
             Expanded(child: _dateBox("End Date", false)),
           ],
         ),
+         const SizedBox(height: 12),
+          _buildQuantitySelector(),
         const SizedBox(height: 16),
         locationAndSetupTime(),
         const Divider(),
@@ -594,7 +725,25 @@ double get averageRating {
       ],
     ),
   );
-
+Widget _buildQuantitySelector() {
+  return Row(
+    children: [
+      const Text('Quantity:'),
+      const Spacer(),
+      IconButton(
+        onPressed: rentQuantity > 1
+            ? () => setState(() => rentQuantity--)
+            : null,
+        icon: const Icon(Icons.remove),
+      ),
+      Text('$rentQuantity'),
+      IconButton(
+        onPressed: () => setState(() => rentQuantity++),
+        icon: const Icon(Icons.add),
+      ),
+    ],
+  );
+}
   Widget _dateBox(String title, bool isStart) => GestureDetector(
     onTap: () async {
       final picked = await showDatePicker(
@@ -915,7 +1064,7 @@ double get averageRating {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      r.doctorName ?? "Doctor",
+                      r.doctorName ?? " ",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -923,6 +1072,15 @@ double get averageRating {
                     "${r.createdAt.day}/${r.createdAt.month}/${r.createdAt.year}",
                     style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
+
+                    if (r.doctorId == ApiService.doctorId) // تقييم المستخدم الحالي
+                      IconButton(
+                        onPressed: () => _deleteReview(r),
+                        icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                      ),
+
+
+
                 ],
               ),
               const SizedBox(height: 6),
@@ -1013,11 +1171,13 @@ Future<void> _submitReview() async {
       // ✅ إضافة التقييم محلياً (أو إعادة تحميل المنتج)
       final newReview = Review(
         id: DateTime.now().millisecondsSinceEpoch,
-        doctorId: 0,
+        productId: _product!.id,
+        doctorId: ApiService.doctorId ?? 0,
         rating: userRating,
         comment: reviewController.text,
         createdAt: DateTime.now(),
-        doctorName: "You",
+        doctorName: ApiService.doctorName?? ' ',
+        canDelete: true,
       );
       
       setState(() {
@@ -1039,7 +1199,7 @@ Future<void> _submitReview() async {
           warranty: _product!.warranty,
           setupDuration: _product!.setupDuration,
           supplierData: _product!.supplierData,
-          reviews: [..._product!.reviews, newReview],
+          reviews: [newReview, ..._product!.reviews],
         );
         userRating = 0;
         reviewController.clear();
@@ -1051,6 +1211,72 @@ Future<void> _submitReview() async {
       );
     } else {
       throw result['error'] ?? 'Failed to submit review';
+    }
+  } catch (e) {
+    setState(() => isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
+    );
+  }
+}
+Future<void> _deleteReview(Review review) async {
+  final shouldDelete = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Delete Review'),
+      content: const Text('Are you sure you want to delete this review?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
+
+  if (shouldDelete != true) return;
+
+  setState(() => isLoading = true);
+
+  try {
+    final result = await _apiService.deleteReview(review.id);
+    
+    if (result['success'] == true) {
+      // ✅ إزالة التقييم من القائمة محلياً
+      setState(() {
+        final updatedReviews = List<Review>.from(_product!.reviews);
+        updatedReviews.removeWhere((r) => r.id == review.id);
+        _product = Product(
+          id: _product!.id,
+          supplierId: _product!.supplierId,
+          name: _product!.name,
+          brand: _product!.brand,
+          price: _product!.price,
+          imagePath: _product!.imagePath,
+          stock: _product!.stock,
+          isRentable: _product!.isRentable,
+          restockDate: _product!.restockDate,
+          status: _product!.status,
+          images: _product!.images,
+          description: _product!.description,
+          specification: _product!.specification,
+          warranty: _product!.warranty,
+          setupDuration: _product!.setupDuration,
+          supplierData: _product!.supplierData,
+          reviews: updatedReviews,
+        );
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review deleted successfully!')),
+      );
+    } else {
+      throw Exception(result['error'] ?? 'Failed to delete review');
     }
   } catch (e) {
     setState(() => isLoading = false);
@@ -1230,40 +1456,129 @@ Future<void> _submitReview() async {
   // );
 
   // ---------------- ACTION BUTTON ----------------
-  Widget _actionButton() => Padding(
+  Widget _buildNotifyButton() {
+  return SizedBox(
+    width: double.infinity,
+    child: Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _isNotified ? Colors.red.shade100 : Colors.amber,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+        onPressed: () async {
+          if (_isNotified) {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Cancel Notification'),
+                content: const Text('Are you sure you want to cancel this notification?'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes', style: TextStyle(color: Colors.red))),
+                ],
+              ),
+            );
+            if (confirm != true) return;
+      
+            try {
+              await _apiService.undoRestockNotification(_product!.id);
+              setState(() => _isNotified = false);
+              Navigator.pop(context,true);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification cancelled')));
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))));
+            }
+          } else {
+            try {
+              await _apiService.requestRestockNotification(_product!.id);
+              setState(() => _isNotified = true);
+              Navigator.pop(context,true);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification requested!')));
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))));
+            }
+          }
+        },
+        child: Text(
+          _isNotified ? "Undo" : "Notify Me",
+          style: TextStyle(color: _isNotified ? Colors.red : Colors.black, fontWeight: FontWeight.bold),
+        ),
+      ),
+    ),
+  );
+}
+  final CartService _cartService = CartService();
+  Widget _actionButton() {
+
+  if (_product!.stock == 0 && _product!.restockDate != null) {
+  return _buildNotifyButton();
+}
+  if(_product!.stock == 0 && _product!.restockDate == null){
+    return Padding(padding: const EdgeInsets.all(12),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          backgroundColor: Colors.grey,
+        ),
+        onPressed: null,
+        child: const Text(
+          "Out of Stock",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),);
+  }
+  return Padding(
+    
     padding: const EdgeInsets.all(12),
-    child: ElevatedButton(
+    child: selectedPurchase == 1 ? ElevatedButton(
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 14),
         backgroundColor: _product!.stock == 0
             ? Colors.grey
-            : (selectedPurchase == 0 ? Colors.green : Colors.blue),
+            :  Colors.blue,
       ),
+      
       onPressed: _product!.stock == 0
           ? null // disabled
-          : () {
-              // إضافة للمنتج
-              cartItemsGlobal.add(
-                CartItem(
-                  name: _product!.name,
-                  image: _product!.imagePath,
-                  quantity: 1,
-                  price: _product!.price,
-                  type: selectedPurchase == 0 ? "rent" : "buy",
-                  dateRange: selectedPurchase == 0 ? "3 Days" : "",
-                  daily_rent: 50,
-                  id: _product!.id,
-                  
-                  productId: _product!.id,),
+          : () async {  //there is change by mohamed
+              final result = await _cartService.addToCart(
+                productId: _product!.id,
+                quantity: 1,
+                type: "sale",
               );
 
+              if (result['success'] != false) {
+                // ✅ ضيفه local برضو لو عايز
+                cartItemsGlobal.add(
+                  CartItem(
+                    daily_rent: 0,
+                    name: _product!.name,
+                    image: _product!.imagePath,
+                    quantity: 1,
+                    price: _product!.price,
+                    type: 'sale',
+                    dateRange: '',
+                    id: _product!.id,
+                    productId: _product!.id,
+                  ),
+                );
+
+              //   ScaffoldMessenger.of(context).showSnackBar(
+              //     SnackBar(content: Text("${p.name} added to cart ✅")),
+              //   );
+              // } else { //there is change by mohamed
+              //   ScaffoldMessenger.of(context).showSnackBar(
+              //     SnackBar(content: Text(result['message'] ?? "Error")),
+              //   );
+              // }
+            
               // SnackBar
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    selectedPurchase == 0
-                        ? "Product added for rent 🛒"
-                        : "Product added to cart 🛒",
+                  
+                      "Product added to cart 🛒",
                   ),
                   duration: const Duration(seconds: 2),
                   backgroundColor: Colors.blue,
@@ -1283,21 +1598,39 @@ Future<void> _submitReview() async {
                   ),
                 ),
               );
-            },
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(result['message'] ?? "Error")),
+                );
+              }
+          },
       child: Text(
-        _product!.stock == 0
-            ? "Out of Stock"
-            : (_product!.stock == 0 && _product!.restockDate != null
-                  ? "Notify Me"
-                  : (selectedPurchase == 0 ? "Rent Now" : "Add To Cart")),
+     "Add To Cart",
         style: const TextStyle(
           color: Colors.white,
           fontSize: 16,
           fontWeight: FontWeight.bold,
         ),
       ),
-    ),
+    ):ElevatedButton(
+       style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        backgroundColor: _product!.isRentable
+            ? Colors.blue
+            :  Colors.grey,
+      ),
+      
+    onPressed: _product!.isRentable ? _rentNow : null,
+    child: const Text(
+      'Rent Now',
+     style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),),
+  ),
   );
+  }
 
   // ---------------- HELPERS ----------------
   Widget _card({required Widget child}) => Padding(

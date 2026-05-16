@@ -61,7 +61,7 @@ class CartService {
         if (token != null) 'Authorization': 'Bearer $token',
       },
     );
-
+    print('Reponse Cart body: ${response.body}');
     if (response.statusCode == 200) {
     final responseData = jsonDecode(response.body);
     

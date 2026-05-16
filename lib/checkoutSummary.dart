@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/checkoutPayment.dart';
+import 'package:medconnect_app/models/rental_item.dart';
 
 // ========== صفحة الـ Summary ==========
 class CheckoutSummaryPage extends StatelessWidget {
@@ -9,6 +10,8 @@ class CheckoutSummaryPage extends StatelessWidget {
   final double taxes;
   final double total;
   final Map<String, String> selectedAddress;
+  final bool isRentablMode; 
+  final RentalItem? rentalItem;
 
   const CheckoutSummaryPage({
     super.key,
@@ -17,6 +20,8 @@ class CheckoutSummaryPage extends StatelessWidget {
     required this.subtotal,
     required this.taxes,
     required this.total,
+    this.isRentablMode = false, 
+    this.rentalItem,
   });
 
   @override
@@ -159,7 +164,23 @@ class CheckoutSummaryPage extends StatelessWidget {
   // ========== Order Summary ==========
 
   Widget _buildOrderSummary() {
-    double subtotal = cartItems.fold(
+
+     final items = isRentablMode && rentalItem != null
+      ? [
+          CartItem(
+            id: rentalItem!.productId,
+            productId: rentalItem!.productId,
+            name: rentalItem!.name,
+            image: rentalItem!.image,
+            quantity: rentalItem!.quantity,
+            price: rentalItem!.price,
+            type: 'rent',
+            daily_rent: rentalItem!.price / 30,
+          )
+        ]
+      : cartItems;
+
+    double subtotal = items.fold(
       0,
       (sum, item) => sum + (item.price * item.quantity),
     );
@@ -174,7 +195,7 @@ class CheckoutSummaryPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ====== عرض المنتجات ديناميكياً ======
-          ...cartItems.map((item) {
+          ...items.map((item) {
             return Column(
               children: [
                 Row(
@@ -269,6 +290,15 @@ class CheckoutSummaryPage extends StatelessWidget {
           backgroundColor: const Color(0xFF0D6EFD),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => CheckoutPaymentPage(
+              isRentalMode: isRentablMode,
+              rentalItem:rentalItem
+            )),
+          );
+        },
       onPressed: () {
   Navigator.push(
     context,
