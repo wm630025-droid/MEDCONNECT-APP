@@ -26,7 +26,7 @@ class EquipmentItem {
 
 class EquipmentList {
   final int id;
-  final String listName;
+   String listName;
   final bool isDefault;
   final String createdAt;
     bool isExpanded;  // ✅ أضيفي هذا السطر

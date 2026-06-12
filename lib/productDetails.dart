@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/checkoutAddress.dart';
+import 'package:medconnect_app/models/equipment_model.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/models/rental_item.dart';
 import 'package:medconnect_app/models/review.dart';
 import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/services/cart_services.dart';
+import 'package:medconnect_app/services/equipment_service.dart' as EquipmentApiService;
 import 'package:medconnect_app/supplierProfile.dart';
 import 'package:provider/provider.dart';
 import '../providers/wishlist_provider.dart';
@@ -222,7 +224,134 @@ Future<void> _rentNow() async {
     );
   }
 }
+  void _showAddToListDialog(Product product) async {
+  try {
+    final lists = await EquipmentApiService.getSimpleLists();
+    if (lists.isEmpty) {
+      _showCreateListFirstDialog(product);
+      return;
+    }
 
+    final selectedList = await showDialog<EquipmentList>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Add to Equipment List"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ...lists.map((list) => ListTile(
+              title: Text(list.listName),
+              onTap: () => Navigator.pop(ctx, list),
+            )),
+            const Divider(),
+            ListTile(
+              title: const Text("+ Create New List"),
+              onTap: () => Navigator.pop(ctx, null),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedList != null) {
+      await EquipmentApiService.addItemToList(selectedList.id, product.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Added to list")),
+      );
+    } else {
+      _showCreateNewListDialog(product);
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: $e")),
+    );
+  }
+}
+
+void _showCreateNewListDialog(Product product) async {
+  final controller = TextEditingController();
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text("New List Name"),
+      content: TextField(controller: controller),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text("Create"),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true && controller.text.isNotEmpty) {
+    try {
+      await EquipmentApiService.createEquipmentList(controller.text);
+      final newLists = await EquipmentApiService.getSimpleLists();
+      final newList = newLists.firstWhere((l) => l.listName == controller.text);
+      await EquipmentApiService.addItemToList(newList.id, product.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("List created and item added")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  }
+}
+void _showCreateListFirstDialog(Product product) async {
+  final controller = TextEditingController();
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text("No Lists Found"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text("You don't have any equipment lists yet."),
+          const SizedBox(height: 16),
+          TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: "Enter list name",
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text("Create"),
+        ),
+      ],
+    ),
+  );
+  
+  if (confirmed == true && controller.text.isNotEmpty) {
+    try {
+      await EquipmentApiService.createEquipmentList(controller.text);
+      final newLists = await EquipmentApiService.getSimpleLists();
+      final newList = newLists.firstWhere((l) => l.listName == controller.text);
+      await EquipmentApiService.addItemToList(newList.id, product.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("List created and item added")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.toString().replaceAll('Exception:', '')}")),
+      );
+    }
+  }
+}
   // ---------------- UI ----------------
 
   @override
@@ -363,21 +492,9 @@ Future<void> _rentNow() async {
                     child: SizedBox(
                       height: 40,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          setState(
-                            () => isInEquipmentList = !isInEquipmentList,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                isInEquipmentList
-                                    ? "Added to equipment list"
-                                    : "Removed from equipment list",
-                              ),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
+                      
+                    onPressed: () => _showAddToListDialog(_product!),
+
                         icon: Icon(
                           Icons.bookmark_border,
                           color: isInEquipmentList ? Colors.blue : Colors.black,
@@ -1501,7 +1618,7 @@ Future<void> _deleteReview(Review review) async {
           }
         },
         child: Text(
-          _isNotified ? "Undo" : "Notify Me",
+          _isNotified ? "Un Notify" : "Notify Me",
           style: TextStyle(color: _isNotified ? Colors.red : Colors.black, fontWeight: FontWeight.bold),
         ),
       ),

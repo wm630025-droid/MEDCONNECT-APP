@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/introScreen.dart';
 import 'package:medconnect_app/models/category.dart';
+import 'package:medconnect_app/models/equipment_model.dart';
 import 'package:medconnect_app/productDetails.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/doctorAccount.dart';
 import 'package:medconnect_app/providers/wishlist_provider.dart';
 import 'package:medconnect_app/services/api_service.dart';
+import 'package:medconnect_app/services/equipment_service.dart' as EquipmentApiService;
 import 'package:medconnect_app/services/search_services.dart';
 import 'package:provider/provider.dart';
 import '../models/Search_model.dart';
@@ -34,7 +38,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-
   //#############################
   // mohamed
   List<ProductModel> searchResults = [];
@@ -45,8 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<CategoryApiModel> categoriesApi = [];
   bool isLoadingCategoriesApi = false;
 
-//################################# 
-//  wafaa
+  //#################################
+  //  wafaa
   final TextEditingController _searchController = TextEditingController();
   List<Product> displayedProducts = [];
   List<Product> _allProducts = [];
@@ -65,21 +68,26 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _productsError;
 
   final ApiService _apiService = ApiService();
-    final CartService _cartService = CartService();
+  final CartService _cartService = CartService();
 
   final ScrollController _scrollController = ScrollController();
 
-  
-Map<int, bool> _notifyStatus = {};
+  Map<int, bool> _notifyStatus = {};
 
-  
-   //#################################
+Timer? _pollTimer;
+bool _forceRefresh = false;
+
+bool _forceRefreshCategories = false;
+Timer? _categoriesPollTimer;
+
+  //#################################
   @override
   void initState() {
     super.initState();
     _loadCategories();
     fetchCategoriesApi(); //mohamed only
-
+_startPolling();
+    _startCategoriesPolling();
     _loadProducts();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
@@ -90,14 +98,38 @@ Map<int, bool> _notifyStatus = {};
       }
     });
   }
-
+void _startPolling() {
+  _pollTimer = Timer.periodic(Duration(seconds: 30), (timer) {
+    if (mounted) {
+      _forceRefresh = true;
+      _loadProducts(forceRefresh: true).then((_) {
+        _forceRefresh = false;
+      });
+    }
+  });
+}
   @override
   void dispose() {
     _scrollController.dispose();
+    _pollTimer?.cancel();
+    _categoriesPollTimer?.cancel();
     super.dispose();
   }
+  
 
-  Future<void> _loadProducts({bool loadMore = false}) async {
+  Future<void> _loadProducts({bool loadMore = false, bool forceRefresh = false}) async {
+     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh) {
+    setState(() {
+      _allProducts = ApiService.cachedProducts!;
+      displayedProducts = List.from(_allProducts);
+      _isLoadingProducts = false;
+      _isLoadingMore = false;
+    });
+    return;
+  }
+    
+    
+    
     if (ApiService.token == null) {
       setState(() {
         _productsError = 'Please login first';
@@ -139,13 +171,13 @@ Map<int, bool> _notifyStatus = {};
         _isLoadingMore = false;
       });
 
-       for (var product in _allProducts) {
-    if (product.stock == 0 && product.restockDate != null) {
-      final isNotified = await _apiService.isNotified(product.id);
-      _notifyStatus[product.id] = isNotified;
-    }
-  }
-  setState(() {});
+      for (var product in _allProducts) {
+        if (product.stock == 0 && product.restockDate != null) {
+          final isNotified = await _apiService.isNotified(product.id);
+          _notifyStatus[product.id] = isNotified;
+        }
+      }
+      setState(() {});
     } catch (e) {
       setState(() {
         _productsError = e.toString();
@@ -155,7 +187,18 @@ Map<int, bool> _notifyStatus = {};
     }
   }
 
-  Future<void> _loadCategories() async {
+  Future<void> _loadCategories({bool forceRefresh = false}) async {
+
+
+      if (ApiService.cachedCategories != null && !forceRefresh && !_forceRefreshCategories) {
+    setState(() {
+      _categories = ApiService.cachedCategories!;
+      _isLoadingCategories = false;
+      _categoriesError = null;
+    });
+    return;
+  }
+  
     // ✅ التأكد من وجود توكن
     if (ApiService.token == null) {
       setState(() {
@@ -187,7 +230,16 @@ Map<int, bool> _notifyStatus = {};
       });
     }
   }
-
+void _startCategoriesPolling() {
+  _categoriesPollTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    if (mounted) {
+      _forceRefreshCategories = true;
+      _loadCategories(forceRefresh: true).then((_) {
+        _forceRefreshCategories = false;
+      });
+    }
+  });
+}
   //######################
 
   // البحث
@@ -196,8 +248,8 @@ Map<int, bool> _notifyStatus = {};
   //     _searchController.dispose();
   //     super.dispose();
   //   }
-//##################################################################
-// mohamed
+  //##################################################################
+  // mohamed
   Future<void> _searchProduct(String query) async {
     final result = await SearchService.searchProducts(
       query,
@@ -231,7 +283,7 @@ Map<int, bool> _notifyStatus = {};
       isLoadingCategoriesApi = false;
     });
   }
-//##################################################################################
+  //##################################################################################
   //int _selectedIndex = 0;
 
   @override
@@ -252,7 +304,9 @@ Map<int, bool> _notifyStatus = {};
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => doctorAccountPage()),//there is change by mohamed 
+                MaterialPageRoute(
+                  builder: (_) => doctorAccountPage(),
+                ), //there is change by mohamed
               );
 
               // افتح صفحة البروفايل
@@ -303,7 +357,7 @@ Map<int, bool> _notifyStatus = {};
                   );
                 } else {
                   // 5️⃣ لو فشل
-                  print("xxxxxxxxxxxxxxxxxxxxxxx");
+                  print("xxxxxxxxx");
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(result['error'] ?? 'Something went wrong'),
@@ -325,8 +379,8 @@ Map<int, bool> _notifyStatus = {};
           children: [
             _buildSearchBar(),
             const SizedBox(height: 20),
-//####################################################################################
-// mohamed
+            //####################################################################################
+            // mohamed
             Row(
               children: [
                 GestureDetector(
@@ -397,7 +451,8 @@ Map<int, bool> _notifyStatus = {};
       },
     );
   }
-//######################################################################################
+
+  //######################################################################################
   Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -406,7 +461,8 @@ Map<int, bool> _notifyStatus = {};
         borderRadius: BorderRadius.circular(10),
       ),
       child: TextField(
-        onChanged: (value) {   //there is change by mohamed
+        onChanged: (value) {
+          //there is change by mohamed
           _searchProduct(value);
         },
         controller: _searchController,
@@ -418,8 +474,9 @@ Map<int, bool> _notifyStatus = {};
       ),
     );
   }
-//############################################################################################
-// mohamed
+
+  //############################################################################################
+  // mohamed
   Widget _buildCategoryListApi() {
     if (isLoadingCategoriesApi) {
       return const Center(child: CircularProgressIndicator());
@@ -461,7 +518,8 @@ Map<int, bool> _notifyStatus = {};
       ),
     );
   }
-//##########################################################################################################
+
+  //##########################################################################################################
   // ---------------------
   // أقسام الصفحة الرئيسية
   // ---------------------
@@ -490,8 +548,8 @@ Map<int, bool> _notifyStatus = {};
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           image: const DecorationImage(
-            image: AssetImage("assets/images/Ventilator_banner.png"),
-            fit: BoxFit.fill,
+            image: AssetImage("assets/images/intro_backGround.png"),
+            fit: BoxFit.cover,
           ),
         ),
       ),
@@ -500,7 +558,8 @@ Map<int, bool> _notifyStatus = {};
 
   Widget _categoryItem({required Category category}) {
     return GestureDetector(
-      onTap: () {   ////there is change by mohamed
+      onTap: () {
+        ////there is change by mohamed
         setState(() {
           selectedCategoryId = category.id;
         });
@@ -510,11 +569,11 @@ Map<int, bool> _notifyStatus = {};
       child: Column(
         children: [
           Container(
-            width: 70,
-            height: 70,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(35),
+              borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.2),
@@ -524,7 +583,7 @@ Map<int, bool> _notifyStatus = {};
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(35),
+              borderRadius: BorderRadius.circular(10),
               child: Image.network(
                 category.image,
                 width: 60,
@@ -553,12 +612,30 @@ Map<int, bool> _notifyStatus = {};
 
   Widget buildCategories() {
     if (_isLoadingCategories) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: CircularProgressIndicator(),
+      return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: List.generate(
+          2, // ✅ عدد الـ skeleton categories
+          (index) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Column(
+              children: [
+                Skeleton(width: 70, height: 70, borderRadius: BorderRadius.circular(12)),
+                const SizedBox(height: 8),
+                Skeleton(width: 60, height: 12, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
         ),
-      );
+      ),
+    );
+      // return const Center(
+      //   child: Padding(
+      //     padding: EdgeInsets.all(16.0),
+      //     child: CircularProgressIndicator(),
+      //   ),
+      // );
     }
 
     if (_categoriesError != null) {
@@ -613,18 +690,36 @@ Map<int, bool> _notifyStatus = {};
   // Grid Products
   // ---------------------
   Widget _featuredGrid() {
-    if (_isLoadingProducts && _allProducts.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
+
+      if (_isLoadingProducts && _allProducts.isEmpty) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.65,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: 4, // ✅ عدد الـ skeleton cards
+      itemBuilder: (context, index) {
+        return _skeletonProductCard();
+      },
+    );
+  }
+
+    // if (_isLoadingProducts && _allProducts.isEmpty) {
+    //   return const Center(child: CircularProgressIndicator());
+    // }
 
     if (_productsError != null && _allProducts.isEmpty) {
       return Center(
         child: Column(
           children: [
             Text('Error: $_productsError'),
-             SizedBox(height: 10,),
+            SizedBox(height: 10),
             ElevatedButton(
-               style: ElevatedButton.styleFrom(
+              style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.blueAccent,
               ),
@@ -649,7 +744,7 @@ Map<int, bool> _notifyStatus = {};
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.60,
+            childAspectRatio: 0.65,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
@@ -665,21 +760,64 @@ Map<int, bool> _notifyStatus = {};
       ],
     );
   }
-
+Widget _skeletonProductCard() {
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // صورة
+        Skeleton(
+          width: double.infinity,
+          height: MediaQuery.of(context).size.height * 0.22,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        const SizedBox(height: 8),
+        // اسم المنتج
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Skeleton(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+        ),
+        const SizedBox(height: 8),
+        // اسم المورد
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Skeleton(width: 100, height: 12, borderRadius: BorderRadius.circular(4)),
+        ),
+        const SizedBox(height: 8),
+        // السعر
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Skeleton(width: 80, height: 14, borderRadius: BorderRadius.circular(4)),
+        ),
+        const SizedBox(height: 8),
+        // زر
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Skeleton(width: double.infinity, height: 36, borderRadius: BorderRadius.circular(8)),
+        ),
+        const SizedBox(height: 8),
+      ],
+    ),
+  );
+}
   // ---------------------
   // PRODUCT CARD
   // ---------------------
   Widget _productCard(Product p) {
-final wishlistProvider = Provider.of<WishlistProvider>(
+    final wishlistProvider = Provider.of<WishlistProvider>(
       context,
       listen: true,
     );
-final isInWishlist = wishlistProvider.isInWishlist(p.id);
-   // final isInWishlist = wishListGlobal.any((i) => i["name"] == p.name);
+    final isInWishlist = wishlistProvider.isInWishlist(p.id);
+    // final isInWishlist = wishListGlobal.any((i) => i["name"] == p.name);
     bool isInequipmentList = equipmentListGlobal.any(
       (i) => i["name"] == p.name,
     );
-      String supplierName = '';
+    String supplierName = '';
     if (p.supplierData != null && p.supplierData!['company_name'] != null) {
       supplierName = p.supplierData!['company_name'];
     }
@@ -692,35 +830,36 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               GestureDetector(
                 onTap: () async {
-                 final result= await Navigator.push(
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          ProductDetailsPage(productId: p.id,product: p),
+                          ProductDetailsPage(productId: p.id, product: p),
                     ),
                   );
-                
+
                   if (result == true && mounted) {
-    final isNotified = await _apiService.isNotified(p.id);
-    setState(() {
-      _notifyStatus[p.id] = isNotified;
-    });
-  }
-},
+                    final isNotified = await _apiService.isNotified(p.id);
+                    setState(() {
+                      _notifyStatus[p.id] = isNotified;
+                    });
+                  }
+                },
                 //#####################################################
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
                     p.imagePath,
-                    height: MediaQuery.of(context).size.height * 0.12,
+                    height: MediaQuery.of(context).size.height * 0.22,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
-                        height: MediaQuery.of(context).size.height * 0.12,
+                        height: MediaQuery.of(context).size.height * 0.22,
                         color: Colors.grey.shade200,
                         child: const Icon(
                           Icons.broken_image,
@@ -732,7 +871,7 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
                       return Container(
-                        height: MediaQuery.of(context).size.height * 0.17,
+                        height: MediaQuery.of(context).size.height * 0.22,
                         color: Colors.grey.shade200,
                         child: const Center(child: CircularProgressIndicator()),
                       );
@@ -752,6 +891,8 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Padding(
@@ -762,6 +903,8 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
                 child: Text(
                   supplierName,
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Padding(
@@ -780,25 +923,31 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
 
               if (p.stock == 0)
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8.0,
-                    vertical: 2,
-                  ),
-                  child: Container(
-                    // padding: const EdgeInsets.symmetric(
-                    //   horizontal: 8,
-                    //   vertical: 2,
-                    // ),
-                    // decoration: BoxDecoration(
-                    //   color: Colors.red.shade100,
-                    //   borderRadius: BorderRadius.circular(12),
-                    // ),
+                  padding: const EdgeInsets.all(7.0),
+                  child: Expanded(
+                    flex: 2,
                     child: const Text(
-                      "Out of Stock",
+                      " ",
                       style: TextStyle(
                         color: Colors.red,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
+                  
+                ),
+              if (p.isRentable && p.stock > 0)
+                Padding(
+                  padding: const EdgeInsets.all(7.0),
+                  child: Expanded(
+                    flex: 2,
+                    child: const Text(
+                      "Available for Rent",
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 89, 129, 248),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
                       ),
                     ),
                   ),
@@ -820,64 +969,69 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
             child: Row(
               children: [
                 // ❤️ Wishlist
-                  GestureDetector(
-                  onTap: () {
-                    wishlistProvider.toggleWishlist(p.id);
+                //   GestureDetector(
+                //   onTap: () {
+                //     wishlistProvider.toggleWishlist(p.id);
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          wishlistProvider.isInWishlist(p.id)
-                              ? "${p.name} added to wishlist"
-                              : "${p.name} removed from wishlist",
-                        ),
-                      ),
-                    );
-                  },
-                  child: Icon(
-                    isInWishlist ? Icons.favorite : Icons.favorite_border,
-                    color: isInWishlist ? Colors.red : Colors.black,
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(width: 8),
+                //     ScaffoldMessenger.of(context).showSnackBar(
+                //       SnackBar(
+                //         content: Text(
+                //           wishlistProvider.isInWishlist(p.id)
+                //               ? "${p.name} added to wishlist"
+                //               : "${p.name} removed from wishlist",
+                //         ),
+                //       ),
+                //     );
+                //   },
+                //   child: Icon(
+                //     isInWishlist ? Icons.favorite : Icons.favorite_border,
+                //     color: isInWishlist ? Colors.red : Colors.black,
+                //     size: 26,
+                //   ),
+                // ),
+                // const SizedBox(width: 8),
 
                 // 📋 Equipment List
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      if (isInequipmentList) {
-                        equipmentListGlobal.removeWhere(
-                          (i) => i["name"] == p.name,
-                        );
-                      } else {
-                        equipmentListGlobal.add({
-                          "name": p.name,
-                          "price": p.price,
-                          "image": p.imagePath,
-                        });
-                      }
+                
+IconButton(
+  icon: const Icon(Icons.playlist_add, color: Colors.grey),
+  onPressed: () => _showAddToListDialog(p),
+),
 
-                      // toggle اللون
-                      isInequipmentList = !isInequipmentList;
-                    });
+                  // onTap: () {
+                  //   setState(() {
+                  //     if (isInequipmentList) {
+                  //       equipmentListGlobal.removeWhere(
+                  //         (i) => i["name"] == p.name,
+                  //       );
+                  //     } else {
+                  //       equipmentListGlobal.add({
+                  //         "name": p.name,
+                  //         "price": p.price,
+                  //         "image": p.imagePath,
+                  //       });
+                  //     }
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          isInequipmentList
-                              ? "${p.name} added to equipment list"
-                              : "${p.name} removed from equipment list",
-                        ),
-                      ),
-                    );
-                  },
-                  child: Icon(
-                    Icons.bookmark_border, // أو playlist_add
-                    color: isInequipmentList ? Colors.blue : Colors.black,
-                    size: 26,
-                  ),
-                ),
+                  //     // toggle اللون
+                  //     isInequipmentList = !isInequipmentList;
+                  //   });
+
+                  //   ScaffoldMessenger.of(context).showSnackBar(
+                  //     SnackBar(
+                  //       content: Text(
+                  //         isInequipmentList
+                  //             ? "${p.name} added to equipment list"
+                  //             : "${p.name} removed from equipment list",
+                  //       ),
+                  //     ),
+                  //   );
+                  // },
+                  // child: Icon(
+                  //   Icons.playlist_add, // أو playlist_add
+                  //   color: isInequipmentList ? Colors.blue : Colors.black,
+                  //   size: 26,
+                  // ),
+                
               ],
             ),
           ),
@@ -885,11 +1039,138 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
       ),
     );
   }
+  void _showAddToListDialog(Product product) async {
+  try {
+    final lists = await EquipmentApiService.getSimpleLists();
+    if (lists.isEmpty) {
+      _showCreateListFirstDialog(product);
+      return;
+    }
 
+    final selectedList = await showDialog<EquipmentList>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Add to Equipment List"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ...lists.map((list) => ListTile(
+              title: Text(list.listName),
+              onTap: () => Navigator.pop(ctx, list),
+            )),
+            const Divider(),
+            ListTile(
+              title: const Text("+ Create New List"),
+              onTap: () => Navigator.pop(ctx, null),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedList != null) {
+      await EquipmentApiService.addItemToList(selectedList.id, product.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Added to list")),
+      );
+    } else {
+      _showCreateNewListDialog(product);
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("$e")),
+    );
+  }
+}
+
+void _showCreateNewListDialog(Product product) async {
+  final controller = TextEditingController();
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text("New List Name"),
+      content: TextField(controller: controller),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text("Create"),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true && controller.text.isNotEmpty) {
+    try {
+      await EquipmentApiService.createEquipmentList(controller.text);
+      final newLists = await EquipmentApiService.getSimpleLists();
+      final newList = newLists.firstWhere((l) => l.listName == controller.text);
+      await EquipmentApiService.addItemToList(newList.id, product.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("List created and item added")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$e")),
+      );
+    }
+  }
+}
+void _showCreateListFirstDialog(Product product) async {
+  final controller = TextEditingController();
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text("No Lists Found"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text("You don't have any equipment lists yet."),
+          const SizedBox(height: 16),
+          TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: "Enter list name",
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text("Create"),
+        ),
+      ],
+    ),
+  );
+  
+  if (confirmed == true && controller.text.isNotEmpty) {
+    try {
+      await EquipmentApiService.createEquipmentList(controller.text);
+      final newLists = await EquipmentApiService.getSimpleLists();
+      final newList = newLists.firstWhere((l) => l.listName == controller.text);
+      await EquipmentApiService.addItemToList(newList.id, product.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("List created and item added")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$e")),
+      );
+    }
+  }
+}
   // ---------------------
   // BUTTONS: Add / Rent / Notify Me
   // ---------------------
-  
+
   // ... كل المتغيرات
 
   Widget _buildNotifyButton(Product p) {
@@ -901,7 +1182,9 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: isNotified ? const Color.fromARGB(255, 238, 235, 235) : Colors.amber,
+              backgroundColor: isNotified
+                  ? const Color.fromARGB(255, 238, 235, 235)
+                  : Colors.amber,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: () async {
@@ -919,7 +1202,7 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
               setState(() {});
             },
             child: Text(
-              isNotified ? "Undo" : "Notify Me",
+              isNotified ? "Un Notify" : "Notify Me",
               style: TextStyle(
                 color: isNotified ? Colors.red : Colors.white,
                 fontWeight: FontWeight.bold,
@@ -931,9 +1214,8 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
     );
   }
 
-
   // Widget _buildNotifyButton(Product p) {
-    
+
   //    final isNotified = _notifyStatus[p.id] ?? false;
 
   // return SizedBox(
@@ -1005,7 +1287,7 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
   //     ),
   //   ),
   // );
-//}
+  //}
   Widget _buildActionButton(Product p) {
     // ✅ حالة 1: Out of Stock (stock == 0) و restock_date == null
     if (p.stock == 0 && p.restockDate == null) {
@@ -1067,13 +1349,14 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
       children: [
         // ---------- Add To Cart ----------
         Expanded(
-          flex: p.isRentable ? 3 : 1,
+          flex: 1,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               padding: EdgeInsets.symmetric(vertical: 14),
             ),
-            onPressed: () async {  //there is change by mohamed
+            onPressed: () async {
+              //there is change by mohamed
               final result = await _cartService.addToCart(
                 productId: p.id,
                 quantity: 1,
@@ -1099,34 +1382,35 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text("${p.name} added to cart ✅")),
                 );
-              } else { //there is change by mohamed
+              } else {
+                //there is change by mohamed
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(result['message'] ?? "Error")),
                 );
               }
             },
-        //     onPressed: () async { 
-        //        //there is change by mohamed
-        //        try{
-        //       final result = await _cartService.addToCart(
-        //         productId: p.id,
-        //         quantity: 1,
-        //         type: "sale",
-        //       );
+            //     onPressed: () async {
+            //        //there is change by mohamed
+            //        try{
+            //       final result = await _cartService.addToCart(
+            //         productId: p.id,
+            //         quantity: 1,
+            //         type: "sale",
+            //       );
 
-        //       if (result['success'] == true) {
-        //       ScaffoldMessenger.of(context).showSnackBar(
-        //         SnackBar(content: Text("${p.name} added to cart (Buy)")),
-        //       );
-        //     } else {
-        //       throw Exception(result['error']);
-        //     }
-        //   } catch (e) {
-        //     ScaffoldMessenger.of(context).showSnackBar(
-        //       SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
-        //     );
-        //   }
-        // },
+            //       if (result['success'] == true) {
+            //       ScaffoldMessenger.of(context).showSnackBar(
+            //         SnackBar(content: Text("${p.name} added to cart (Buy)")),
+            //       );
+            //     } else {
+            //       throw Exception(result['error']);
+            //     }
+            //   } catch (e) {
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
+            //     );
+            //   }
+            // },
             child: const Text(
               "Add To Cart",
               style: TextStyle(
@@ -1139,42 +1423,24 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
         ),
 
         // ---------- Rent (يظهر فقط لو isRentable == true) ----------
-      if (p.isRentable)
-       const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProductDetailsPage(
-                      productId: p.id,
-                      product: p,
-                      openRentTab: true,
-                    ),
-                  ),
-                );
-              },
-              child: const Text(
-                "Rent",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ),
-        ],
-      
+        // if (p.isRentable)
+        //  const SizedBox(width: 10),
+        //     Expanded(
+        //       flex: 2,
+        //         child: const Text(
+        //           "Available for Rent",
+        //           style: TextStyle(
+        //             color: Color.fromARGB(255, 89, 129, 248),
+        //             fontWeight: FontWeight.bold,
+        //             fontSize: 12,
+        //           ),
+        //         ),
+
+        //     ),
+      ],
     );
   }
-//#########################   comment by mohamed
+  //#########################   comment by mohamed
   // ---------------------
   // Search Results
   // ---------------------
@@ -1201,4 +1467,29 @@ final isInWishlist = wishlistProvider.isInWishlist(p.id);
   //     },
   //   );
   // }
+}
+
+class Skeleton extends StatelessWidget {
+  final double width;
+  final double height;
+  final BorderRadius borderRadius;
+
+  const Skeleton({
+    super.key,
+    required this.width,
+    required this.height,
+    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: borderRadius,
+      ),
+    );
+  }
 }
