@@ -167,9 +167,12 @@ void initState() {
             return Center(child: Text(snapshot.error.toString()));
           }
 
-          if (!snapshot.hasData) {
-            return const Center(child: Text('No order found'));
-          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+  return const Center(child: CircularProgressIndicator());
+}
+if (!snapshot.hasData) {
+  return const Center(child: Text('No order found'));
+}
           final order = snapshot.data!;
           final isOrderCancelled =
               order.status.toLowerCase() == 'cancelled'; // ✅ هنا

@@ -1,14 +1,11 @@
-import 'dart:convert';
-import 'dart:io';
+// register_services.dart
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
-import 'package:mime/mime.dart';
+import 'dart:convert';
 
 class ApiService {
-  static const String baseUrl = 'https://medconnect-one-pi.vercel.app/api/api/'; // استبدل ده بالـ URL بتاعك
+  static const String baseUrl = 'https://medconnect-one-pi.vercel.app';
 
-  // دالة التسجيل
-  static Future<Map<String, dynamic>> signUp({
+  Future<Map<String, dynamic>> register({
     required String fullName,
     required String email,
     required String password,
@@ -16,115 +13,90 @@ class ApiService {
     required String nationalId,
     required String phone,
     required String licenseNumber,
-    File? profileImage,
   }) async {
     try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('https://medconnect-one-pi.vercel.app/api/api/v1/doctor/register'), // عدل المسار حسب API بتاعك
-      );
-
-      // إضافة headers
-      request.headers.addAll({
+      final url = Uri.parse('$baseUrl/api/api/v1/doctor/register');
+      final headers = {
         'Accept': 'application/json',
-        // 'Content-Type': 'multipart/form-data', // http package بيضيفها تلقائياً
+        'Content-Type': 'application/json',
+      };
+      final body = jsonEncode({
+        'full_name': fullName,
+        'email': email,
+        'password': password,
+        'password_confirmation': password,
+        'address': address,
+        'national_id': nationalId,
+        'phone': phone,
+        'license_number': licenseNumber,
       });
 
-      // إضافة الحقول النصية
-      request.fields['full_name'] = fullName;
-      request.fields['email'] = email;
-      request.fields['password'] = password;
-      request.fields['address'] = address;
-      request.fields['national_id'] = nationalId;
-      request.fields['phone'] = phone;
-      request.fields['license_number'] = licenseNumber;
+      print('🔐 [register_services] register request: ${url.toString()}');
+      print('🔐 [register_services] request headers: $headers');
+      print('🔐 [register_services] request body: ${jsonEncode({
+        'full_name': fullName,
+        'email': email,
+        'password': '***hidden***',
+        'password_confirmation': '***hidden***',
+        'address': address,
+        'national_id': nationalId,
+        'phone': phone,
+        'license_number': licenseNumber,
+      })}');
 
-      // إضافة الصورة لو موجودة
-      if (profileImage != null) {
-        var mimeType = lookupMimeType(profileImage.path) ?? 'image/jpeg';
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'profile_image', // اسم الحقل اللي بيستقبل الصورة في الـ API
-            profileImage.path,
-            contentType: MediaType.parse(mimeType),
-          ),
-        );
+      final response = await http.post(url, headers: headers, body: body);
+      print('📥 [register_services] response status: ${response.statusCode}');
+      print('📥 [register_services] response body: ${response.body}');
+      final String rawBody = response.body;
+      dynamic responseData;
+      try {
+        responseData = jsonDecode(rawBody);
+      } catch (_) {
+        responseData = null;
       }
 
-      // إرسال الطلب
-      var streamedResponse = await request.send();
-var response = await http.Response.fromStream(streamedResponse);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final dynamic data = responseData is Map<String, dynamic> && responseData['data'] is Map<String, dynamic>
+            ? responseData['data']
+            : responseData;
+        final String? profileImageUrl = data is Map<String, dynamic>
+            ? (data['profile_image_url']?.toString() ?? data['profile_image']?.toString())
+            : null;
 
-// ========== طباعة الـ Response بالكامل ==========
-print('\n📥 ========== API RESPONSE ==========');
-print('📊 Status Code: ${response.statusCode}');
-print('📊 Status Message: ${response.reasonPhrase}');
-
-// طباعة الـ Headers
-print('\n📋 Headers:');
-response.headers.forEach((key, value) {
-  print('   $key: $value');
-});
-
-// طباعة الـ Body
-print('\n📄 Response Body:');
-print('────────────────────────────');
-
-try {
-  // محاولة تنسيق الـ JSON بشكل جميل
-  var responseData = json.decode(response.body);
-  print(JsonEncoder.withIndent('  ').convert(responseData));
-  
-  // طباعة ملخص سريع
-  print('\n📌 Summary:');
-  print('   Success: ${responseData['success'] ?? 'N/A'}');
-  print('   Message: ${responseData['message'] ?? 'N/A'}');
-  
-  if (responseData['errors'] != null) {
-    print('   Errors: ${responseData['errors']}');
-  }
-  if (responseData['data'] != null) {
-    print('   Data: ${responseData['data']}');
-  }
-  
-} catch (e) {
-  // لو مش JSON، اطبع النص العادي
-  print(response.body);
-}
-
-print('────────────────────────────');
-print('🔄 ========== END OF RESPONSE ==========\n');
-// ============================================
-
-var responseData = json.decode(response.body);
-
-if (response.statusCode == 200 || response.statusCode == 201) {
-  print(responseData['message'] ?? 'Registration successful'); // رسالة نجاح
-  return {
-    'success': true,
-    'data': responseData,
-  };
-} else {
-  print('❌ ERROR: Registration failed');
-  print('   Status Code: ${response.statusCode}');
-  print('   Message: ${responseData['message'] ?? 'Unknown error'}');
-  
-  return {
-    'success': false,
-    'message': responseData['message'] ?? 'Registration failed',
-    'errors': responseData['errors'] ?? {},
-  };
-}
+        return {
+          'success': true,
+          'message': responseData['message'] ?? 'Registration successful',
+          'data': responseData,
+          'profile_Image_Url': profileImageUrl,
+        };
+      } else if (response.statusCode == 422) {
+        return {
+          'success': false,
+          'statusCode': 422,
+          'message': responseData['message'] ?? 'Validation failed',
+          'errors': responseData['errors'] ?? {},
+        };
+      } else if (response.statusCode == 403 || response.statusCode == 401) {
+        return {
+          'success': false,
+          'statusCode': 403,
+          'error': responseData['error'] ?? 'Registration not permitted',
+        };
+      } else {
+        return {
+          'success': false,
+          'statusCode': response.statusCode,
+          'message': responseData is Map<String, dynamic>
+              ? (responseData['message']?.toString() ?? 'Unexpected error')
+              : rawBody,
+          'errors': responseData is Map<String, dynamic> ? (responseData['errors'] ?? {}) : {},
+        };
+      }
     } catch (e) {
-      print('\n💥 ========== NETWORK ERROR ==========');
-  print('❌ Error Type: ${e.runtimeType}');
-  print('❌ Error Message: $e');
-  print('❌ Stack Trace:');
-  print(StackTrace.current);
-  print('💥 ====================================\n');
+      print('❌ [register_services] exception: $e');
       return {
         'success': false,
-        'message': 'Network error: $e',
+        'message': 'Network error: ${e.toString()}',
       };
     }
   }

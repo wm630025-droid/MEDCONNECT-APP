@@ -1,7 +1,6 @@
 // ===================== Splash Screen =====================
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/introScreen.dart';
-import 'package:medconnect_app/main.dart';
 import 'package:medconnect_app/mainScreen.dart';
 import 'package:medconnect_app/services/api_service.dart';
 class MedConnectSplash extends StatefulWidget {
@@ -99,8 +98,4 @@ class _MedConnectSplashState extends State<MedConnectSplash>
       ),
     );
   }
-}
-void main(){
-  runApp(MyApp());
-    
 }

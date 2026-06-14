@@ -93,25 +93,25 @@ static String? _doctorName;
       var data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        if (data is Map<String, dynamic> && data['success'] == false) {
+          print('❌ Login returned success=false');
+          return {
+            'success': false,
+            'message': data['message'] ?? data['error'] ?? 'فشل تسجيل الدخول',
+            'error': data['error'] ?? data['message'],
+            'errors': data['errors'] ?? {},
+          };
+        }
+
         setDoctorData(data['data']);
         print('✅ Login success - status 200');
         print('📦 Data: ${data['data']}');
-       
-        
 
         // تخزين التوكن
         if (data['data'] != null && data['token'] != null) {
-          
           print('💾 Found token: ${data['token']}');
           await _saveToken(data['token']);
           await _saveUserData(data['data']);
-
-
-          //  _doctorId = data['data']['id'];
-          //  _doctorName = data['data']['fullname'];
-
-
-           
         } else {
           print('❌ Token not found in response!');
           print('🔍 data["data"]: ${data['data']}');
@@ -124,9 +124,22 @@ static String? _doctorName;
           'message': data['message'],
           'token': data['token'],
         };
+      } else if (response.statusCode == 422) {
+        print('❌ Login validation failed - status 422');
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Validation failed',
+          'errors': data['errors'] ?? {},
+          'error': data['message'] ?? data['error'] ?? 'Validation failed',
+        };
       } else {
         print('❌ Login failed - status: ${response.statusCode}');
-        return {'success': false, 'error': data['error'] ?? 'فشل تسجيل الدخول'};
+        return {
+          'success': false,
+          'message': data['message'] ?? data['error'] ?? 'فشل تسجيل الدخول',
+          'error': data['error'] ?? data['message'] ?? 'فشل تسجيل الدخول',
+          'errors': data['errors'] ?? {},
+        };
       }
     } catch (e) {
       print('❌ Exception: $e');

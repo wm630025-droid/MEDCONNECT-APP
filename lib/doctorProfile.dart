@@ -3,10 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:medconnect_app/services/Get_Doctor_Profile.dart';
 import 'package:medconnect_app/doctorAccount.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

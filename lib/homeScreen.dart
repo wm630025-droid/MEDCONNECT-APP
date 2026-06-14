@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _productsError;
 
   final ApiService _apiService = ApiService();
-    final CartService _cartService = CartService();
+    final CartService cartService = CartService();
 
   final ScrollController _scrollController = ScrollController();
 
@@ -325,36 +325,6 @@ Map<int, bool> _notifyStatus = {};
           children: [
             _buildSearchBar(),
             const SizedBox(height: 20),
-//####################################################################################
-// mohamed
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      showCategories = !showCategories;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: const [
-                        Text("Category"),
-                        Icon(Icons.keyboard_arrow_down),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (showCategories) _buildCategoryListApi(),
             isSearching ? _searchResultsApi() : _buildHomeSections(),
           ],
         ),
@@ -362,105 +332,206 @@ Map<int, bool> _notifyStatus = {};
     );
   }
 
-  Widget _searchResultsApi() {
-    if (searchResults.isEmpty) {
-      return const Text("No products found");
-    }
-
-    return GridView.builder(
-      itemCount: searchResults.length,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.60,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemBuilder: (context, index) {
-        final product = searchResults[index];
-
-        return Container(
-          color: Colors.white,
-          child: Column(
-            children: [
-              Image.network(
-                product.image.isNotEmpty ? product.image[0].image : "",
-                height: 120,
-                fit: BoxFit.cover,
-              ),
-              Text(product.name),
-              Text("${product.price} EGP"),
-            ],
-          ),
-        );
-      },
-    );
+ Widget _searchResultsApi() {
+  if (searchResults.isEmpty) {
+    return const Text("No products found");
   }
+
+  return GridView.builder(
+    itemCount: searchResults.length,
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 2,
+      childAspectRatio: 0.60,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+    ),
+    itemBuilder: (context, index) {
+      final product = searchResults[index];
+      final bool isRentable = product.is_rentable ?? false; // غيّر حسب اسم الخاصية الفعلي
+
+      return Container(
+        color: Colors.white,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.network(
+              product.image.isNotEmpty ? product.image[0].image : "",
+              height: 120,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                product.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                "${product.price} EGP",
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (isRentable)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  "Rentable",
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}
 //######################################################################################
   Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: TextField(
-        onChanged: (value) {   //there is change by mohamed
-          _searchProduct(value);
-        },
-        controller: _searchController,
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          hintText: "Search For Equipment",
-          icon: Icon(Icons.search),
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: TextField(
+              onChanged: (value) {
+                _searchProduct(value);
+              },
+              controller: _searchController,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: "Search For Equipment",
+                icon: Icon(Icons.search),
+              ),
+            ),
+          ),
         ),
-      ),
+        const SizedBox(width: 12),
+        InkWell(
+          onTap: () {
+            setState(() {
+              showCategories = !showCategories;
+            });
+                _showCategoriesTopSheet(); // استدعاء الدالة الجديدة
+
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.tune, color: Colors.white , size: 20),
+
+          ),
+        ),
+      ],
     );
   }
 //############################################################################################
 // mohamed
-  Widget _buildCategoryListApi() {
-    if (isLoadingCategoriesApi) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (categoriesApi.isEmpty) {
-      return const Text("No categories found");
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: categoriesApi.map((cat) {
-          return Row(
-            children: [
-              Checkbox(
-                value: selectedCategoryId == cat.id,
-                onChanged: (value) {
-                  setState(() {
-                    selectedCategoryId = (selectedCategoryId == cat.id)
-                        ? null
-                        : cat.id;
-                    showCategories = false;
-                  });
-
-                  // 🔥 فلترة من API
-                  _searchProduct(_searchController.text);
-                },
-              ),
-              Text(cat.name),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
+void _showCategoriesTopSheet() {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true, // النقر خارج النافذة يغلقها
+    barrierLabel: "Dismiss",
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, anim1, anim2) {
+      return Align(
+        alignment: Alignment.topCenter, // تظهر في أعلى المنتصف
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.only(top: 80, left: 20, right: 20),
+            width: MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.5,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: Text(
+                    'Select Category',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                const Divider(height: 1),
+                if (isLoadingCategoriesApi)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (categoriesApi.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: Text("No categories found")),
+                  )
+                else
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: categoriesApi.map((cat) {
+                        return CheckboxListTile(
+                          title: Text(cat.name),
+                          value: selectedCategoryId == cat.id,
+                          onChanged: (checked) {
+                            setState(() {
+                              selectedCategoryId = (selectedCategoryId == cat.id) ? null : cat.id;
+                              showCategories = false;
+                            });
+                            Navigator.of(context).pop(); // إغلاق النافذة
+                            _searchProduct(_searchController.text);
+                          },
+                          activeColor: const Color(0xFF0066FF),
+                          controlAffinity: ListTileControlAffinity.leading,
+                        );
+                      }).toList(),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (ctx, anim, _, child) {
+      return SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(anim),
+        child: child,
+      );
+    },
+  );
+}
+ 
 //##########################################################################################################
   // ---------------------
   // أقسام الصفحة الرئيسية
@@ -510,8 +581,8 @@ Map<int, bool> _notifyStatus = {};
       child: Column(
         children: [
           Container(
-            width: 70,
-            height: 70,
+            width: 60,
+            height: 40,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(35),

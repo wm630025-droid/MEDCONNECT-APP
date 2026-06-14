@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/services/password_service.dart';
+import 'package:medconnect_app/signinScreen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -431,10 +432,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   Center(
                     child: TextButton(
                       onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(
+                        Navigator.push(
                           context,
-                          '/signin',
-                          (route) => false,
+                          MaterialPageRoute(builder: (_) => const SignInScreen()),
                         );
                       },
                       child: const Text(

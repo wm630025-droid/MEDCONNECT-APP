@@ -90,7 +90,6 @@ List<CartItem> cartItemsGlobal = [];
                 imageUrl = firstImage['image']?.toString() ?? "";
               }
             }
-            // لو كانت String
             else if (imageField is String) {
               imageUrl = imageField;
             }

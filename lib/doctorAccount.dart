@@ -45,8 +45,6 @@ class doctorAccountPage extends StatelessWidget {
             
             ),
             const RecentOrdersSection(),
-            const DiscountsSection(),
-            const SavedListsTile(),
             const OldChatsSection(),
             const CustomRequestsSection(requestType: "", selectedType: "",),
           ],
@@ -295,33 +293,50 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
   int _lastPage = 1;
   bool _isLoading = false;
   bool _hasLoadedOnce = false;
+  String? _errorMessage; // متغير لتخزين رسالة الخطأ
 
   @override
   void initState() {
     super.initState();
     _loadOrders();
   }
+
   Future<void> _refreshOrders() async {
-  setState(() {
-    _orders = [];
-    _currentPage = 1;
-    _lastPage = 1;
-    _hasLoadedOnce = false;
-  });
-  await _loadOrders();
-}
+    setState(() {
+      _orders = [];
+      _currentPage = 1;
+      _lastPage = 1;
+      _hasLoadedOnce = false;
+      _errorMessage = null;
+    });
+    await _loadOrders();
+  }
 
   Future<void> _loadOrders() async {
-    final result = await OrderServices.fetchDoctorOrders(
-      page: _currentPage,
-      perPage: 5,
-    );
+    try {
+      final result = await OrderServices.fetchDoctorOrders(
+        page: _currentPage,
+        perPage: 5,
+      );
 
-    setState(() {
-      _orders.addAll(result['orders'] as List<Order>);
-      _lastPage = result['lastPage'] ?? 1;
-      _hasLoadedOnce = true;
-    });
+      // التحقق من صحة النتيجة
+      if (result.containsKey('orders') && result['orders'] is List) {
+        setState(() {
+          _orders.addAll(result['orders'] as List<Order>);
+          _lastPage = result['lastPage'] ?? 1;
+          _hasLoadedOnce = true;
+          _errorMessage = null;
+        });
+      } else {
+        throw Exception('Invalid response structure');
+      }
+    } catch (e) {
+      print('Error loading orders: $e');
+      setState(() {
+        _hasLoadedOnce = true;
+        _errorMessage = 'Failed to load orders. Please try again.';
+      });
+    }
   }
 
   Future<void> _loadMore() async {
@@ -329,22 +344,41 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
 
     setState(() {
       _isLoading = true;
-      _currentPage++;
     });
 
-    final result = await OrderServices.fetchDoctorOrders(
-      page: _currentPage,
-      perPage: 5,
-    );
+    final nextPage = _currentPage + 1;
+    try {
+      final result = await OrderServices.fetchDoctorOrders(
+        page: nextPage,
+        perPage: 5,
+      );
 
-    setState(() {
-      _orders.addAll(result['orders'] as List<Order>);
-      _isLoading = false;
-    });
+      if (result.containsKey('orders') && result['orders'] is List) {
+        setState(() {
+          _orders.addAll(result['orders'] as List<Order>);
+          _currentPage = nextPage;
+          _lastPage = result['lastPage'] ?? _lastPage;
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Invalid response structure');
+      }
+    } catch (e) {
+      print('Error loading more: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load more orders: $e')),
+        );
+      }
+    }
   }
 
   String _formatDate(DateTime? date) {
-    return '${date?.year.toString().padLeft(4, '0')}-${date?.month.toString().padLeft(2, '0')}-${date?.day.toString().padLeft(2, '0')}';
+    if (date == null) return 'No date';
+    return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -358,168 +392,158 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
+      body: RefreshIndicator(
+        onRefresh: _refreshOrders,
+        child: _buildBody(),
+      ),
+    );
+  }
 
-      body: _orders.isEmpty && !_hasLoadedOnce
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _orders.length + 1,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                
-                // 🔥 زرار View More في آخر العنصر
-                if (index == _orders.length) {
-                  if (_currentPage >= _lastPage) {
-                    return const SizedBox();
-                  }
+  Widget _buildBody() {
+    if (!_hasLoadedOnce) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-                  return Center(
-                    child: TextButton(
-                      onPressed: _isLoading ? null : _loadMore,
-                      child: _isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text('View More'),
-                    ),
-                  );
-                }
-
-                final order = _orders[index];
-
-               final productNames = order.items.isNotEmpty
-    ? order.items.map((item) => item.name).join(', ')
-    : 'No item details';
-
-                return GestureDetector(
-                 // في دالة onTap الخاصة ب item
-onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => OrderDetailsPage(orderId: order.id),
-    ),
-  ).then((_) {
-    // ✅ عند العودة، أعد تحميل البيانات
-    _refreshOrders();
-  });
-},
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 8)
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              order.invoiceNumber.isNotEmpty
-                                  ? order.invoiceNumber
-                                  : 'Order #${order.id}',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            Text(
-                              order.status,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: order.status.toLowerCase() == 'confirmed'
-                                    ? Colors.green
-                                    : order.status.toLowerCase() == 'cancelled' ||
-                                            order.status.toLowerCase() == 'canceled'
-                                        ? Colors.red
-                                        : Colors.orange,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Total: ${order.total.toStringAsFixed(2)}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Type: ${order.orderType}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 4),
-                      Text(
-  'Name: $productNames',
-  style: const TextStyle(fontSize: 14),
-),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Date: ${_formatDate(order.createdAt)}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Items: ${order.items.length}',
-                          style: const TextStyle(color: Colors.blue),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red, fontSize: 16),
+              textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _refreshOrders,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_orders.isEmpty) {
+      return const Center(child: Text('No orders found.'));
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: _orders.length + 1,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        // عنصر "View More" في النهاية
+        if (index == _orders.length) {
+          if (_currentPage >= _lastPage) {
+            return const SizedBox.shrink();
+          }
+          return Center(
+            child: TextButton(
+              onPressed: _isLoading ? null : _loadMore,
+              child: _isLoading
+                  ? const CircularProgressIndicator()
+                  : const Text('View More'),
+            ),
+          );
+        }
+
+        final order = _orders[index];
+        final productNames = order.items.isNotEmpty
+            ? order.items.map((item) => item.name).join(', ')
+            : 'No item details';
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => OrderDetailsPage(orderId: order.id),
+              ),
+            ).then((_) {
+              // تحديث البيانات عند العودة
+              _refreshOrders();
+            });
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 8)
+              ],
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      order.invoiceNumber.isNotEmpty
+                          ? order.invoiceNumber
+                          : 'Order #${order.id}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      order.status,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: order.status.toLowerCase() == 'confirmed'
+                            ? Colors.green
+                            : order.status.toLowerCase() == 'cancelled' ||
+                                    order.status.toLowerCase() == 'canceled'
+                                ? Colors.red
+                                : Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Total: ${order.total.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Type: ${order.orderType}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Name: $productNames',
+                  style: const TextStyle(fontSize: 14),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Date: ${_formatDate(order.createdAt)}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Items: ${order.items.length}',
+                  style: const TextStyle(color: Colors.blue),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
-
 
 // ================= DISCOUNTS =================
-class DiscountsSection extends StatelessWidget {
-  const DiscountsSection({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return sectionCard(
-      title: "Discounts For You",
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.secondary.withOpacity(.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(Icons.sell, color: AppColors.secondary),
-        ),
-        title: const Text("15% off on GE Healthcare",
-            style: TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: const Text("Expires in 5 days"),
-        trailing: const Text("Apply",
-            style: TextStyle(
-                color: AppColors.primary, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-}
 
 // ================= SAVED LISTS =================
-class SavedListsTile extends StatelessWidget {
-  const SavedListsTile({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return sectionCard(
-      title: "My Saved Lists",
-      child: ListTile(
-        leading: const Icon(Icons.list_alt),
-        title: const Text("2 Total Saved Lists",
-            style: TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: const Text("Tap to view your lists"),
-        trailing: const Icon(Icons.chevron_right),
-      ),
-    );
-  }
-}
 
 // ================= CHATS =================
 class OldChatsSection extends StatelessWidget {

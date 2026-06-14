@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medconnect_app/introScreen.dart';
 import 'package:medconnect_app/mainScreen.dart';
 import 'package:medconnect_app/signUpScreen.dart';
 import 'package:medconnect_app/forgotPasswordScreen.dart';
@@ -26,6 +27,7 @@ class _SignInScreenState extends State<SignInScreen> {
   // String _selectedRole = 'doctor'; // doctor, supplier, admin
   String? _emailError;
   String? _passwordError;
+  String? _generalError;
 
   final ApiService _apiService = ApiService();
 
@@ -37,66 +39,105 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _handleSignIn() async {
-    // 1. Validation
-    if (!_formKey.currentState!.validate()) {
-      setState(() {});
-      return;
-    }
-
-    // 2. Loading
-    setState((){
-      _emailError =null;
+    setState(() {
+      _emailError = null;
       _passwordError = null;
+      _generalError = null;
       _isLoading = true;
-    }) ;
+    });
 
-    // 3. API Call
     final result = await _apiService.login(
       email: _identifierController.text.trim(),
       password: _passwordController.text,
       role: 'doctor',
     );
 
-    // 4. Stop Loading
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    // 5. Handle Result
     if (result['success']) {
+      final successMessage = result['message']?.toString() ?? 'Sign in successfully';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('sign in succesfully'),
+          content: Text(successMessage),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
-      await Future.delayed(Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 300));
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => MainScreen()),
       );
     } else {
-      // ❌ فشل - نحدد الخطأ تحت أي حقل
-      final errorMessage = result['error'].toString().toLowerCase();
-      
-      setState(() {
-        if (errorMessage.contains('email') || errorMessage.contains('البريد')) {
-          _emailError = result['error'];
-        } else if (errorMessage.contains('password') || errorMessage.contains('كلمة المرور')) {
-          _passwordError = result['error'];
-        } else if (errorMessage.contains('credentials') || errorMessage.contains('بيانات')) {
-          // لو الخطأ عام (زي "incorrect credentials")
-          _emailError = 'Invalid email or password';
-          _passwordError = 'Invalid email or password';
-        } else {
-          // خطأ عام
-          _emailError = result['error'];
-      // _showErrorDialog(result['error']);
+      _setSignInErrors(result);
+    }
+  }
+
+  void _setSignInErrors(Map<String, dynamic> result) {
+    final errors = <String, dynamic>{};
+    if (result['errors'] is Map) {
+      errors.addAll(Map<String, dynamic>.from(result['errors']));
+    }
+
+    String? apiError = result['error']?.toString() ?? result['message']?.toString();
+    if (apiError != null && apiError.isEmpty) apiError = null;
+
+    String? emailError;
+    String? passwordError;
+    String? generalError;
+
+    if (errors.containsKey('email')) {
+      final emailErrors = errors['email'];
+      if (emailErrors is List && emailErrors.isNotEmpty) {
+        emailError = emailErrors.first.toString();
+      } else {
+        emailError = emailErrors?.toString();
+      }
+    }
+    if (errors.containsKey('password')) {
+      final passwordErrors = errors['password'];
+      if (passwordErrors is List && passwordErrors.isNotEmpty) {
+        passwordError = passwordErrors.first.toString();
+      } else {
+        passwordError = passwordErrors?.toString();
+      }
+    }
+
+    if (emailError == null && passwordError == null) {
+      if (errors.isNotEmpty) {
+        final unknownErrors = errors.entries.where(
+          (entry) => entry.key != 'email' && entry.key != 'password',
+        );
+        if (unknownErrors.isNotEmpty) {
+          final firstError = unknownErrors.first.value;
+          if (firstError is List && firstError.isNotEmpty) {
+            generalError = firstError.first.toString();
+          } else {
+            generalError = firstError?.toString();
+          }
         }
+      }
+
+      if (generalError == null && apiError != null) {
+        final lower = apiError.toLowerCase();
+        if (lower.contains('email') || lower.contains('البريد')) {
+          emailError = apiError;
+        } else if (lower.contains('password') || lower.contains('كلمة المرور')) {
+          passwordError = apiError;
+        } else {
+          generalError = apiError;
+        }
+      }
+    }
+
+    setState(() {
+      _emailError = emailError;
+      _passwordError = passwordError;
+      _generalError = generalError;
     });
   }
-    }
 
   // void _showErrorDialog(String message) {
   //   showDialog(
@@ -140,7 +181,9 @@ class _SignInScreenState extends State<SignInScreen> {
                         color: Colors.white,
                         size: 26,
                       ),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const IntroScreen()));
+                        }
                     ),
                     const SizedBox(width: 8),
                     Image.asset(
@@ -237,15 +280,6 @@ class _SignInScreenState extends State<SignInScreen> {
                             color:Colors.red,
                           ),
                         ),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return "Email is Required";
-                            if (!RegExp(
-                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                            ).hasMatch(v)) {
-                              return "Enter a valid email";
-                            }
-                            return null;
-                          },
                           onChanged: (_){
                             if(_emailError != null){
                               setState(() => _emailError=null);
@@ -272,7 +306,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 _obscurePassword
                                     ? Icons.visibility_off
                                     : Icons.visibility,
-                                color: const Color(0xFF0066FF),
+                                color: _passwordError != null ? Colors.red : const Color(0xFF0066FF),
                               ),
                               onPressed: () => setState(
                                 () => _obscurePassword = !_obscurePassword,
@@ -292,17 +326,7 @@ class _SignInScreenState extends State<SignInScreen> {
                               color: Colors.red,
                             )
                           ),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Password is Required';
-                            if (v.length < 8) return 'At least 8 characters';
-                            if (!RegExp(
-                              r'^(?=.*[A-Za-z])(?=.*[\d@#$!%*?&]).+$',
-                            ).hasMatch(v)) {
-                              return 'Letters + numbers/symbols';
-                            }
-                            return null;
-                          },
-                            onChanged: (_){
+                          onChanged: (_){
                             if(_passwordError != null){
                               setState(() => _passwordError=null);
                             }
@@ -360,6 +384,16 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                       ),
                     ),
+
+                    if (_generalError != null && _generalError!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16, top: 16),
+                        child: Text(
+                          _generalError!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red, fontSize: 14),
+                        ),
+                      ),
 
                     const SizedBox(height: 24),
 
