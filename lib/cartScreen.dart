@@ -55,6 +55,10 @@ List<CartItem> cartItemsGlobal = [];
   void initState() {
     super.initState();
     loadCart();
+      print('🛒 Cart items count: ${cartItemsGlobal.length}');
+  for (var item in cartItemsGlobal) {
+    print('   - ${item.name} | Qty: ${item.quantity} | Price: ${item.price}');
+  }
   }
 
  Future<void> loadCart() async {

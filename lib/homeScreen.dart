@@ -10,7 +10,8 @@ import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/doctorAccount.dart';
 import 'package:medconnect_app/providers/wishlist_provider.dart';
 import 'package:medconnect_app/services/api_service.dart';
-import 'package:medconnect_app/services/equipment_service.dart' as EquipmentApiService;
+import 'package:medconnect_app/services/equipment_service.dart'
+    as EquipmentApiService;
 import 'package:medconnect_app/services/search_services.dart';
 import 'package:provider/provider.dart';
 import '../models/Search_model.dart';
@@ -68,17 +69,17 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _productsError;
 
   final ApiService _apiService = ApiService();
-    final CartService cartService = CartService();
+  final CartService cartService = CartService();
 
   final ScrollController _scrollController = ScrollController();
 
   Map<int, bool> _notifyStatus = {};
 
-Timer? _pollTimer;
-bool _forceRefresh = false;
+  Timer? _pollTimer;
+  bool _forceRefresh = false;
 
-bool _forceRefreshCategories = false;
-Timer? _categoriesPollTimer;
+  bool _forceRefreshCategories = false;
+  Timer? _categoriesPollTimer;
 
   //#################################
   @override
@@ -86,7 +87,7 @@ Timer? _categoriesPollTimer;
     super.initState();
     _loadCategories();
     fetchCategoriesApi(); //mohamed only
-_startPolling();
+    _startPolling();
     _startCategoriesPolling();
     _loadProducts();
     _scrollController.addListener(() {
@@ -98,16 +99,18 @@ _startPolling();
       }
     });
   }
-void _startPolling() {
-  _pollTimer = Timer.periodic(Duration(seconds: 30), (timer) {
-    if (mounted) {
-      _forceRefresh = true;
-      _loadProducts(forceRefresh: true).then((_) {
-        _forceRefresh = false;
-      });
-    }
-  });
-}
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(Duration(seconds: 60), (timer) {
+      if (mounted) {
+        _forceRefresh = true;
+        _loadProducts(forceRefresh: true).then((_) {
+          _forceRefresh = false;
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -115,21 +118,21 @@ void _startPolling() {
     _categoriesPollTimer?.cancel();
     super.dispose();
   }
-  
 
-  Future<void> _loadProducts({bool loadMore = false, bool forceRefresh = false}) async {
-     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh) {
-    setState(() {
-      _allProducts = ApiService.cachedProducts!;
-      displayedProducts = List.from(_allProducts);
-      _isLoadingProducts = false;
-      _isLoadingMore = false;
-    });
-    return;
-  }
-    
-    
-    
+  Future<void> _loadProducts({
+    bool loadMore = false,
+    bool forceRefresh = false,
+  }) async {
+    if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh) {
+      setState(() {
+        _allProducts = ApiService.cachedProducts!;
+        displayedProducts = List.from(_allProducts);
+        _isLoadingProducts = false;
+        _isLoadingMore = false;
+      });
+      return;
+    }
+
     if (ApiService.token == null) {
       setState(() {
         _productsError = 'Please login first';
@@ -188,17 +191,17 @@ void _startPolling() {
   }
 
   Future<void> _loadCategories({bool forceRefresh = false}) async {
+    if (ApiService.cachedCategories != null &&
+        !forceRefresh &&
+        !_forceRefreshCategories) {
+      setState(() {
+        _categories = ApiService.cachedCategories!;
+        _isLoadingCategories = false;
+        _categoriesError = null;
+      });
+      return;
+    }
 
-
-      if (ApiService.cachedCategories != null && !forceRefresh && !_forceRefreshCategories) {
-    setState(() {
-      _categories = ApiService.cachedCategories!;
-      _isLoadingCategories = false;
-      _categoriesError = null;
-    });
-    return;
-  }
-  
     // ✅ التأكد من وجود توكن
     if (ApiService.token == null) {
       setState(() {
@@ -230,16 +233,17 @@ void _startPolling() {
       });
     }
   }
-void _startCategoriesPolling() {
-  _categoriesPollTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-    if (mounted) {
-      _forceRefreshCategories = true;
-      _loadCategories(forceRefresh: true).then((_) {
-        _forceRefreshCategories = false;
-      });
-    }
-  });
-}
+
+  void _startCategoriesPolling() {
+    _categoriesPollTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      if (mounted) {
+        _forceRefreshCategories = true;
+        _loadCategories(forceRefresh: true).then((_) {
+          _forceRefreshCategories = false;
+        });
+      }
+    });
+  }
   //######################
 
   // البحث
@@ -372,89 +376,97 @@ void _startCategoriesPolling() {
         ],
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSearchBar(),
-            const SizedBox(height: 20),
-            isSearching ? _searchResultsApi() : _buildHomeSections(),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSearchBar(),
+              const SizedBox(height: 20),
+              
+              isSearching ? _searchResultsApi() : _buildHomeSections(),
+            ],
+          ),
         ),
       ),
     );
   }
 
- Widget _searchResultsApi() {
-  if (searchResults.isEmpty) {
-    return const Text("No products found");
+  Widget _searchResultsApi() {
+    if (searchResults.isEmpty) {
+      return const Text("No products found");
+    }
+
+    return GridView.builder(
+      itemCount: searchResults.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.60,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemBuilder: (context, index) {
+        final product = searchResults[index];
+        final bool isRentable =
+            product.is_rentable ?? false; // غيّر حسب اسم الخاصية الفعلي
+
+        return Container(
+          color: Colors.white,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Image.network(
+                product.image.isNotEmpty ? product.image[0].image : "",
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  product.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  "${product.price} EGP",
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (isRentable)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    "Rentable",
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  return GridView.builder(
-    itemCount: searchResults.length,
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      childAspectRatio: 0.60,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-    ),
-    itemBuilder: (context, index) {
-      final product = searchResults[index];
-      final bool isRentable = product.is_rentable ?? false; // غيّر حسب اسم الخاصية الفعلي
-
-      return Container(
-        color: Colors.white,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Image.network(
-              product.image.isNotEmpty ? product.image[0].image : "",
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                product.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                "${product.price} EGP",
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (isRentable)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  "Rentable",
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-          ],
-        ),
-      );
-    },
-  );
-}
-//######################################################################################
+  //######################################################################################
   Widget _buildSearchBar() {
     return Row(
       children: [
@@ -484,8 +496,7 @@ void _startCategoriesPolling() {
             setState(() {
               showCategories = !showCategories;
             });
-                _showCategoriesTopSheet(); // استدعاء الدالة الجديدة
-
+            _showCategoriesTopSheet(); // استدعاء الدالة الجديدة
           },
           borderRadius: BorderRadius.circular(12),
           child: Container(
@@ -494,99 +505,112 @@ void _startCategoriesPolling() {
               color: Colors.blue,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.tune, color: Colors.white , size: 20),
-
+            child: const Icon(Icons.tune, color: Colors.white, size: 20),
           ),
         ),
       ],
     );
   }
-//############################################################################################
-// mohamed
-void _showCategoriesTopSheet() {
-  showGeneralDialog(
-    context: context,
-    barrierDismissible: true, // النقر خارج النافذة يغلقها
-    barrierLabel: "Dismiss",
-    transitionDuration: const Duration(milliseconds: 200),
-    pageBuilder: (context, anim1, anim2) {
-      return Align(
-        alignment: Alignment.topCenter, // تظهر في أعلى المنتصف
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            margin: const EdgeInsets.only(top: 80, left: 20, right: 20),
-            width: MediaQuery.of(context).size.width * 0.9,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.5,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  child: Text(
-                    'Select Category',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+
+  //############################################################################################
+  // mohamed
+  void _showCategoriesTopSheet() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true, // النقر خارج النافذة يغلقها
+      barrierLabel: "Dismiss",
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (context, anim1, anim2) {
+        return Align(
+          alignment: Alignment.topCenter, // تظهر في أعلى المنتصف
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              margin: const EdgeInsets.only(top: 80, left: 20, right: 20),
+              width: MediaQuery.of(context).size.width * 0.9,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.5,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
                   ),
-                ),
-                const Divider(height: 1),
-                if (isLoadingCategoriesApi)
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (categoriesApi.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: Text("No categories found")),
-                  )
-                else
-                  Flexible(
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: categoriesApi.map((cat) {
-                        return CheckboxListTile(
-                          title: Text(cat.name),
-                          value: selectedCategoryId == cat.id,
-                          onChanged: (checked) {
-                            setState(() {
-                              selectedCategoryId = (selectedCategoryId == cat.id) ? null : cat.id;
-                              showCategories = false;
-                            });
-                            Navigator.of(context).pop(); // إغلاق النافذة
-                            _searchProduct(_searchController.text);
-                          },
-                          activeColor: const Color(0xFF0066FF),
-                          controlAffinity: ListTileControlAffinity.leading,
-                        );
-                      }).toList(),
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    child: Text(
+                      'Select Category',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
-              ],
+                  const Divider(height: 1),
+                  if (isLoadingCategoriesApi)
+                    const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (categoriesApi.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(child: Text("No categories found")),
+                    )
+                  else
+                    Flexible(
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: categoriesApi.map((cat) {
+                          return CheckboxListTile(
+                            title: Text(cat.name),
+                            value: selectedCategoryId == cat.id,
+                            onChanged: (checked) {
+                              setState(() {
+                                selectedCategoryId =
+                                    (selectedCategoryId == cat.id)
+                                    ? null
+                                    : cat.id;
+                                showCategories = false;
+                              });
+                              Navigator.of(context).pop(); // إغلاق النافذة
+                              _searchProduct(_searchController.text);
+                            },
+                            activeColor: const Color(0xFF0066FF),
+                            controlAffinity: ListTileControlAffinity.leading,
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-    transitionBuilder: (ctx, anim, _, child) {
-      return SlideTransition(
-        position: Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(anim),
-        child: child,
-      );
-    },
-  );
-}
- 
-//##########################################################################################################
+        );
+      },
+      transitionBuilder: (ctx, anim, _, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, -1),
+            end: Offset.zero,
+          ).animate(anim),
+          child: child,
+        );
+      },
+    );
+  }
+
+  //##########################################################################################################
   // ---------------------
   // أقسام الصفحة الرئيسية
   // ---------------------
@@ -611,16 +635,48 @@ void _showCategoriesTopSheet() {
   Widget _buildBanner() {
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          image: const DecorationImage(
-            image: AssetImage("assets/images/intro_backGround.png"),
-            fit: BoxFit.cover,
-          ),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // الخلفية
+            Image.asset(
+              'assets/images/intro_BackGround.png',
+              fit: BoxFit.cover,
+              color: const Color.fromRGBO(0, 0, 0, 0.7),
+              colorBlendMode: BlendMode.darken,
+            ),
+
+            // المحتوى
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // اللوجو
+                Image.asset(
+                  "assets/images/logoPNG.png",
+                  width: 220,
+                  fit: BoxFit.contain,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
+
+    // return AspectRatio(
+    //   aspectRatio: 16 / 9,
+    //   child: Container(
+    //     decoration: BoxDecoration(
+    //       borderRadius: BorderRadius.circular(12),
+    //       image: const DecorationImage(
+    //         image: AssetImage("assets/images/intro_backGround.png"),
+    //         fit: BoxFit.cover,
+    //       ),
+    //     ),
+    //   ),
+    // );
   }
 
   Widget _categoryItem({required Category category}) {
@@ -636,8 +692,8 @@ void _showCategoriesTopSheet() {
       child: Column(
         children: [
           Container(
-            width: 60,
-            height: 40,
+            width: 70,
+            height: 70,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
@@ -653,8 +709,8 @@ void _showCategoriesTopSheet() {
               borderRadius: BorderRadius.circular(10),
               child: Image.network(
                 category.image,
-                width: 60,
-                height: 60,
+                width: 65,
+                height: 65,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return const Icon(
@@ -680,23 +736,31 @@ void _showCategoriesTopSheet() {
   Widget buildCategories() {
     if (_isLoadingCategories) {
       return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(
-          2, // ✅ عدد الـ skeleton categories
-          (index) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Column(
-              children: [
-                Skeleton(width: 70, height: 70, borderRadius: BorderRadius.circular(12)),
-                const SizedBox(height: 8),
-                Skeleton(width: 60, height: 12, borderRadius: BorderRadius.circular(4)),
-              ],
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(
+            2, // ✅ عدد الـ skeleton categories
+            (index) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Column(
+                children: [
+                  Skeleton(
+                    width: 70,
+                    height: 70,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  const SizedBox(height: 8),
+                  Skeleton(
+                    width: 60,
+                    height: 12,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
       // return const Center(
       //   child: Padding(
       //     padding: EdgeInsets.all(16.0),
@@ -757,23 +821,22 @@ void _showCategoriesTopSheet() {
   // Grid Products
   // ---------------------
   Widget _featuredGrid() {
-
-      if (_isLoadingProducts && _allProducts.isEmpty) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.65,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: 4, // ✅ عدد الـ skeleton cards
-      itemBuilder: (context, index) {
-        return _skeletonProductCard();
-      },
-    );
-  }
+    if (_isLoadingProducts && _allProducts.isEmpty) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.50,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: 4, // ✅ عدد الـ skeleton cards
+        itemBuilder: (context, index) {
+          return _skeletonProductCard();
+        },
+      );
+    }
 
     // if (_isLoadingProducts && _allProducts.isEmpty) {
     //   return const Center(child: CircularProgressIndicator());
@@ -811,7 +874,7 @@ void _showCategoriesTopSheet() {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.65,
+            childAspectRatio: 0.50,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
@@ -827,50 +890,68 @@ void _showCategoriesTopSheet() {
       ],
     );
   }
-Widget _skeletonProductCard() {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // صورة
-        Skeleton(
-          width: double.infinity,
-          height: MediaQuery.of(context).size.height * 0.22,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        const SizedBox(height: 8),
-        // اسم المنتج
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Skeleton(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
-        ),
-        const SizedBox(height: 8),
-        // اسم المورد
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Skeleton(width: 100, height: 12, borderRadius: BorderRadius.circular(4)),
-        ),
-        const SizedBox(height: 8),
-        // السعر
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Skeleton(width: 80, height: 14, borderRadius: BorderRadius.circular(4)),
-        ),
-        const SizedBox(height: 8),
-        // زر
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Skeleton(width: double.infinity, height: 36, borderRadius: BorderRadius.circular(8)),
-        ),
-        const SizedBox(height: 8),
-      ],
-    ),
-  );
-}
+
+  Widget _skeletonProductCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // صورة
+          Skeleton(
+            width: double.infinity,
+            height: MediaQuery.of(context).size.height * 0.22,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          const SizedBox(height: 8),
+          // اسم المنتج
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Skeleton(
+              width: double.infinity,
+              height: 14,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // اسم المورد
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Skeleton(
+              width: 100,
+              height: 12,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // السعر
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Skeleton(
+              width: 80,
+              height: 14,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // زر
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Skeleton(
+              width: double.infinity,
+              height: 36,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
   // ---------------------
   // PRODUCT CARD
   // ---------------------
@@ -1001,8 +1082,7 @@ Widget _skeletonProductCard() {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  )
-                  
+                  ),
                 ),
               if (p.isRentable && p.stock > 0)
                 Padding(
@@ -1059,46 +1139,44 @@ Widget _skeletonProductCard() {
                 // const SizedBox(width: 8),
 
                 // 📋 Equipment List
-                
-IconButton(
-  icon: const Icon(Icons.playlist_add, color: Colors.grey),
-  onPressed: () => _showAddToListDialog(p),
-),
+                IconButton(
+                  icon: const Icon(Icons.playlist_add, color: Colors.grey),
+                  onPressed: () => _showAddToListDialog(p),
+                ),
 
-                  // onTap: () {
-                  //   setState(() {
-                  //     if (isInequipmentList) {
-                  //       equipmentListGlobal.removeWhere(
-                  //         (i) => i["name"] == p.name,
-                  //       );
-                  //     } else {
-                  //       equipmentListGlobal.add({
-                  //         "name": p.name,
-                  //         "price": p.price,
-                  //         "image": p.imagePath,
-                  //       });
-                  //     }
+                // onTap: () {
+                //   setState(() {
+                //     if (isInequipmentList) {
+                //       equipmentListGlobal.removeWhere(
+                //         (i) => i["name"] == p.name,
+                //       );
+                //     } else {
+                //       equipmentListGlobal.add({
+                //         "name": p.name,
+                //         "price": p.price,
+                //         "image": p.imagePath,
+                //       });
+                //     }
 
-                  //     // toggle اللون
-                  //     isInequipmentList = !isInequipmentList;
-                  //   });
+                //     // toggle اللون
+                //     isInequipmentList = !isInequipmentList;
+                //   });
 
-                  //   ScaffoldMessenger.of(context).showSnackBar(
-                  //     SnackBar(
-                  //       content: Text(
-                  //         isInequipmentList
-                  //             ? "${p.name} added to equipment list"
-                  //             : "${p.name} removed from equipment list",
-                  //       ),
-                  //     ),
-                  //   );
-                  // },
-                  // child: Icon(
-                  //   Icons.playlist_add, // أو playlist_add
-                  //   color: isInequipmentList ? Colors.blue : Colors.black,
-                  //   size: 26,
-                  // ),
-                
+                //   ScaffoldMessenger.of(context).showSnackBar(
+                //     SnackBar(
+                //       content: Text(
+                //         isInequipmentList
+                //             ? "${p.name} added to equipment list"
+                //             : "${p.name} removed from equipment list",
+                //       ),
+                //     ),
+                //   );
+                // },
+                // child: Icon(
+                //   Icons.playlist_add, // أو playlist_add
+                //   color: isInequipmentList ? Colors.blue : Colors.black,
+                //   size: 26,
+                // ),
               ],
             ),
           ),
@@ -1106,134 +1184,140 @@ IconButton(
       ),
     );
   }
-  void _showAddToListDialog(Product product) async {
-  try {
-    final lists = await EquipmentApiService.getSimpleLists();
-    if (lists.isEmpty) {
-      _showCreateListFirstDialog(product);
-      return;
-    }
 
-    final selectedList = await showDialog<EquipmentList>(
+  void _showAddToListDialog(Product product) async {
+    try {
+      final lists = await EquipmentApiService.getSimpleLists();
+      if (lists.isEmpty) {
+        _showCreateListFirstDialog(product);
+        return;
+      }
+
+      final selectedList = await showDialog<EquipmentList>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Add to Equipment List"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...lists.map(
+                (list) => ListTile(
+                  title: Text(list.listName),
+                  onTap: () => Navigator.pop(ctx, list),
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                title: const Text("+ Create New List"),
+                onTap: () => Navigator.pop(ctx, null),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (selectedList != null) {
+        await EquipmentApiService.addItemToList(selectedList.id, product.id);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Added to list")));
+      } else {
+        _showCreateNewListDialog(product);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$e")));
+    }
+  }
+
+  void _showCreateNewListDialog(Product product) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Add to Equipment List"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ...lists.map((list) => ListTile(
-              title: Text(list.listName),
-              onTap: () => Navigator.pop(ctx, list),
-            )),
-            const Divider(),
-            ListTile(
-              title: const Text("+ Create New List"),
-              onTap: () => Navigator.pop(ctx, null),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (selectedList != null) {
-      await EquipmentApiService.addItemToList(selectedList.id, product.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Added to list")),
-      );
-    } else {
-      _showCreateNewListDialog(product);
-    }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("$e")),
-    );
-  }
-}
-
-void _showCreateNewListDialog(Product product) async {
-  final controller = TextEditingController();
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text("New List Name"),
-      content: TextField(controller: controller),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text("Create"),
-        ),
-      ],
-    ),
-  );
-  if (confirmed == true && controller.text.isNotEmpty) {
-    try {
-      await EquipmentApiService.createEquipmentList(controller.text);
-      final newLists = await EquipmentApiService.getSimpleLists();
-      final newList = newLists.firstWhere((l) => l.listName == controller.text);
-      await EquipmentApiService.addItemToList(newList.id, product.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("List created and item added")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("$e")),
-      );
-    }
-  }
-}
-void _showCreateListFirstDialog(Product product) async {
-  final controller = TextEditingController();
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text("No Lists Found"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text("You don't have any equipment lists yet."),
-          const SizedBox(height: 16),
-          TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              hintText: "Enter list name",
-              border: OutlineInputBorder(),
-            ),
+        title: const Text("New List Name"),
+        content: TextField(controller: controller),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Create"),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text("Create"),
-        ),
-      ],
-    ),
-  );
-  
-  if (confirmed == true && controller.text.isNotEmpty) {
-    try {
-      await EquipmentApiService.createEquipmentList(controller.text);
-      final newLists = await EquipmentApiService.getSimpleLists();
-      final newList = newLists.firstWhere((l) => l.listName == controller.text);
-      await EquipmentApiService.addItemToList(newList.id, product.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("List created and item added")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("$e")),
-      );
+    );
+    if (confirmed == true && controller.text.isNotEmpty) {
+      try {
+        await EquipmentApiService.createEquipmentList(controller.text);
+        final newLists = await EquipmentApiService.getSimpleLists();
+        final newList = newLists.firstWhere(
+          (l) => l.listName == controller.text,
+        );
+        await EquipmentApiService.addItemToList(newList.id, product.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("List created and item added")),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("$e")));
+      }
     }
   }
-}
+
+  void _showCreateListFirstDialog(Product product) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("No Lists Found"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("You don't have any equipment lists yet."),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: "Enter list name",
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Create"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && controller.text.isNotEmpty) {
+      try {
+        await EquipmentApiService.createEquipmentList(controller.text);
+        final newLists = await EquipmentApiService.getSimpleLists();
+        final newList = newLists.firstWhere(
+          (l) => l.listName == controller.text,
+        );
+        await EquipmentApiService.addItemToList(newList.id, product.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("List created and item added")),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("$e")));
+      }
+    }
+  }
   // ---------------------
   // BUTTONS: Add / Rent / Notify Me
   // ---------------------
@@ -1281,95 +1365,25 @@ void _showCreateListFirstDialog(Product product) async {
     );
   }
 
-  // Widget _buildNotifyButton(Product p) {
 
-  //    final isNotified = _notifyStatus[p.id] ?? false;
-
-  // return SizedBox(
-  //    width: double.infinity,
-  //   child: ElevatedButton(
-  //     style: ElevatedButton.styleFrom(
-  //       backgroundColor: isNotified ? const Color.fromARGB(255, 240, 234, 235) : Colors.amber,
-  //     ),
-  //     onPressed: () async {
-  //       if (isNotified) {
-  //         // ✅ المنتج في الـ list → ندوس Undo → نطلبه undo من API
-  //         await _apiService.undoRestockNotification(p.id);
-  //         setState(() => _notifyStatus[p.id] = false);
-  //         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Notification cancelled')));
-  //       } else {
-  //         // ✅ المنتج مش في الـ list → نطلب Notify Me
-  //         await _apiService.requestRestockNotification(p.id);
-  //         setState(() => _notifyStatus[p.id] = true);
-  //         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Notification requested!')));
-  //       }
-  //     },
-  //     child: Text(isNotified ? "Undo" : "Notify Me"),
-  //   ),
-  // );
-  // final isNotified = _notifyStatus[p.id] ?? false;
-
-  // return SizedBox(
-  //   width: double.infinity,
-  //   child: ElevatedButton(
-  //     style: ElevatedButton.styleFrom(
-  //       backgroundColor: isNotified ? Colors.red.shade100 : Colors.amber,
-  //       padding: const EdgeInsets.symmetric(vertical: 14),
-  //     ),
-  //     onPressed: () async {
-  //       if (isNotified) {
-  //         final confirm = await showDialog<bool>(
-  //           context: context,
-  //           builder: (ctx) => AlertDialog(
-  //             title: const Text('Cancel Notification'),
-  //             content: const Text('Are you sure you want to cancel this notification?'),
-  //             actions: [
-  //               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-  //               TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes', style: TextStyle(color: Colors.red))),
-  //             ],
-  //           ),
-  //         );
-  //         if (confirm != true) return;
-
-  //         try {
-  //           await _apiService.undoRestockNotification(p.id);
-  //           setState(() => _notifyStatus[p.id] = false);
-  //           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification cancelled')));
-  //         } catch (e) {
-  //           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))));
-  //         }
-  //       } else {
-  //         try {
-  //           await _apiService.requestRestockNotification(p.id);
-  //           setState(() => _notifyStatus[p.id] = true);
-  //           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification requested!')));
-  //         } catch (e) {
-  //           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))));
-  //         }
-  //       }
-  //     },
-  //     child: Text(
-  //       isNotified ? "Undo" : "Notify Me",
-  //       style: TextStyle(color: isNotified ? Colors.red : Colors.black, fontWeight: FontWeight.bold),
-  //     ),
-  //   ),
-  // );
-  //}
   Widget _buildActionButton(Product p) {
     // ✅ حالة 1: Out of Stock (stock == 0) و restock_date == null
     if (p.stock == 0 && p.restockDate == null) {
       return SizedBox(
         width: double.infinity,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade400,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            disabledBackgroundColor: Colors.grey.shade400,
-          ),
-          onPressed: null, // disabled
-          child: const Text(
-            "Out of Stock",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        child: Expanded(
+          flex: 1,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey.shade400,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              disabledBackgroundColor: Colors.grey.shade400,
+            ),
+            onPressed: null, // disabled
+            child: const Text(
+              "Out of Stock",
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       );

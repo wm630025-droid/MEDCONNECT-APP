@@ -57,8 +57,11 @@ Future<List<EquipmentList>> getAllEquipmentLists() async {
     headers: headers,
   );
   if (response.statusCode == 200) {
+     print('Response Body#######################: ${response.body}'); // ✅ Debug print
+    print('Response Status: ${response.statusCode}');
     final Map<String, dynamic> data = json.decode(response.body);
     final List<dynamic> listsData = data['data'];
+    print('Decoded Data: $data'); // ✅ Debug print
     return listsData.map((json) => EquipmentList.fromJson(json)).toList();
   } else {
     throw Exception('Error fetching lists: ${response.statusCode}');
@@ -89,8 +92,12 @@ Future<EquipmentList> getEquipmentListById(int listId) async {
     headers: headers,
   );
   if (response.statusCode == 200) {
+    // ✅ Debug print
+    
     final Map<String, dynamic> data = json.decode(response.body);
+    print('Decoded Data: $data'); // ✅ Debug print
     return EquipmentList.fromJson(data['data']);
+    
   } else {
     throw Exception('Error fetching list by id: ${response.statusCode}');
   }
@@ -150,27 +157,33 @@ Future<bool> isProductInList(int listId, int productId) async {
   return false;
 }
 // 8. PUT update list name
- Future<void> updateEquipmentListName(int listId, String newName) async {
+  Future<void> updateEquipmentListName(int listId, String newName, {bool isDefault = false}) async {
   final headers = await _getHeaders();
-  final response = await http.put(
-    Uri.parse('$baseUrl/equipment-list/$listId'),
+  final response = await http.post(
+    Uri.parse('$baseUrl/equipment-list/$listId/update'),
     headers: headers,
-    body: jsonEncode({"list_name": newName}),
+    body: jsonEncode({
+      "list_name": newName,
+      "is_default": isDefault,
+    }),
   );
-  print('Update List Name Response: ${response.statusCode} - ${response.body}');
+  print('📦 Update List Response (${response.statusCode}): ${response.body}');
   if (response.statusCode != 200) {
-    throw Exception('Failed to update list name: ${response.statusCode}');
+    final error = json.decode(response.body);
+    throw Exception(error['message'] ?? 'Failed to update list name');
   }
 }
 // 9. DELETE remove item from list
- Future<void> removeItemFromList(int listId, int itemId) async {
+Future<void> removeItemFromList(int listId, int productId) async {
   final headers = await _getHeaders();
   final response = await http.delete(
-    Uri.parse('$baseUrl/equipment-list/$listId/remove-item/$itemId'),
+    Uri.parse('$baseUrl/equipment-list/$listId/remove-item/$productId'),
     headers: headers,
+    body: jsonEncode({"product_id": productId.toString()}),
   );
-  print('Remove Item Response: ${response.statusCode} - ${response.body}');
+  print('📦 Remove Item Response (${response.statusCode}): ${response.body}');
   if (response.statusCode != 200) {
-    throw Exception('Failed to remove item: ${response.statusCode}');
+    final error = json.decode(response.body);
+    throw Exception(error['message'] ?? 'Failed to remove item');
   }
 }

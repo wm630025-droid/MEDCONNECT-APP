@@ -14,7 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiService.loadToken();
 
-final prefs = await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
   final userDataString = prefs.getString('user_data');
   if (userDataString != null) {
     final userData = jsonDecode(userDataString);
