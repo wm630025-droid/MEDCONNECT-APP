@@ -609,21 +609,21 @@ setState((){
     );
   }
 
-  Widget _rejectedButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton(
-            onPressed: null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey,
-            ),
-            child: const Text("Rejected", style: TextStyle(color: Colors.white)),
-          ),
-        ),
-      ],
-    );
-  }
+  // Widget _rejectedButtons() {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: ElevatedButton(
+  //           onPressed: null,
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Colors.grey,
+  //           ),
+  //           child: const Text("Rejected", style: TextStyle(color: Colors.white)),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 }
   // Widget _activeButtons(BuildContext context) {
   //   return Row(
