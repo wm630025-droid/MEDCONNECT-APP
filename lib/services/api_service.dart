@@ -627,7 +627,45 @@ Future<List<CustomRequest>> getCustomRequests({
   }
 }
 
+Future<Map<String, dynamic>> getCustomRequestsWithPagination({
+  int page = 1,
+  int perPage = 10,
+  String status = 'all',
+}) async {
+  try {
+    if (_token == null) throw Exception('Please login first');
 
+    final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(queryParameters: {
+      'page': page.toString(),
+      'per_page': perPage.toString(),
+      'status': status,
+    });
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $_token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {
+        'requests': (data['data'] as List)
+            .map((json) => CustomRequest.fromJson(json))
+            .toList(),
+        'lastPage': data['last_page'] ?? 1,
+        'total': data['total'] ?? 0,
+      };
+    } else {
+      throw Exception('Failed to fetch custom requests');
+    }
+  } catch (e) {
+    print('❌ Error: $e');
+    throw Exception('Error: $e');
+  }
+}
 
 // ------------------- Cancel Custom Request -------------------
 Future<Map<String, dynamic>> cancelCustomRequest(int requestId) async {

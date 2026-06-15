@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/core/app_colorAccepted.dart';
+import 'package:medconnect_app/homeScreen.dart';
 //import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/mainScreen.dart';
+import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/services/equipment_service.dart'
     as EquipmentApiService;
 import 'models/equipment_model.dart';
@@ -54,22 +57,115 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
   void retryFetch() {
     fetchEquipmentLists();
   }
+  void _addAllToCart(EquipmentList list) async {
+  int addedCount = 0;
 
-  void addAllToCart(EquipmentList list) {
-    int addedCount = 0;
-    for (var item in list.items) {
-      if (item.isAva) {
-        addedCount++;
-        print('تمت إضافة: ${item.productName} إلى السلة');
+  
+  for (var item in list.items) {
+    if (item.isAva) {
+      try {
+        final product = await ApiService().fetchProductById(item.productId);
+        final result = await ApiService().addToCart(
+          productId: item.productId,
+          quantity: 1,
+          type: 'sale',
+        );
+        
+        if (result['success'] == true) {
+          // ✅ إضافة محلية لـ cartItemsGlobal
+          final cartItem = CartItem(
+            id: product.id,
+            productId: product.id,
+            name: product.name,
+            image: product.imagePath, // مش متوفر في equipment list
+            quantity: 1,
+            price: product.price, // مش متوفر
+            type: 'sale',
+            daily_rent: 0,
+          );
+          cartItemsGlobal.add(cartItem);
+          addedCount++;
+          print('✅ Added to cart: ${item.productName}');
+        }
+      } catch (e) {
+        print('❌ Error adding ${item.productId}: $e');
       }
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("✅ Added $addedCount items to cart"),
-        backgroundColor: Colors.green,
-      ),
-    );
   }
+
+  if (addedCount > 0) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text("🛒 Added $addedCount items to cart"),
+      backgroundColor: Colors.green,
+    ),
+  );
+  }
+}
+
+// void _addAllToCart(EquipmentList list) async {
+//   //   showDialog(
+//   //   context: context,
+//   //   barrierDismissible: false,
+//   //   builder: (_) => const Center(child: CircularProgressIndicator()),
+//   // );
+//   int addedCount = 0;
+  
+//   for (var item in list.items) {
+//     if (item.isAva) {
+//       try {
+       
+//         // ✅ جلب بيانات المنتج من API عشان السعر والصورة
+        
+//         final product = await ApiService().fetchProductById(item.productId);
+        
+//         final cartItem = CartItem(
+//           id: product.id,
+//           productId: product.id,
+//           name: product.name,
+//           image: product.imagePath,
+//           quantity: 1,
+//           price: product.price,
+//           type: 'sale',
+//           daily_rent: 0,
+//         );
+        
+//         cartItemsGlobal.add(cartItem);
+//         addedCount++;
+//       } catch (e) {
+//         print('❌ Failed to fetch product ${item.productId}: $e');
+//       }
+//     }
+//   }
+  
+//   ScaffoldMessenger.of(context).showSnackBar(
+//     SnackBar(
+//       content: Text("🛒 Added $addedCount items to cart"),
+//       backgroundColor: Colors.green,
+//     ),
+//   );
+//   // بعد الإضافة
+// Navigator.pushReplacement(
+//   context,
+//   MaterialPageRoute(builder: (_) => const CartPage()),
+// );
+// }
+
+  // void addAllToCart(EquipmentList list) {
+  //   int addedCount = 0;
+  //   for (var item in list.items) {
+  //     if (item.isAva) {
+  //       addedCount++;
+  //       print('تمت إضافة: ${item.productName} إلى السلة');
+  //     }
+  //   }
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     SnackBar(
+  //       content: Text("✅ Added $addedCount items to cart"),
+  //       backgroundColor: Colors.green,
+  //     ),
+  //   );
+  // }
 
   void _createNewList(String listName) async {
     try {
@@ -126,114 +222,119 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
     );
   }
 
-  void _editListName(EquipmentList list, int index) async {
-    final controller = TextEditingController(text: list.listName);
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Edit List Name"),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: "Enter new list name",
-            border: OutlineInputBorder(),
-          ),
+ void _editListName(EquipmentList list, int index) async {
+  final controller = TextEditingController(text: list.listName);
+  final newName = await showDialog<String>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("Edit List Name"),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        decoration: const InputDecoration(
+          hintText: "Enter new list name",
+          border: OutlineInputBorder(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text("Save"),
-          ),
-        ],
       ),
-    );
-
-    if (newName != null && newName.isNotEmpty && newName != list.listName) {
-      try {
-        await EquipmentApiService.updateEquipmentListName(list.id, newName);
-        setState(() {
-          lists[index].listName = newName;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text("✏️ List name updated")));
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                "❌ Error: ${e.toString().replaceAll('Exception:', '')}",
-              ),
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  void _removeItemFromList(
-    
-    EquipmentList list,
-    int listIndex,
-    EquipmentItem item,
-    int itemIndex,
-    
-  ) async {
-      print('🗑️ Attempting to remove:');
-  print('   listId: ${list.id}');
-  print('   itemId: ${item.id}');  
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Remove Item"),
-        content: Text(
-          "Are you sure you want to remove '${item.productName}' from this list?",
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 252, 251, 251)),
-            child: const Text("Remove", style: TextStyle(color: Color.fromARGB(255, 243, 114, 114))),
-          ),
-        ],
-      ),
-    );
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, controller.text.trim()),
+          child: const Text("Save"),
+        ),
+      ],
+    ),
+  );
 
-    if (confirm != true) return;
-
+  if (newName != null && newName.isNotEmpty && newName != list.listName) {
     try {
-      await EquipmentApiService.removeItemFromList(list.id, item.id);
+      await EquipmentApiService.updateEquipmentListName(list.id, newName);
+      
+      final updatedList = EquipmentList(
+        id: list.id,
+        listName: newName,
+        isDefault: list.isDefault,
+        createdAt: list.createdAt,
+        items: list.items,
+        isExpanded: list.isExpanded,
+      );
+      
       setState(() {
-        lists[listIndex].items.removeAt(itemIndex);
+        lists[index] = updatedList;
       });
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("🗑️ Item removed from list")),
+          const SnackBar(content: Text("✏️ List name updated")),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "❌ Error: ${e.toString().replaceAll('Exception:', '')}",
-            ),
-          ),
+          SnackBar(content: Text("❌ Error: ${e.toString().replaceAll('Exception:', '')}")),
         );
       }
     }
   }
+}
+  void _removeItemFromList(EquipmentList list, int listIndex, EquipmentItem item, int itemIndex) async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("Remove Item"),
+      content: Text("Are you sure you want to remove '${item.productName}' from this list?"),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text("Remove", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+
+  if (confirm != true) return;
+
+  try {
+    // ✅ استخدام product_id مش item_id
+    await EquipmentApiService.removeItemFromList(list.id, item.productId);
+    
+    final updatedItems = List<EquipmentItem>.from(list.items);
+    updatedItems.removeAt(itemIndex);
+    
+    final updatedList = EquipmentList(
+      id: list.id,
+      listName: list.listName,
+      isDefault: list.isDefault,
+      createdAt: list.createdAt,
+      items: updatedItems,
+      isExpanded: list.isExpanded,
+    );
+    
+    setState(() {
+      lists[listIndex] = updatedList;
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("🗑️ Item removed from list")),
+      );
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Error: ${e.toString().replaceAll('Exception:', '')}")),
+      );
+    }
+  }
+}
 
   void _deleteList(int listId, int index) async {
     final confirm = await showDialog<bool>(
@@ -424,6 +525,7 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
         final list = lists[index];
 
         return Card(
+          color: Colors.white,
           margin: const EdgeInsets.only(bottom: 12),
           elevation: 2,
           shape: RoundedRectangleBorder(
@@ -704,7 +806,7 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: () => addAllToCart(list),
+                          onPressed: () => _addAllToCart(list),
                           child: const Text(
                             "Add All To Cart",
                             style: TextStyle(

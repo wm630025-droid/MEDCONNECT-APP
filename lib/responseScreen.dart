@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:medconnect_app/acceptedSupplier.dart';
 import 'package:medconnect_app/core/app_colorResponse.dart';
 import 'package:medconnect_app/models/offer_request.dart';
+//import 'package:medconnect_app/models/offer_request.dart';
 import 'package:medconnect_app/myCustomRequests.dart';
 import 'package:medconnect_app/services/api_service.dart';
 
@@ -52,6 +54,7 @@ class _SupplierBidsPageState extends State<SupplierBidsPage> {
           ? AppColors.bgDark
           : AppColors.bgLight,
       appBar: AppBar(
+        backgroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () {
@@ -61,10 +64,10 @@ class _SupplierBidsPageState extends State<SupplierBidsPage> {
             );
           },
         ),
-        title: const Text("Supplier Bids", overflow: TextOverflow.ellipsis),
+        title: const Text("Supplier offers", overflow: TextOverflow.ellipsis),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -99,54 +102,173 @@ class _SupplierBidsPageState extends State<SupplierBidsPage> {
   }
 }
 
-class SupplierBidCard extends StatelessWidget {
+class SupplierBidCard extends StatefulWidget {
   final OfferRequest offer;
   final bool initiallyExpanded;
   final String customRequestBudget;
+    final VoidCallback? onRejected;
 
   const SupplierBidCard({
     super.key,
     required this.offer,
     this.initiallyExpanded = false,
     required this.customRequestBudget,
-    
+    this.onRejected,
   });
 
   @override
+  State<SupplierBidCard> createState() => _SupplierBidCardState();
+}
+
+class _SupplierBidCardState extends State<SupplierBidCard> {
+ // bool _isRejected = false;
+ // bool _isAccepted = false;
+  @override
+  // Widget build(BuildContext context) {
+  //   final isPending = widget.offer.status.toLowerCase() == 'pending';
+  //   final isCancelled = widget.offer.status.toLowerCase() == 'cancelled';
+  //  // final isAccepted = widget.offer.status.toLowerCase() == 'accepted';
+   
+  //   return Card(
+  //     margin: const EdgeInsets.only(bottom: 12),
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  //     child: ExpansionTile(
+  //       initiallyExpanded: widget.initiallyExpanded,
+  //       tilePadding: const EdgeInsets.all(16),
+  //       childrenPadding: const EdgeInsets.all(16),
+  //       title: Row(
+  //         children: [
+  //           CircleAvatar(
+  //             backgroundImage: widget.offer.supplier.companyImageUrl != null
+  //                 ? NetworkImage(widget.offer.supplier.companyImageUrl!)
+  //                 : null,
+  //             child: widget.offer.supplier.companyImageUrl == null
+  //                 ? const Icon(Icons.business)
+  //                 : null,
+  //             radius: 20,
+  //           ),
+  //           const SizedBox(width: 12),
+  //           Expanded(
+  //             child: Text(
+  //               widget.offer.supplier.companyName,
+  //               style: const TextStyle(fontWeight: FontWeight.w600),
+  //             ),
+
+
+              
+  //           ),
+  //         ],
+  //       ),
+  //       children: [
+  //         if (widget.offer.notes != null)
+  //           Container(
+  //             padding: const EdgeInsets.all(12),
+  //             decoration: BoxDecoration(
+  //               color: Theme.of(context).brightness == Brightness.dark
+  //                   ? Colors.grey.shade800
+  //                   : Colors.grey.shade100,
+  //               borderRadius: BorderRadius.circular(12),
+  //             ),
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 const Text(
+  //                   "Note from Supplier",
+  //                   style: TextStyle(fontWeight: FontWeight.w600),
+  //                 ),
+  //                 const SizedBox(height: 4),
+  //                 Text(widget.offer.notes!),
+  //               ],
+  //             ),
+  //           ),
+  //         const SizedBox(height: 12),
+  //         _budgetRow("Delivery Days:", "${widget.offer.deliveryDays} days"),
+  //         const SizedBox(height: 6),
+
+  //         _budgetRow("Your Budget :",_formatBudget(widget.customRequestBudget)),
+          
+  //         _budgetRow(
+  //           "Supplier's Bid :",
+  //           "\$${widget.offer.price}",
+  //           highlight: true,
+  //         ),
+  //         const SizedBox(height: 16),
+  //         if (isPending) _pendingButtons(context),
+  //         if (isAccepted) _acceptedButtons(),
+  //         if (isCancelled) _cancelledButtons(),
+  //       ],
+  //     ),
+  //   );
+  // }
   Widget build(BuildContext context) {
-    final isPending = offer.status.toLowerCase() == 'pending';
-    final isCancelled = offer.status.toLowerCase() == 'cancelled';
-    final isAccepted = offer.status.toLowerCase() == 'accepted';
+    final isPending = widget.offer.status.toLowerCase() == 'pending';
+    final isRejected = widget.offer.status.toLowerCase() == 'rejected';
+    final isAccepted = widget.offer.status.toLowerCase() == 'accepted';
+
+    // ✅ لو تم الرفض، نظهر الكارت عادي بس الأزرار تختفي وتظهر كلمة "REJECTED"
     return Card(
+      color: Colors.white,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ExpansionTile(
-        initiallyExpanded: initiallyExpanded,
+        initiallyExpanded: widget.initiallyExpanded,
         tilePadding: const EdgeInsets.all(16),
         childrenPadding: const EdgeInsets.all(16),
         title: Row(
           children: [
             CircleAvatar(
-              backgroundImage: offer.supplier.companyImageUrl != null
-                  ? NetworkImage(offer.supplier.companyImageUrl!)
-                  : null,
-              child: offer.supplier.companyImageUrl == null
-                  ? const Icon(Icons.business)
+              backgroundImage: widget.offer.supplier.companyImageUrl != null
+                  ? NetworkImage(widget.offer.supplier.companyImageUrl!)
                   : null,
               radius: 20,
+              child: widget.offer.supplier.companyImageUrl == null
+                  ? const Icon(Icons.business)
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                offer.supplier.companyName,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.offer.supplier.companyName,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (isAccepted)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        "ACCEPTED",
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  if (isRejected)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        "REJECTED",
+                        style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
         ),
         children: [
-          if (offer.notes != null)
+          if (widget.offer.notes != null)
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).brightness == Brightness.dark
@@ -157,34 +279,33 @@ class SupplierBidCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Note from Supplier",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(offer.notes!),
+                  const Text("Note from Supplier", style: TextStyle(fontWeight: FontWeight.w600)),
+const SizedBox(height: 4),
+                  Text(widget.offer.notes!,textAlign: TextAlign.left,),
                 ],
               ),
             ),
           const SizedBox(height: 12),
-          _budgetRow("Delivery Days:", "${offer.deliveryDays} days"),
+          _budgetRow("Delivery Days:", "${widget.offer.deliveryDays} days"),
           const SizedBox(height: 6),
-
-          _budgetRow("Your Budget :",_formatBudget(customRequestBudget)),
-          
+          _budgetRow("Your Budget:", _formatBudget(widget.customRequestBudget)),
           _budgetRow(
-            "Supplier's Bid :",
-            "\$${offer.price}",
+            "Supplier's offer:",
+            "\$${widget.offer.price}",
             highlight: true,
           ),
           const SizedBox(height: 16),
-          if (isPending) _pendingButtons(context),
+          // ✅ الأزرار تختفي لو تم القبول أو الرفض
+          if (isPending && !isAccepted && !isRejected) _pendingButtons(context),
+         // if (isRejected) _rejectedButtons(),
           if (isAccepted) _acceptedButtons(),
-          if (isCancelled) _cancelledButtons(),
         ],
       ),
     );
   }
+
+
+
   String _formatBudget(String budget) {
   if (budget == "No Budget") return budget;
   if (budget.startsWith('\$')) return budget;
@@ -192,27 +313,6 @@ class SupplierBidCard extends StatelessWidget {
   }
 
   // Widget _budgetRow(
-  //   String label,
-  //   String value, {
-  //   bool strike = false,
-  //   bool highlight = false,
-  // }) {
-  //   return Row(
-  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //     children: [
-  //       Text(label),
-  //       Text(
-  //         value,
-  //         style: TextStyle(
-  //           fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
-  //           fontSize: highlight ? 18 : 14,
-  //           color: highlight ? AppColors.primary : null,
-  //           decoration: strike ? TextDecoration.lineThrough : null,
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
   Widget _budgetRow(String label, String value, {bool highlight = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -229,6 +329,7 @@ class SupplierBidCard extends StatelessWidget {
       ],
     );
   }
+
 Widget _pendingButtons(BuildContext context) {
     return Row(
       children: [
@@ -269,148 +370,228 @@ Widget _pendingButtons(BuildContext context) {
       ],
     );
   }
+
   void _acceptOffer(BuildContext context) async {
-  final shouldAccept = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Accept Offer'),
-      content: const Text('Are you sure you want to accept this offer?\n\nOther offers will be automatically rejected.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Accept', style: TextStyle(color: Colors.green)),
-        ),
-      ],
-    ),
-  );
-
-  if (shouldAccept != true) return;
-
-  // إظهار مؤشر تحميل
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (ctx) => const Center(child: CircularProgressIndicator()),
-  );
-
-  try {
-    final apiService = ApiService();
-    final result = await apiService.respondToOffer(
-      offerId: offer.id,
-      response: 'accepted',
-    );
-
-    // إغلاق مؤشر التحميل
-    Navigator.pop(context);
-
-    if (result['success'] == true) {
-      // ✅ تحديث واجهة العرض (إخفاء الأزرار)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Offer accepted successfully!')),
-      );
-      
-      // ✅ الذهاب لصفحة AcceptedSupplierDetails مع بيانات المورد
-      // Navigator.pushReplacement(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (_) => AcceptedSupplierDetailsPage(
-      //       offer: offer,
-      //     ),
-      //   ),
-      // );
-    } else {
-      throw Exception(result['error'] ?? 'Failed to accept offer');
-    }
-  } catch (e) {
-    Navigator.pop(context); // إغلاق مؤشر التحميل لو كان مفتوح
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
-    );
-  }
-}
-
-void _rejectOffer(BuildContext context) async {
-  final shouldReject = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Reject Offer'),
-      content: const Text('Are you sure you want to reject this offer?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Reject', style: TextStyle(color: Colors.red)),
-        ),
-      ],
-    ),
-  );
-
-  if (shouldReject != true) return;
-
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (ctx) => const Center(child: CircularProgressIndicator()),
-  );
-
-  try {
-    final apiService = ApiService();
-    final result = await apiService.respondToOffer(
-      offerId: offer.id,
-      response: 'rejected',
-    );
-
-    Navigator.pop(context);
-
-    if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Offer rejected')),
-    );
-      // تحديث الحالة محلياً
-      // (يمكن إعادة تحميل الصفحة)
-    } else {
-      throw Exception(result['error'] ?? 'Failed to reject offer');
-    }
-  } catch (e) {
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
-    );
-  }
-}
-
-  void _showAcceptDialog(BuildContext context) {
-    showDialog(
+    final shouldAccept = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Accept Offer'),
-        content: const Text('Are you sure you want to accept this offer?'),
+        content: const Text('Are you sure you want to accept this offer?\n\nOther offers will be automatically rejected.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              // TODO: استدعاء API قبول العرض
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Offer accepted!')),
-              );
-            },
-            child: const Text('Accept', style: TextStyle(color: Colors.green)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Accept', style: TextStyle(color: Colors.green))),
         ],
       ),
     );
+    if (shouldAccept != true) return;
+
+    
+
+    try {
+      final apiService = ApiService();
+      await apiService.respondToOffer(
+        offerId: widget.offer.id,
+        response: 'accepted',
+      );
+setState((){
+      widget.offer.status = 'accepted';
+    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Offer accepted successfully!')),
+      );
+
+      // ✅ الانتقال إلى صفحة المورد المقبول
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AcceptedSupplierDetailsPage(
+            offer: widget.offer,
+            requestBudget: widget.customRequestBudget,
+          ),
+        ),
+      );
+    } catch (e) {
+      //setState(() => _isAccepted = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
+      );
+    }
   }
+//   void _acceptOffer(BuildContext context) async {
+//   final shouldAccept = await showDialog<bool>(
+//     context: context,
+//     builder: (ctx) => AlertDialog(
+//       title: const Text('Accept Offer'),
+//       content: const Text('Are you sure you want to accept this offer?\n\nOther offers will be automatically rejected.'),
+//       actions: [
+//         TextButton(
+//           onPressed: () => Navigator.pop(ctx, false),
+//           child: const Text('Cancel'),
+//         ),
+//         TextButton(
+//           onPressed: () => Navigator.pop(ctx, true),
+//           child: const Text('Accept', style: TextStyle(color: Colors.green)),
+//         ),
+//       ],
+//     ),
+//   );
+
+//   if (shouldAccept != true) return;
+
+//   // إظهار مؤشر تحميل
+//   showDialog(
+//     context: context,
+//     barrierDismissible: false,
+//     builder: (ctx) => const Center(child: CircularProgressIndicator()),
+//   );
+
+//   try {
+//     final apiService = ApiService();
+//     final result = await apiService.respondToOffer(
+//       offerId: widget.offer.id,
+//       response: 'accepted',
+//     );
+
+//     // إغلاق مؤشر التحميل
+//     Navigator.pop(context);
+
+//     if (result['success'] == true) {
+//       // ✅ تحديث واجهة العرض (إخفاء الأزرار)
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(content: Text('Offer accepted successfully!')),
+//       );
+      
+//       // ✅ الذهاب لصفحة AcceptedSupplierDetails مع بيانات المورد
+//       // Navigator.pushReplacement(
+//       //   context,
+//       //   MaterialPageRoute(
+//       //     builder: (_) => AcceptedSupplierDetailsPage(
+//       //       offer: offer,
+//       //     ),
+//       //   ),
+//       // );
+//     } else {
+//       throw Exception(result['error'] ?? 'Failed to accept offer');
+//     }
+//   } catch (e) {
+//     Navigator.pop(context); // إغلاق مؤشر التحميل لو كان مفتوح
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
+//     );
+//   }
+// }
+ void _rejectOffer(BuildContext context) async {
+    final shouldReject = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reject Offer'),
+        content: const Text('Are you sure you want to reject this offer?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reject', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (shouldReject != true) return;
+
+    try {
+      final apiService = ApiService();
+      await apiService.respondToOffer(
+        offerId: widget.offer.id,
+        response: 'rejected',
+      );
+      setState((){
+      widget.offer.status = 'rejected';
+    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Offer rejected')),
+      );
+    } catch (e) {
+     // setState(() => _isRejected = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
+      );
+    }
+  }
+
+// void _rejectOffer(BuildContext context) async {
+//   final shouldReject = await showDialog<bool>(
+//     context: context,
+//     builder: (ctx) => AlertDialog(
+//       title: const Text('Reject Offer'),
+//       content: const Text('Are you sure you want to reject this offer?'),
+//       actions: [
+//         TextButton(
+//           onPressed: () => Navigator.pop(ctx, false),
+//           child: const Text('Cancel'),
+//         ),
+//         TextButton(
+//           onPressed: () => Navigator.pop(ctx, true),
+//           child: const Text('Reject', style: TextStyle(color: Colors.red)),
+//         ),
+//       ],
+//     ),
+//   );
+
+//   if (shouldReject != true) return;
+
+//   showDialog(
+//     context: context,
+//     barrierDismissible: false,
+//     builder: (ctx) => const Center(child: CircularProgressIndicator()),
+//   );
+
+//   try {
+//     final apiService = ApiService();
+//     final result = await apiService.respondToOffer(
+//       offerId: widget.offer.id,
+//       response: 'rejected',
+//     );
+
+//     Navigator.pop(context);
+
+//     if (result['success'] == true) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(content: Text('Offer rejected')),
+//     );
+//       // تحديث الحالة محلياً
+//       // (يمكن إعادة تحميل الصفحة)
+//     } else {
+//       throw Exception(result['error'] ?? 'Failed to reject offer');
+//     }
+//   } catch (e) {
+//     Navigator.pop(context);
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
+//     );
+//   }
+// }
+
+  // void _showAcceptDialog(BuildContext context) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (ctx) => AlertDialog(
+  //       title: const Text('Accept Offer'),
+  //       content: const Text('Are you sure you want to accept this offer?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(ctx),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () {
+  //             Navigator.pop(ctx);
+  //             // TODO: استدعاء API قبول العرض
+  //             ScaffoldMessenger.of(context).showSnackBar(
+  //               const SnackBar(content: Text('Offer accepted!')),
+  //             );
+  //           },
+  //           child: const Text('Accept', style: TextStyle(color: Colors.green)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _acceptedButtons() {
     return Row(
@@ -428,21 +609,21 @@ void _rejectOffer(BuildContext context) async {
     );
   }
 
-  Widget _cancelledButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton(
-            onPressed: null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey,
-            ),
-            child: const Text("Offer Cancelled", style: TextStyle(color: Colors.white)),
-          ),
-        ),
-      ],
-    );
-  }
+  // Widget _rejectedButtons() {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: ElevatedButton(
+  //           onPressed: null,
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Colors.grey,
+  //           ),
+  //           child: const Text("Rejected", style: TextStyle(color: Colors.white)),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 }
   // Widget _activeButtons(BuildContext context) {
   //   return Row(

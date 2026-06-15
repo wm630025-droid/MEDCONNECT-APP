@@ -5,7 +5,7 @@ class OfferRequest {
   final String price;
   final int deliveryDays;
   final String? notes;
-  final String status;
+   String status;
   final DateTime createdAt;
   final DateTime updatedAt;
   final Supplier supplier;

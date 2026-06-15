@@ -15,6 +15,12 @@ class MyCustomRequestsPage extends StatefulWidget {
 }
 
 class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
+  int _currentPage = 1;
+  int _lastPage = 1;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _perPage = 10;
+
   List<CustomRequest> _requests = [];
   bool _isLoading = true;
   String? _error;
@@ -55,26 +61,77 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
   //     });
   //   }
   //}
-  Future<void> _loadRequests() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  // Future<void> _loadRequests() async {
+  //   setState(() {
+  //     _isLoading = true;
+  //     _error = null;
+  //   });
+
+  //   try {
+  //     final requests = await _apiService.getCustomRequests(
+  //       status: _currentFilter == 'All' ? 'all' : _currentFilter.toLowerCase(),
+  //     );
+
+  //     setState(() {
+  //       _requests = requests;
+  //       _isLoading = false;
+  //     });
+  //   } catch (e) {
+  //     setState(() {
+  //       _error = e.toString();
+  //       _isLoading = false;
+  //     });
+  //   }
+  // }
+  Future<void> _loadRequests({bool loadMore = false}) async {
+    if (!loadMore) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+        _currentPage = 1;
+        _requests = [];
+        _hasMore = true;
+      });
+    } else {
+      setState(() {
+        _isLoadingMore = true;
+      });
+    }
 
     try {
-      final requests = await _apiService.getCustomRequests(
+      final result = await _apiService.getCustomRequestsWithPagination(
+        page: _currentPage,
+        perPage: _perPage,
         status: _currentFilter == 'All' ? 'all' : _currentFilter.toLowerCase(),
       );
 
       setState(() {
-        _requests = requests;
+        if (loadMore) {
+          _requests.addAll(result['requests']);
+        } else {
+          _requests = result['requests'];
+        }
+        _lastPage = result['lastPage'];
+        _hasMore = _currentPage < _lastPage;
+        _currentPage++;
         _isLoading = false;
+        _isLoadingMore = false;
       });
     } catch (e) {
       setState(() {
         _error = e.toString();
         _isLoading = false;
+        _isLoadingMore = false;
       });
+    }
+  }
+
+  Future<int> _getOffersCount(int requestId) async {
+    try {
+      final offers = await _apiService.getOfferRequests(requestId);
+      return offers.length;
+    } catch (e) {
+      return 0;
     }
   }
 
@@ -85,7 +142,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
           ? const Color(0xFF101C22)
           : const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
@@ -104,75 +161,114 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
         centerTitle: true,
       ),
       body: Column(
-      children: [
-        // ✅ الفلتر دايماً موجود في الأعلى (حتى لو مفيش بيانات)
-        _buildFilterDropdown(),
-        
-        // ✅ باقي المحتوى (تحميل، خطأ، أو قائمة)
-        Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(_error!),
-                          SizedBox(height: 10,),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.blueAccent,
+        children: [
+          // ✅ الفلتر دايماً موجود في الأعلى (حتى لو مفيش بيانات)
+          _buildFilterDropdown(),
 
-                            ),
+          // ✅ باقي المحتوى (تحميل، خطأ، أو قائمة)
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(_error!),
+                        SizedBox(height: 10),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.blueAccent,
+                          ),
 
-                            onPressed: _loadRequests,
-                            child: const Text(
-                              'Retry',
-                             // style: TextStyle(color: Colors.blueAccent ),
-                              ),
+                          onPressed: _loadRequests,
+                          child: const Text(
+                            'Retry',
+                            // style: TextStyle(color: Colors.blueAccent ),
                           ),
-                        ],
-                      ),
-                    )
-                  : _requests.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.inbox, size: 80, color: Colors.grey),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No ${_currentFilter == 'All' ? '' : _currentFilter} requests found',
-                                style: const TextStyle(color: Colors.grey, fontSize: 16),
-                              ),
-                              const SizedBox(height: 8),
-                              TextButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _currentFilter = 'All';
-                                    _loadRequests();
-                                  });
-                                },
-                                child: const Text(
-                                  'Show all requests',
-                                  style: TextStyle(color: Colors.blueAccent ),
-                                  ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _requests.length,
-                          itemBuilder: (context, index) {
-                            return _buildRequestCard(_requests[index]);
-                          },
                         ),
-        ),
-      ],
-    ),
+                      ],
+                    ),
+                  )
+                : _requests.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.inbox, size: 80, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No ${_currentFilter == 'All' ? '' : _currentFilter} requests found',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _currentFilter = 'All';
+                              _loadRequests();
+                            });
+                          },
+                          child: const Text(
+                            'Show all requests',
+                            style: TextStyle(color: Colors.blueAccent),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView(
+                    shrinkWrap: true,
+                    // physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      ..._requests
+                          .map((request) => _buildRequestCard(request))
+                          .toList(),
+                      if (_hasMore)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Center(
+                            child: ElevatedButton(
+                              onPressed: _isLoadingMore
+                                  ? null
+                                  : () => _loadRequests(loadMore: true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                              ),
+                              child: _isLoadingMore
+                                  ? const SizedBox(
+                                      width: 10,
+                                      height: 10,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text('Load More',
+                                      style: TextStyle(color: Colors.blueAccent)),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+            // ListView.builder(
+            //     padding: const EdgeInsets.all(16),
+            //     itemCount: _requests.length,
+            //     itemBuilder: (context, index) {
+            //       return _buildRequestCard(_requests[index]);
+            //     },
+            //   ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -193,7 +289,10 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
         items: const [
           DropdownMenuItem(value: "All", child: Text("filter by Status: All")),
           DropdownMenuItem(value: "open", child: Text("open")),
-          DropdownMenuItem(value: "in negotiation", child: Text("In negotiation")),
+          DropdownMenuItem(
+            value: "in negotiation",
+            child: Text("In negotiation"),
+          ),
           DropdownMenuItem(value: "Delivered", child: Text("Delivered")),
           DropdownMenuItem(value: "Cancelled", child: Text("Cancelled")),
           DropdownMenuItem(value: "Expired", child: Text("Expired")),
@@ -227,22 +326,21 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
 
     return GestureDetector(
       onTap: isCardClickable
-          ? (){
-
-         // if (isInNegotiation) {
-          // ✅ لو في مفاوضات، نروح لصفحة AcceptedSupplierDetails
-          // ملاحظة: لازم نعرف الـ offerId
-          // حالياً هنحتاج نجيب الـ offer الأول
-          _navigateToAcceptedSupplier(request);
-        // } else {
-        //       Navigator.push(
-        //         context,
-        //         MaterialPageRoute(
-        //           builder: (_) => const AcceptedSupplierDetailsPage(),
-        //         ),
-        //       );
-        //     }
-          }
+          ? () {
+              // if (isInNegotiation) {
+              // ✅ لو في مفاوضات، نروح لصفحة AcceptedSupplierDetails
+              // ملاحظة: لازم نعرف الـ offerId
+              // حالياً هنحتاج نجيب الـ offer الأول
+              _navigateToAcceptedSupplier(request);
+              // } else {
+              //       Navigator.push(
+              //         context,
+              //         MaterialPageRoute(
+              //           builder: (_) => const AcceptedSupplierDetailsPage(),
+              //         ),
+              //       );
+              //     }
+            }
           : null,
 
       child: Opacity(
@@ -271,53 +369,61 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                     _buildStatusChip(request.status),
                     const Spacer(),
                     if (showNotification)
-                      InkWell(
-                        onTap: () {
-                          final budget = request.budget!= null && request.budget!.isNotEmpty
-                          ?request.budget!
-                          :"No Budget";
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SupplierBidsPage(
-                                customRequestId: request.id,
-                                customRequestBudget: budget,
-                              ),
+                      FutureBuilder<int>(
+                        future: _getOffersCount(request.id),
+                        builder: (context, snapshot) {
+                          final count = snapshot.data ?? 0;
+                          return InkWell(
+                            onTap: () {
+                              final budget =
+                                  request.budget != null &&
+                                      request.budget!.isNotEmpty
+                                  ? request.budget!
+                                  : "No Budget";
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => SupplierBidsPage(
+                                    customRequestId: request.id,
+                                    customRequestBudget: budget,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Stack(
+                              children: [
+                                const Icon(
+                                  Icons.notifications,
+                                  color: Color(0xFF0066FF),
+                                ),
+                                if (count > 0)
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        '$count',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           );
                         },
-                        child: Stack(
-                          children: [
-                            const Icon(
-                              Icons.notifications,
-                              color: Color(0xFF0066FF),
-                            ),
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-
-                                child: const Text(
-                                  "3",
-                                  style: TextStyle(
-                                    fontSize: 8,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                   ],
                 ),
               ),
-
+             
               // Product Items
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -330,8 +436,10 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
-                            decoration: isCancelled ? TextDecoration.lineThrough : null,
-                           // color: isCancelled ? Colors.grey : Colors.black,
+                            decoration: isCancelled
+                                ? TextDecoration.lineThrough
+                                : null,
+                            // color: isCancelled ? Colors.grey : Colors.black,
                           ),
                         ),
                       )
@@ -349,7 +457,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                     style: const TextStyle(color: Colors.grey, fontSize: 13),
                   ),
                 ),
-                SizedBox(height: 15,),
+              SizedBox(height: 15),
               // Budget
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -358,7 +466,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
-                     decoration: isCancelled ? TextDecoration.lineThrough : null,
+                    decoration: isCancelled ? TextDecoration.lineThrough : null,
                   ),
                 ),
               ),
@@ -398,8 +506,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                           SizedBox(
                             width: 100,
                             height: 40,
-                            child: 
-                             OutlinedButton(
+                            child: OutlinedButton(
                               onPressed: () {
                                 // TODO: إلغاء الطلب
                                 _cancelRequest(request);
@@ -415,15 +522,14 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                                 style: TextStyle(color: Colors.red),
                               ),
                             ),
-
                           ),
 
                         if (showCancelButton && (showDelete || showReRequest))
                           const SizedBox(width: 8),
                         if (showDelete)
                           SizedBox(
-                             width: 100,
-                          height: 40,
+                            width: 100,
+                            height: 40,
                             child: OutlinedButton(
                               onPressed: () {
                                 // TODO: حذف الطلب
@@ -440,8 +546,8 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                         SizedBox(width: 5),
                         if (showReRequest)
                           SizedBox(
-                             width: 120,
-                          height: 40,
+                            width: 120,
+                            height: 40,
                             child: ElevatedButton(
                               onPressed: () {
                                 // TODO: إعادة الطلب
@@ -470,31 +576,33 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
       ),
     );
   }
-Future<void> _navigateToAcceptedSupplier(CustomRequest request) async {
-  try {
-    final offers = await _apiService.getOfferRequests(request.id);
-    final acceptedOffer = offers.firstWhere(
-      (o) => o.status.toLowerCase() == 'accepted',
-      orElse: () => offers.first,
-    );
-    final originalBudget = request.budget !=null && request.budget!.isNotEmpty
-    ?request.budget!
-    :"No Budget";
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AcceptedSupplierDetailsPage(
-          offer: acceptedOffer,
-          requestBudget: originalBudget,
+
+  Future<void> _navigateToAcceptedSupplier(CustomRequest request) async {
+    try {
+      final offers = await _apiService.getOfferRequests(request.id);
+      final acceptedOffer = offers.firstWhere(
+        (o) => o.status.toLowerCase() == 'accepted',
+        orElse: () => offers.first,
+      );
+      final originalBudget =
+          request.budget != null && request.budget!.isNotEmpty
+          ? request.budget!
+          : "No Budget";
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AcceptedSupplierDetailsPage(
+            offer: acceptedOffer,
+            requestBudget: originalBudget,
+          ),
         ),
-      ),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: $e')),
-    );
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
-}
 
   Widget _buildStatusChip(String status) {
     Color bgColor;
@@ -586,67 +694,74 @@ Future<void> _navigateToAcceptedSupplier(CustomRequest request) async {
   //   );
   // }
   Future<void> _cancelRequest(CustomRequest request) async {
-  final shouldCancel = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Cancel Request'),
-      content: const Text('Are you sure you want to cancel this request?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('No'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Yes', style: TextStyle(color: Colors.red)),
-        ),
-      ],
-    ),
-  );
-
-  if (shouldCancel != true) return;
-
-  setState(() => _isLoading = true);
-
-  try {
-    final result = await _apiService.cancelCustomRequest(request.id);
-    
-    if (result['success'] == true) {
-      // ✅ تحديث الحالة محلياً
-      setState(() {
-        final index = _requests.indexWhere((r) => r.id == request.id);
-        if (index != -1) {
-          _requests[index] = CustomRequest(
-            id: request.id,
-            doctorId: request.doctorId,
-            type: request.type,
-            item: request.item,
-            expiresAt: request.expiresAt,
-            rentStartDate: request.rentStartDate,
-            rentEndDate: request.rentEndDate,
-            status: 'cancelled',
-            additionalDetails: request.additionalDetails,
-            budget: request.budget,
-            createdAt: request.createdAt,
-            updatedAt: DateTime.now(),
-          );
-        }
-        _isLoading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Request cancelled successfully')),
-      );
-    } else {
-      throw Exception(result['error'] ?? 'Failed to cancel');
-    }
-  } catch (e) {
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Request'),
+        content: const Text('Are you sure you want to cancel this request?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
+
+    if (shouldCancel != true) return;
+    // showDialog(
+    //     context: context,
+    //     barrierDismissible: false,
+    //     builder: (_) => const Center(child: CircularProgressIndicator()),
+    //   );
+
+    // setState(() => _isLoading = true);
+
+    try {
+      final result = await _apiService.cancelCustomRequest(request.id);
+      //Navigator.pop(context);
+
+      if (result['success'] == true) {
+        // ✅ تحديث الحالة محلياً
+        setState(() {
+          final index = _requests.indexWhere((r) => r.id == request.id);
+          if (index != -1) {
+            _requests[index] = CustomRequest(
+              id: request.id,
+              doctorId: request.doctorId,
+              type: request.type,
+              item: request.item,
+              expiresAt: request.expiresAt,
+              rentStartDate: request.rentStartDate,
+              rentEndDate: request.rentEndDate,
+              status: 'cancelled',
+              additionalDetails: request.additionalDetails,
+              budget: request.budget,
+              createdAt: request.createdAt,
+              updatedAt: DateTime.now(),
+            );
+          }
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Request cancelled successfully')),
+        );
+      } else {
+        throw Exception(result['error'] ?? 'Failed to cancel');
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      // Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
+      );
+    }
   }
-}
 
   // void _deleteRequest(CustomRequest request) {
   //   showDialog(
@@ -677,51 +792,62 @@ Future<void> _navigateToAcceptedSupplier(CustomRequest request) async {
   //   );
   // }
   Future<void> _deleteRequest(CustomRequest request) async {
-  final shouldDelete = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Delete Request'),
-      content: const Text('Are you sure you want to permanently delete this request?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Request'),
+        content: const Text(
+          'Are you sure you want to permanently delete this request?',
         ),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Delete', style: TextStyle(color: Colors.red)),
-        ),
-      ],
-    ),
-  );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
 
-  if (shouldDelete != true) return;
+    if (shouldDelete != true) return;
+    //  showDialog(
+    //   context: context,
+    //   barrierDismissible: false,
+    //   builder: (_) => const Center(child: CircularProgressIndicator()),
+    // );
 
-  setState(() => _isLoading = true);
+    //setState(() => _isLoading = true);
 
-  try {
-    final result = await _apiService.deleteCustomRequest(request.id);
-    
-    if (result['success'] == true) {
-      // ✅ حذف من القائمة محلياً
-      setState(() {
-        _requests.removeWhere((r) => r.id == request.id);
-        _isLoading = false;
-      });
+    try {
+      final result = await _apiService.deleteCustomRequest(request.id);
+      //Navigator.pop(context);
+
+      if (result['success'] == true) {
+        // ✅ حذف من القائمة محلياً
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Request deleted permanently')),
+        );
+        setState(() => _isLoading = true);
+
+        setState(() {
+          _requests.removeWhere((r) => r.id == request.id);
+          _isLoading = false;
+        });
+      } else {
+        throw Exception(result['error'] ?? 'Failed to delete');
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Request deleted permanently')),
+        SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
       );
-    } else {
-      throw Exception(result['error'] ?? 'Failed to delete');
     }
-  } catch (e) {
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
-    );
   }
-}
 
   // void _reRequest(CustomRequest request) {
   //   // TODO: فتح شاشة CustomRequestScreen مع بيانات الطلب القديم
@@ -730,4 +856,3 @@ Future<void> _navigateToAcceptedSupplier(CustomRequest request) async {
   //   );
   // }
 }
-
