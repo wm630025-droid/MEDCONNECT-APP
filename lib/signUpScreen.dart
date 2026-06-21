@@ -4,7 +4,7 @@ import 'package:medconnect_app/signinScreen.dart';
 import 'package:medconnect_app/services/register_services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
-import 'package:medconnect_app/services/image_store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class SignUpScreen extends StatefulWidget {
@@ -15,7 +15,7 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  final ApiService apiService = ApiService();
+  final RegisterService apiService = RegisterService();
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -31,39 +31,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
   // متغيرات الصورة الشخصية
   Uint8List? profileImageBytes;
   String? profileImageUrl;
-  final ImageStore _imageStore = ImageStore();
+    XFile? _pickedXFile; // ✅ متغير لحفظ الصورة المختارة
+
   final ImagePicker imagePicker = ImagePicker();
 
   bool isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  Future<void> pickImage() async {
-    try {
-      final XFile? pickedFile = await imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 75,
-      );
-      if (pickedFile != null) {
-        final Uint8List imageBytes = await pickedFile.readAsBytes();
-        setState(() {
-          profileImageBytes = imageBytes;
-          profileImageUrl = null;
-          // persist selected image in the in-memory store so it survives navigation
-          _imageStore.profileImageBytes = imageBytes;
-        });
-        // clear any previously saved API url (user chose a local image)
-        await _imageStore.saveUrl(null);
-        print('🖼️ [signUpScreen] selected image path: ${pickedFile.path}');
-        print('🖼️ [signUpScreen] selected image bytes: ${imageBytes.lengthInBytes} bytes');
-      } else {
-        print('🖼️ [signUpScreen] image selection canceled');
-      }
-    } catch (e) {
-      print('❌ [signUpScreen] Error picking image: $e');
-    }
-  }
+
+  Future<void> _pickAndUploadImage() async {
+  final ImagePicker picker = ImagePicker();
+  final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
+  if (picked == null) return;
+
+  final bytes = await picked.readAsBytes();
+  setState(() {
+    profileImageBytes = bytes;
+    _pickedXFile = picked; // ✅ حفظ محلي بس
+  });
+}
+void _deleteProfileImage() {
+  setState(() {
+    profileImageBytes = null;
+    _pickedXFile = null;
+  });
+}
   // خريطة لتخزين أخطاء API لكل حقل (المفتاح هو اسم الحقل كما يرجعه الـ API)
   Map<String, String?> apiFieldErrors = {};
 
@@ -84,12 +76,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void initState() {
     super.initState();
     // restore any previously selected image URL from persistent store
-    _imageStore.load().then((_) {
-      setState(() {
-        profileImageBytes = _imageStore.profileImageBytes;
-        profileImageUrl = _imageStore.profileImageUrl;
-      });
-    });
+    
   }
 
   // دالة اختيار الصورة
@@ -115,19 +102,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
         nationalId: nationalIdController.text.trim(),
         phone: phoneController.text.trim(),
         licenseNumber: licenseNumberController.text.trim(),
+        profileImage: _pickedXFile,
       );
 
       print('🔔 [signUpScreen] register result: $result');
 
       if (result['success']) {
-        setState(() {
-          profileImageUrl = result['profileImageUrl'] as String?;
-          // clear in-memory bytes after successful registration
-          profileImageBytes = null;
-          _imageStore.profileImageBytes = null;
-        });
-        // persist the API-provided image url to storage
-        await _imageStore.saveUrl(profileImageUrl);
+        // ✅ ارفع الصورة بعد التسجيل مباشرة
+        if (_pickedXFile != null) {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('pending_profile_image', _pickedXFile!.path);
+    print('🖼️ Image path saved for later upload: ${_pickedXFile!.path}');
+  }
+
         print('✅ [signUpScreen] registration success');
         print('✅ [signUpScreen] profileImageUrl from API: $profileImageUrl');
 
@@ -209,6 +196,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       },
     );
   }
+  
 
   // دالة لربط أسماء الحقول من API بأسماء الحقول المحلية
   String _mapApiFieldToUiField(String apiField) {
@@ -276,8 +264,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     // ===== حقل الصورة الشخصية (تمت إعادته) =====
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
+
                       children: [
-                        Stack(
+                        SizedBox(
+  width: 100,
+  height: 100,
+  child: Stack(
                           children: [
                             GestureDetector(
                               onTap: profileImageBytes != null || profileImageUrl != null ? _showImagePreview : null,
@@ -294,41 +286,79 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     : null,
                               ),
                             ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: CircleAvatar(
-                                radius: 18,
-                                backgroundColor: const Color(0xFF0066FF),
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
-                                  onPressed: pickImage,
-                                ),
-                              ),
-                            ),
-                            if (profileImageBytes != null || (profileImageUrl != null && profileImageUrl!.isNotEmpty))
-                              Positioned(
-                                top: 0,
-                                right: 0,
-                                child: CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: Colors.redAccent,
-                                  child: IconButton(
-                                    padding: EdgeInsets.zero,
-                                    icon: const Icon(Icons.close, size: 16, color: Colors.white),
-                                    onPressed: () async {
-                                      setState(() {
-                                        profileImageBytes = null;
-                                        profileImageUrl = null;
-                                        _imageStore.profileImageBytes = null;
-                                      });
-                                      await _imageStore.saveUrl(null);
-                                    },
-                                  ),
-                                ),
-                              ),
+                           Positioned(
+  bottom: 0,
+  right: 0,
+  child: CircleAvatar(
+    radius: 18,
+    backgroundColor: const Color(0xFF0066FF),
+    child: IconButton(
+      padding: EdgeInsets.zero,
+      icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+      onPressed: () {
+        showModalBottomSheet(
+          context: context,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          builder: (_) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.camera_alt),
+                  title: const Text('Change Image'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickAndUploadImage();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text('Delete Image',
+                      style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteProfileImage(); 
+                    setState(() {
+      profileImageBytes = null;
+      _pickedXFile = null;
+    });// 
+
+                    final confirm =  showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Delete Profile Image'),
+                        content: const Text(
+                            'Are you sure you want to delete your profile image?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete',
+                                style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  ),
+  
+),
                           ],
+                        ),
                         ),
                       ],
                     ),

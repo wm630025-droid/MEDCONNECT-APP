@@ -284,9 +284,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
   Widget _buildOrderSummary() {
     final items = getDisplayItems();
     double subtotal = calculateTotalAmount();
-    double insurance = 50;
-    double delivery = 25;
-    double total = subtotal + insurance + delivery;
+    double total = subtotal;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -426,8 +424,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
 
           const Divider(height: 32),
           _priceRow('Subtotal', '\$${subtotal.toStringAsFixed(2)}'),
-          _priceRow('Insurance', '\$${insurance.toStringAsFixed(2)}'),
-          _priceRow('Delivery', '\$${delivery.toStringAsFixed(2)}'),
+         
           const SizedBox(height: 8),
           _priceRow('Total', '\$${total.toStringAsFixed(2)}', isTotal: true),
 
@@ -568,11 +565,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
 
           if (selectedPayment == 'online' && link != null && link.isNotEmpty) {
             await _launchURL(link);
-            _showSuccessDialog(
-              message: message,
-              invoice: invoice,
-              paymentLink: link,
-            );
+           
           } else {
             _showSuccessDialog(
               message: message,
@@ -634,11 +627,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
 
             if (selectedPayment == 'online' && link != null && link.isNotEmpty) {
               await _launchURL(link);
-              _showSuccessDialog(
-                message: message,
-                invoice: invoice,
-                paymentLink: link,
-              );
+            
             } else {
               _showSuccessDialog(
                 message: message,
@@ -672,10 +661,20 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     _showErrorDialog('Invalid payment link');
     return;
   }
-  Navigator.push(
+ Navigator.push(
     context,
     MaterialPageRoute(
-      builder: (context) => InAppWebViewScreen(url: url),
+      builder: (context) => InAppWebViewScreen(
+        url: url,
+        onSuccess: () {
+          // ✅ روح لصفحة الـ Orders وامسح كل الصفحات السابقة
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => AllOrdersScreen()), // غير لاسم صفحة الـ orders عندك
+            (route) => false,
+          );
+        },
+      ),
     ),
   );
 }
@@ -734,7 +733,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
               Navigator.pop(context);
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) =>  doctorAccountPage()),
+                MaterialPageRoute(builder: (_) =>  AllOrdersScreen()),
                 (route) => false,
               );
             },

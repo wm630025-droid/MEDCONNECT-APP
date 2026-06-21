@@ -12,6 +12,7 @@ import 'package:medconnect_app/services/equipment_service.dart' as EquipmentApiS
 import 'package:medconnect_app/supplierProfile.dart';
 import 'package:provider/provider.dart';
 import '../providers/wishlist_provider.dart';
+import 'package:medconnect_app/shimmerSkeleton.dart';
 
 
 // ---------------- PAGE ----------------
@@ -52,7 +53,6 @@ List<Review> get reviews => _product?.reviews ?? [];
       if (mounted) {
          setState(() {
         _product = widget.product;
-        isLoading = false;
       });
       }
     
@@ -89,6 +89,7 @@ List<Review> get reviews => _product?.reviews ?? [];
 if (mounted) {
       setState(() {
         _product = freshproduct;
+
         _product = Product(
         id: freshproduct.id,
         supplierId: freshproduct.supplierId,
@@ -108,7 +109,8 @@ if (mounted) {
         supplierData: freshproduct.supplierData,
         reviews: updatedReviews, // ✅ من API منفصل
       );
-        isLoading = false;
+                      isLoading = false;
+
       });
 }
 
@@ -365,31 +367,82 @@ void _showCreateListFirstDialog(Product product) async {
 
   @override
   Widget build(BuildContext context) {
-    (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text("Product Details")),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    };
-
-    if (_error != null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text("Product Details")),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(_error!),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadProduct,
-                child: const Text('Retry'),
-              ),
-            ],
+  if (isLoading) {
+  return Scaffold(
+    appBar: AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      title: const Text("Product Details", style: TextStyle(color: Colors.black)),
+      iconTheme: const IconThemeData(color: Colors.black),
+    ),
+    body: SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // صورة المنتج
+          ShimmerSkeleton(
+            width: double.infinity,
+            height: 260,
+            borderRadius: BorderRadius.circular(0),
           ),
-        ),
-      );
-    }
+          const SizedBox(height: 16),
+
+          // اسم المنتج
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerSkeleton(width: double.infinity, height: 24, borderRadius: BorderRadius.circular(6)),
+          ),
+          const SizedBox(height: 10),
+
+          // الوصف
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerSkeleton(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerSkeleton(width: 200, height: 14, borderRadius: BorderRadius.circular(4)),
+          ),
+          const SizedBox(height: 16),
+
+          // زرار Wishlist و Equipment
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(child: ShimmerSkeleton(width: double.infinity, height: 40, borderRadius: BorderRadius.circular(8))),
+                const SizedBox(width: 12),
+                Expanded(child: ShimmerSkeleton(width: double.infinity, height: 40, borderRadius: BorderRadius.circular(8))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Supplier card
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerSkeleton(width: double.infinity, height: 70, borderRadius: BorderRadius.circular(14)),
+          ),
+          const SizedBox(height: 16),
+
+          // Rent/Buy switch
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerSkeleton(width: double.infinity, height: 44, borderRadius: BorderRadius.circular(30)),
+          ),
+          const SizedBox(height: 16),
+
+          // Config card
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ShimmerSkeleton(width: double.infinity, height: 150, borderRadius: BorderRadius.circular(16)),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
     if (_product == null) {
       return Scaffold(

@@ -147,24 +147,27 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadMessages() async {
     if (conversationId == null) return;
 
-    try {
-      final messages = await _api.getMessages(conversationId!);
-      setState(() {
-        _messages = messages.map((m) {
-          return ChatMessage(
-            id: m['id'],
-            text: m['body'],
-            type: 'text',
-            time: DateTime.parse(m['created_at']),
-            isMe: m['sender']['role'] == 'doctor',
-          );
-        }).toList();
-        _loading = false;
-      });
+  try {
+    final messages = await _api.getMessages(conversationId!);
+    if (mounted) {
+    setState(() {
+      _messages = messages.map((m) {
+        return ChatMessage(
+          id: m['id'],
+          text: m['body'],
+          type: 'text',
+          time: DateTime.parse(m['created_at']),
+          isMe: m['sender']['role'] == 'doctor',
+        );
+      }).toList();
+      _loading = false;
+    });
+    }
 
-      // ✅ بعد تحميل الرسائل نحددها كمقروءة
-      await _api.markConversationAsRead(conversationId!);
-    } catch (e) {
+    // ✅ بعد تحميل الرسائل نحددها كمقروءة
+    await _api.markConversationAsRead(conversationId!);
+  } catch (e) {
+    if (mounted) {
       setState(() {
         _loading = false;
         _error = e.toString();
@@ -201,40 +204,7 @@ class _ChatScreenState extends State<ChatScreen> {
           isMe: true,
         ),
       );
-    });
-    _controller.clear();
-    try {
-       final response = await _api.sendMessage(
-      receiverId: widget.receiverId, // ✅ من الـ widget
-      message: text,
-    );
-
-    final newMsg = response['message'];
-    final conv = response['conversation'];
-
-    // ✅ لو أول رسالة، ناخد conversationId
-    if (conversationId == null && conv != null) {
-      setState(() {
-        conversationId = conv['id'];
-      });
-      _startPolling(); // ✅ نبدأ نسمع رسائل جديدة
-    }
-      // final newMsg = await _api.sendMessage(
-      //   receiverId: 30001, // هنا هتحتاجي الـ supplier id
-      //   message: text,
-      // );
-      //setState(() {
-        // final index = _messages.indexWhere((m) => m.id == tempId);
-        // if (index != -1) {
-      //     _messages[index] = ChatMessage(
-      //       id: newMsg['message']['id'],
-      //       text: text,
-      //       type: 'text',
-      //       time: DateTime.now(),
-      //       isMe: true,
-      //     );
-      //   }
-      // });
+      if(mounted) {
       setState(() {
       final index = _messages.indexWhere((m) => m.id == tempId);
       if (index != -1) {
@@ -244,20 +214,11 @@ class _ChatScreenState extends State<ChatScreen> {
           type: 'text',
           time: DateTime.now(),
           isMe: true,
-        );
+        ));
+      });
       }
-    });
-      // setState(() {
-      //   _messages.add(ChatMessage(
-      //     id: newMsg['id'],
-      //     text: text,
-      //     type: 'text',
-      //     time: DateTime.now(),
-      //     isMe: true,
-      //   ));
-      // });
-      //  _controller.clear();
-      // Navigator.pop(context, true);
+      _controller.clear();
+      Navigator.pop(context,true);
     } catch (e) {
       print(e);
       
@@ -288,6 +249,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // زرار الإرفاق (دلوقتي تجريبي)
   void sendAttachment(String type) {
+    if(mounted) {
     setState(() {
       _messages.add(
         ChatMessage(
@@ -299,6 +261,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     });
+  }
   }
 
   String formatTime(DateTime time) {

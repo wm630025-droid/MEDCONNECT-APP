@@ -16,7 +16,6 @@ import 'package:medconnect_app/services/search_services.dart';
 //import 'package:provider/provider.dart';
 import '../models/Search_model.dart';
 import 'package:medconnect_app/services/cart_services.dart';
-import 'package:shimmer/shimmer.dart';
 
 
 // ---------------------
@@ -400,7 +399,7 @@ if (!mounted) return;
       if (isSearching && _isSearchingLoading)   // ✅ حالة التحميل
         _buildSearchSkeleton()
       else if (isSearching && !_isSearchingLoading)
-        _searchResultsApi(searchResults[0]) // Pass the first search result
+        _searchResultsApi() // Pass the first search result
       else
         _buildHomeSections(),
     ],
@@ -409,7 +408,7 @@ if (!mounted) return;
     );
   }
 
- Widget _searchResultsApi( product) {
+ Widget _searchResultsApi() {
   if (searchResults.isEmpty) {
     return const Text("No products found");
   }
@@ -430,7 +429,14 @@ if (!mounted) return;
 
       return GestureDetector(
         onTap: () {
-          
+           Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ProductDetailsPage(
+        productId: product.id ?? 0,
+      ),
+    ),
+  );
         },
         child: Container(
           color: Colors.white,
@@ -603,7 +609,7 @@ void _showCategoriesTopSheet() {
                 BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))
               ],
             ),
-           
+            
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,7 +807,7 @@ void _showCategoriesTopSheet() {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: List.generate(
-          2, // ✅ عدد الـ skeleton categories
+          1, // ✅ عدد الـ skeleton categories
           (index) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Column(
@@ -1402,25 +1408,22 @@ Widget _skeletonProductCard() {
   Widget _buildActionButton(Product p) {
     // ✅ حالة 1: Out of Stock (stock == 0) و restock_date == null
     if (p.stock == 0 && p.restockDate == null) {
-      return SizedBox(
-        width: double.infinity,
-        child: Expanded(
-          flex: 1,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey.shade400,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              disabledBackgroundColor: Colors.grey.shade400,
-            ),
-            onPressed: null, // disabled
-            child: const Text(
-              "Out of Stock",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      );
-    }
+  return SizedBox(
+    width: double.infinity,
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.grey.shade400,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        disabledBackgroundColor: Colors.grey.shade400,
+      ),
+      onPressed: null,
+      child: const Text(
+        "Out of Stock",
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+    ),
+  );
+}
 
     // ✅ حالة 2: Notify Me (stock == 0 و restock_date != null)
     if (p.stock == 0 && p.restockDate != null) {
@@ -1458,7 +1461,7 @@ Widget _skeletonProductCard() {
 
     // ✅ حالة 3: منتج متاح (stock > 0)
     // Rent + Add To Cart (يظهر Rent فقط لو isRentable == true)
-    final CartService _cartService = CartService();
+    final CartService cartService = CartService();
     return Row(
       children: [
         // ---------- Add To Cart ----------
@@ -1471,7 +1474,7 @@ Widget _skeletonProductCard() {
             ),
             onPressed: () async {
               //there is change by mohamed
-              final result = await _cartService.addToCart(
+              final result = await cartService.addToCart(
                 productId: p.id,
                 quantity: 1,
                 type: "sale",
@@ -1581,35 +1584,5 @@ if (!mounted) return;
   //     },
   //   );
   // }
-}
-
-class ShimmerSkeleton extends StatelessWidget {
-  final double width;
-  final double height;
-  final BorderRadius borderRadius;
-
-  const ShimmerSkeleton({
-    super.key,
-    required this.width,
-    required this.height,
-    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      period: const Duration(milliseconds: 1200),
-      child: Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.white, // اللون سيتم تجاوزه بواسطة الـ Shimmer
-          borderRadius: borderRadius,
-        ),
-      ),
-    );
-  }
 }
 

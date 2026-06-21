@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:medconnect_app/services/Get_Doctor_Profile.dart';
 import 'package:medconnect_app/doctorAccount.dart';
 import 'package:medconnect_app/forgotPasswordScreen.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:medconnect_app/services/register_services.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -56,7 +58,6 @@ class DoctorProfilePage extends StatefulWidget {
 
 class _DoctorProfilePageState extends State<DoctorProfilePage> {
   // Selected bottom navigation index
-  int _selectedIndex = 3; // Profile is selected
 
   // Address field that can be edited
   String fullname = '';
@@ -70,10 +71,97 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
   bool isLoading = true;
 
 
+Future<void> _pickAndUploadImage() async {
+  final ImagePicker picker = ImagePicker();
+  final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
 
+  if (picked == null) return;
+
+  // show loading
+  showDialog(
+    context: context,
+    builder: (context) => const Center(child: CircularProgressIndicator()),
+  );
+
+  final result = await RegisterService.updateProfileImage(
+    picked,
+  );
+
+  if (!mounted) return;
+  Navigator.pop(context); // close loading
+
+  if (result['success'] == true) {
+    setState(() {
+      profileImageUrl = result['image_url'];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+       SnackBar(
+        content: Text(result['message'] ?? 'Profile image updated successfully'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result['message'] ?? 'Update failed')),
+    );
+  }
+}
+Future<void> _deleteProfileImage() async {
+  // confirm dialog الأول
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Delete Profile Image'),
+      content: const Text('Are you sure you want to delete your profile image?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
+
+  if (confirm != true) return;
+
+  // show loading
+  showDialog(
+    context: context,
+    builder: (context) => const Center(child: CircularProgressIndicator()),
+  );
+
+  final result = await RegisterService.deleteProfileImage();
+
+  if (!mounted) return;
+  Navigator.pop(context); // close loading
+
+  if (result['success'] == true) {
+    setState(() {
+      profileImageUrl = result['image_url']; // بيرجع default image
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result['message'] ?? 'Image deleted successfully'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result['message'] ?? 'Delete failed'
+      ),
+      ),
+    );
+  }
+}
   // 👇 حط الفنكشن هنا
   Future<void> getProfileData() async {
     final result = await GetDoctorProfile.doctorProfile();
+      print('👤 Profile result: $result'); // ✅ أضف ده
+
 
     if (result['success']) {
       final data = result['data'];
@@ -184,162 +272,162 @@ void initState() {
           ),
 
           // Fixed Bottom Navigation Bar
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 80,
-              decoration: BoxDecoration(
-                color: colorScheme.surface,
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? const Color(0xFF374151) : const Color(0xFFE5E7EB),
-                  ),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home,
-                      label: 'Home',
-                      index: 0,
-                      isDark: isDark,
-                      colorScheme: colorScheme,
-                    ),
-                    _buildNavItem(
-                      icon: Icons.receipt_outlined,
-                      activeIcon: Icons.receipt,
-                      label: 'Orders',
-                      index: 1,
-                      isDark: isDark,
-                      colorScheme: colorScheme,
-                    ),
-                    _buildNavItem(
-                      icon: Icons.chat_bubble_outline,
-                      activeIcon: Icons.chat_bubble,
-                      label: 'Messages',
-                      index: 2,
-                      isDark: isDark,
-                      colorScheme: colorScheme,
-                    ),
-                    _buildNavItem(
-                      icon: Icons.person_outline,
-                      activeIcon: Icons.person,
-                      label: 'Profile',
-                      index: 3,
-                      isDark: isDark,
-                      colorScheme: colorScheme,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+         
         ],
       ),
     );
   }
 
   Widget _buildProfileHeader(bool isDark, ColorScheme colorScheme) {
-    return Center(
-      child: Column(
-        children: [
-          // Profile Image
-          Container(
-            width: 128,
-            height: 128,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isDark ? Colors.grey[800]! : Colors.white,
-                width: 4,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+  return Center(
+    child: Column(
+      children: [
+        Stack(
+          children: [
+            Container(
+              width: 128,
+              height: 128,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDark ? Colors.grey[800]! : Colors.white,
+                  width: 4,
                 ),
-              ],
-            ),
-            child: profileImageUrl.isNotEmpty
-                ? ClipOval(
-                    child: Image.network(
-                      profileImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: isDark
-                                  ? [Colors.grey[700]!, Colors.grey[800]!]
-                                  : [const Color(0xFFDBEAFE), const Color(0xFFEFF6FF)],
-                            ),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.person,
-                              size: 64,
-                              color: isDark
-                                  ? Colors.white.withOpacity(0.4)
-                                  : colorScheme.primary.withOpacity(0.4),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                : Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isDark
-                            ? [Colors.grey[700]!, Colors.grey[800]!]
-                            : [const Color(0xFFDBEAFE), const Color(0xFFEFF6FF)],
-                      ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.person,
-                        size: 64,
-                        color: isDark
-                            ? Colors.white.withOpacity(0.4)
-                            : colorScheme.primary.withOpacity(0.4),
-                      ),
-                    ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            fullname,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
+                ],
+              ),
+              child: profileImageUrl.isNotEmpty
+                  ? ClipOval(
+                      child: Image.network(
+                        profileImageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildDefaultAvatar(isDark, colorScheme);
+                        },
+                      ),
+                    )
+                  : _buildDefaultAvatar(isDark, colorScheme),
             ),
+
+            // 👇 زرار التعديل
+           Positioned(
+  bottom: 4,
+  right: 4,
+  child: GestureDetector(
+    onTap: () {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          
+        ),
+        builder: (_) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Change Image'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndUploadImage();
+                },
+              ),
+             ListTile(
+  leading: const Icon(Icons.delete, color: Colors.red),
+  title: const Text('Delete Image', style: TextStyle(color: Colors.red)),
+  onTap: () async {
+    Navigator.pop(context); // ✅ أول حاجة اقفل الـ BottomSheet
+    
+    // بعدين اعرض الـ confirm dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Profile Image'),
+        content: const Text('Are you sure you want to delete your profile image?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
-         
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );
-  }
+
+    if (confirm == true) {
+      _deleteProfileImage();
+    }
+  },
+),
+            ],
+          ),
+        ),
+      );
+    },
+    child: Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: colorScheme.primary,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+      child: const Icon(
+        Icons.camera_alt,
+        size: 16,
+        color: Colors.white,
+      ),
+    ),
+  ),
+),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          fullname,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildDefaultAvatar(bool isDark, ColorScheme colorScheme) {
+  return Container(
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: isDark
+            ? [Colors.grey[700]!, Colors.grey[800]!]
+            : [const Color(0xFFDBEAFE), const Color(0xFFEFF6FF)],
+      ),
+    ),
+    child: Center(
+      child: Icon(
+        Icons.person,
+        size: 64,
+        color: isDark
+            ? Colors.white.withOpacity(0.4)
+            : colorScheme.primary.withOpacity(0.4),
+      ),
+    ),
+  );
+}
 
   Widget _buildPersonalInfoSection(bool isDark, ColorScheme colorScheme) {
     return Container(
@@ -686,50 +774,7 @@ void initState() {
     );
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-    required int index,
-    required bool isDark,
-    required ColorScheme colorScheme,
-  }) {
-    final isSelected = _selectedIndex == index;
-    
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Navigating to $label'),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isSelected ? activeIcon : icon,
-            color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+   
 
   void _showEditAddressDialog(bool isDark, ColorScheme colorScheme) {
     final TextEditingController controller = TextEditingController(text: address);

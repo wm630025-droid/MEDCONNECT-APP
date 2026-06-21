@@ -87,38 +87,49 @@ class CartService {
   required int cartId,
   required int quantity,
 }) async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('auth_token');
-  final url = Uri.parse('$baseUrl/v1/cart/update/$cartId');
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final url = Uri.parse('$baseUrl/v1/cart/update/$cartId');
 
-  final response = await http.post(
-    url,
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    },
-    body: jsonEncode({
-      "quantity": quantity,
-    }),
-  );
+    final response = await http.post(
+      url,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "quantity": quantity,
+      }),
+    );
 
-  print('Update response status: ${response.statusCode}');
-  print('Update response body: ${response.body}');
+    print('Update response status: ${response.statusCode}');
+    print('Update response body: ${response.body}');
 
-  if (response.statusCode == 200 || response.statusCode == 201) {
-    final data = jsonDecode(response.body);
-    
-    // ✅ تأكد من إرجاع Map فيها message
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      return {
+        'success': true,
+        'message': data['message'] ?? 'Quantity updated successfully',
+        'data': data,
+      };
+    } else {
+      // ✅ لازم يرجع حاجة هنا
+      final data = jsonDecode(response.body);
+      return {
+        'success': false,
+        'message': data['error'] ?? 'Failed to update cart',
+      };
+    }
+  } catch (e) {
     return {
-      'success': true,
-      'message': data['message'] ?? 'Quantity updated successfully',
-      'data': data,
+      'success': false,
+      'message': 'Connection error: $e',
     };
-  } else {
-    throw Exception('Failed to update cart: ${response.body}');
   }
 }
+
 
 String _lastMessage = '';
 String get lastMessage => _lastMessage;
