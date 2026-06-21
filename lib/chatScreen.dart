@@ -116,6 +116,7 @@ void dispose() {
 
   try {
     final messages = await _api.getMessages(conversationId!);
+    if (mounted) {
     setState(() {
       _messages = messages.map((m) {
         return ChatMessage(
@@ -128,14 +129,17 @@ void dispose() {
       }).toList();
       _loading = false;
     });
+    }
 
     // ✅ بعد تحميل الرسائل نحددها كمقروءة
     await _api.markConversationAsRead(conversationId!);
   } catch (e) {
-    setState(() {
-      _loading = false;
-      _error = e.toString();
-    });
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
   }
 }
 //  Future<void> _loadMessages() async {
@@ -164,6 +168,7 @@ void dispose() {
         receiverId: 30001, // هنا هتحتاجي الـ supplier id
         message: text,
       );
+      if(mounted) {
       setState(() {
         _messages.add(ChatMessage(
           id: newMsg['id'],
@@ -173,6 +178,7 @@ void dispose() {
           isMe: true,
         ));
       });
+      }
       _controller.clear();
       Navigator.pop(context,true);
     } catch (e) {
@@ -198,6 +204,7 @@ void dispose() {
 
   // زرار الإرفاق (دلوقتي تجريبي)
   void sendAttachment(String type) {
+    if(mounted) {
     setState(() {
       _messages.add(
         ChatMessage(
@@ -209,6 +216,7 @@ void dispose() {
         ),
       );
     });
+  }
   }
 
   String formatTime(DateTime time) {

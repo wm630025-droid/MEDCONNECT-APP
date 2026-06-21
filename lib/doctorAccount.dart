@@ -11,6 +11,7 @@ import 'package:medconnect_app/order_details.dart';
 import 'package:medconnect_app/services/order_services.dart';
 import 'package:medconnect_app/services/Get_doctor_profile.dart';
 //import 'package:medconnect_app/Screens/homeScreen.dart';
+import 'package:shimmer/shimmer.dart';
 
  
  @override
@@ -418,9 +419,14 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
 
   Widget _buildBody() {
     if (!_hasLoadedOnce) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
+    // عرض 3 بطاقات شيمر أثناء التحميل الأولي
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: 3,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, __) => _buildOrderShimmer(),
+    );
+  }
     if (_errorMessage != null) {
       return Center(
         child: Column(
@@ -552,6 +558,54 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
           ),
         );
       },
+    );
+  }
+  Widget _buildOrderShimmer() {
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
+    ),
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            ShimmerSkeleton(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+            ShimmerSkeleton(width: 60, height: 16, borderRadius: BorderRadius.circular(4)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ShimmerSkeleton(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+        const SizedBox(height: 4),
+        ShimmerSkeleton(width: 120, height: 14, borderRadius: BorderRadius.circular(4)),
+        const SizedBox(height: 4),
+        ShimmerSkeleton(width: 200, height: 14, borderRadius: BorderRadius.circular(4)),
+        const SizedBox(height: 4),
+        ShimmerSkeleton(width: 150, height: 14, borderRadius: BorderRadius.circular(4)),
+        const SizedBox(height: 8),
+        ShimmerSkeleton(width: 80, height: 14, borderRadius: BorderRadius.circular(4)),
+      ],
+    ),
+  );
+}
+}
+
+class ShimmerSkeleton extends StatelessWidget {
+  final double width;
+  final double height;
+  final BorderRadius borderRadius;
+  const ShimmerSkeleton({super.key, required this.width, required this.height, this.borderRadius = const BorderRadius.all(Radius.circular(12))});
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      period: const Duration(milliseconds: 1200),
+      child: Container(width: width, height: height, decoration: BoxDecoration(color: Colors.white, borderRadius: borderRadius)),
     );
   }
 }

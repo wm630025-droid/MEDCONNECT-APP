@@ -57,10 +57,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
     super.dispose();
   }
   Future<void> _fetchConversations() async {
+    if (mounted) {
     setState(() {
       _loading = true;
       _error = null;
     });
+    }
 
     try {
       final List<dynamic> convs = await _api.getConversations();
@@ -69,56 +71,57 @@ class _MessagesScreenState extends State<MessagesScreen> {
       List<int> ids = [];
 
       for (var conv in convs) {
-        final int convId = conv['id'];
-        final other = conv['other_user'];
+  if (!mounted) return; // ✅ أضف دي في أول الـ loop
 
-        // ✅ جلب آخر رسالة وعدد الغير مقروءة
-        final messages = await _api.getMessages(convId);
+  final int convId = conv['id'];
+  final other = conv['other_user'];
 
-        // ✅ حساب عدد الرسائل الغير مقروءة (read_at == null والمرسل مش أنا)
-        int unreadCount = 0;
-        String lastMessage = '';
-        String lastTime = '';
+  final messages = await _api.getMessages(convId);
 
-        for (var msg in messages) {
-          final isMe = msg['sender']['role'] == 'doctor';
-          final readAt = msg['read_at'];
+  if (!mounted) return; // ✅ وبعد كل await
 
-          // ✅ لو الرسالة مش أنا (جاية من الآخر) ولسه مقروءتش
-          if (!isMe && readAt == null) {
-            unreadCount++;
-          }
+  int unreadCount = 0;
+  String lastMessage = '';
+  String lastTime = '';
 
-          // ✅ آخر رسالة
-          if (msg == messages.last) {
-            lastMessage = msg['body'];
-            lastTime = _formatTime(msg['created_at']);
-          }
-        }
+  for (var msg in messages) {
+    final isMe = msg['sender']['role'] == 'doctor';
+    final readAt = msg['read_at'];
 
-        loaded.add(
-          ChatModel(
-            name: other['fullname'],
-            lastMessage: lastMessage,
-            time: lastTime,
-            isOnline: false,
-            unreadCount: unreadCount,
-          ),
-        );
-        ids.add(convId);
-      }
+    if (!isMe && readAt == null) {
+      unreadCount++;
+    }
 
+    if (msg == messages.last) {
+      lastMessage = msg['body'];
+      lastTime = _formatTime(msg['created_at']);
+    }
+  }
+
+  loaded.add(ChatModel(
+    name: other['fullname'],
+    lastMessage: lastMessage,
+    time: lastTime,
+    isOnline: false,
+    unreadCount: unreadCount,
+  ));
+  ids.add(convId);
+}
+if (mounted) {
       setState(() {
         _chats = loaded;
         filteredChats = loaded;
         _conversationIds = ids;
         _loading = false;
       });
+}
     } catch (e) {
+      if (mounted) {
       setState(() {
         _error = e.toString();
         _loading = false;
       });
+      }
     }
   }
   //  Future<void> _fetchConversations() async {
@@ -204,20 +207,24 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   void searchChats(String query) {
     if (query.isEmpty) {
+      if(mounted) {
       setState(() {
         filteredChats = _chats;
       });
+      }
       return;
     }
 
     final results = _chats.where((chat) {
       return chat.name.toLowerCase().contains(query.toLowerCase());
     }).toList();
-
+if (mounted) {
     setState(() {
       filteredChats = results;
     });
+}
   }
+
 
   @override
   Widget build(BuildContext context) {

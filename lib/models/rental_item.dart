@@ -2,6 +2,7 @@ class RentalItem {
   final int productId;
   final String name;
   final double price;
+  
   final String image;
   final int quantity;
   final String startDate;

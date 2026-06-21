@@ -281,9 +281,7 @@ class CheckoutSummaryPage extends StatelessWidget {
   Widget _buildOrderSummary() {
     final displayItems = getDisplayItems();
     double calculatedSubtotal = calculateTotalAmount();
-    double insurance = 50;
-    double delivery = 25;
-    double calculatedTotal = calculatedSubtotal + insurance + delivery;
+    double calculatedTotal = calculatedSubtotal;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -435,8 +433,7 @@ class CheckoutSummaryPage extends StatelessWidget {
           
           const SizedBox(height: 8),
           _priceRow('Subtotal', '\$${calculatedSubtotal.toStringAsFixed(2)}'),
-          _priceRow('Insurance', '\$${insurance.toStringAsFixed(2)}'),
-          _priceRow('Delivery', '\$${delivery.toStringAsFixed(2)}'),
+         
           const SizedBox(height: 8),
           _priceRow('Total', '\$${calculatedTotal.toStringAsFixed(2)}', isTotal: true),
         ],

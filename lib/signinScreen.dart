@@ -4,11 +4,13 @@ import 'package:medconnect_app/mainScreen.dart';
 import 'package:medconnect_app/signUpScreen.dart';
 import 'package:medconnect_app/forgotPasswordScreen.dart';
 import '../services/api_service.dart';
- // استيراد ApiService
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:medconnect_app/services/register_services.dart';
+// استيراد ApiService
 
 ////////hagertestingacc@gmail.com
 ///P@ssword123
-
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -56,7 +58,17 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _isLoading = false);
 
     if (result['success']) {
-      final successMessage = result['message']?.toString() ?? 'Sign in successfully';
+      final prefs = await SharedPreferences.getInstance();
+    final pendingImagePath = prefs.getString('pending_profile_image');
+    if (pendingImagePath != null) {
+      print('🖼️ Found pending image, uploading...');
+      final imageFile = XFile(pendingImagePath);
+      final imageResult = await RegisterService.updateProfileImage(imageFile);
+      print('🖼️ Upload result: $imageResult');
+      await prefs.remove('pending_profile_image');
+    }
+      final successMessage =
+          result['message']?.toString() ?? 'Sign in successfully';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(successMessage),
@@ -81,7 +93,8 @@ class _SignInScreenState extends State<SignInScreen> {
       errors.addAll(Map<String, dynamic>.from(result['errors']));
     }
 
-    String? apiError = result['error']?.toString() ?? result['message']?.toString();
+    String? apiError =
+        result['error']?.toString() ?? result['message']?.toString();
     if (apiError != null && apiError.isEmpty) apiError = null;
 
     String? emailError;
@@ -124,7 +137,8 @@ class _SignInScreenState extends State<SignInScreen> {
         final lower = apiError.toLowerCase();
         if (lower.contains('email') || lower.contains('البريد')) {
           emailError = apiError;
-        } else if (lower.contains('password') || lower.contains('كلمة المرور')) {
+        } else if (lower.contains('password') ||
+            lower.contains('كلمة المرور')) {
           passwordError = apiError;
         } else {
           generalError = apiError;
@@ -182,8 +196,13 @@ class _SignInScreenState extends State<SignInScreen> {
                         size: 26,
                       ),
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const IntroScreen()));
-                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const IntroScreen(),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(width: 8),
                     Image.asset(
@@ -251,7 +270,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     //     ),
                     //   ],
                     // ),
-
                     const SizedBox(height: 50),
 
                     // ---------------- EMAIL ----------------
@@ -259,33 +277,37 @@ class _SignInScreenState extends State<SignInScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         TextFormField(
-                          controller: _identifierController,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                            hintText: 'Email',
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 22,
-                              horizontal: 28,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                          
-                          errorText:_emailError,
-                          errorStyle: const TextStyle(
-                            fontSize: 12,
-                            color:Colors.red,
-                          ),
-                        ),
-                          onChanged: (_){
-                            if(_emailError != null){
-                              setState(() => _emailError=null);
-                            }
-                          },
-                        ),
+  controller: _identifierController,
+   keyboardType: TextInputType.emailAddress,
+  decoration: InputDecoration(
+    filled: true,
+    fillColor: Colors.white,
+    labelText: 'Email',
+    floatingLabelBehavior: FloatingLabelBehavior.auto, // ✅ هذه تحل المشكلة
+    contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Color(0xFF0066FF), width: 2),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Colors.red, width: 1),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Colors.red, width: 2),
+    ),
+    errorText: _emailError,
+    errorStyle: const TextStyle(fontSize: 12, color: Colors.red),
+  ),
+  onChanged: (_){
+    if(_emailError != null) setState(() => _emailError = null);
+  },
+)
                       ],
                     ),
 
@@ -295,43 +317,45 @@ class _SignInScreenState extends State<SignInScreen> {
                     Column(
                       children: [
                         TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                            hintText: 'Password',
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: _passwordError != null ? Colors.red : const Color(0xFF0066FF),
-                              ),
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 22,
-                              horizontal: 28,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            errorText: _passwordError,
-                            errorStyle: const TextStyle(
-                              fontSize:  12,
-                              color: Colors.red,
-                            )
-                          ),
-                          onChanged: (_){
-                            if(_passwordError != null){
-                              setState(() => _passwordError=null);
-                            }
-                          },
-                        ),
+  controller: _passwordController,
+  obscureText: _obscurePassword,
+   keyboardType: TextInputType.visiblePassword,
+  decoration: InputDecoration(
+    filled: true,
+    fillColor: Colors.white,
+    labelText: 'Password',
+    floatingLabelBehavior: FloatingLabelBehavior.auto,          // ✅ إضافة labelText هنا أيضاً
+    suffixIcon: IconButton(
+      icon: Icon(
+        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+        color: const Color(0xFF0066FF),
+      ),
+      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+    ),
+    contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Color(0xFF0066FF), width: 2),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Colors.red, width: 1),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Colors.red, width: 2),
+    ),
+    errorText: _passwordError,
+    errorStyle: const TextStyle(fontSize: 12, color: Colors.red),
+  ),
+  onChanged: (_){
+    if(_passwordError != null) setState(() => _passwordError = null);
+  },
+)
                       ],
                     ),
 
@@ -340,7 +364,8 @@ class _SignInScreenState extends State<SignInScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {    // change by mohamed
+                        onPressed: () {
+                          // change by mohamed
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -391,7 +416,10 @@ class _SignInScreenState extends State<SignInScreen> {
                         child: Text(
                           _generalError!,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.red, fontSize: 14),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
 

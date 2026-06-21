@@ -16,7 +16,8 @@ import 'package:medconnect_app/models/offer_request.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/models/review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:image_picker/image_picker.dart';
+import 'package:medconnect_app/services/register_services.dart';
 class ApiService {
   static const String baseUrl = 'https://medconnect-one-pi.vercel.app/api/api';
 
@@ -120,6 +121,23 @@ static void clearCache() {
           print('💾 Found token: ${data['token']}');
           await _saveToken(data['token']);
           await _saveUserData(data['data']);
+           final prefs = await SharedPreferences.getInstance();
+  final pendingImagePath = prefs.getString('pending_profile_image');
+  if (pendingImagePath != null) {
+    print('🖼️ Found pending image, uploading...');
+    final imageFile = XFile(pendingImagePath);
+final imageResult = await RegisterService.updateProfileImage(imageFile);   
+ print('🖼️ Pending image upload result: $imageResult');
+    await prefs.remove('pending_profile_image'); // ✅ امسحها بعد الرفع
+  }
+          if (data['data'] != null && data['token'] != null) {
+  print('💾 Found token: ${data['token']}');
+  await _saveToken(data['token']);
+  await _saveUserData(data['data']);
+
+  // ✅ ارفع الصورة الـ pending لو موجودة
+ 
+}
         } else {
           print('❌ Token not found in response!');
           print('🔍 data["data"]: ${data['data']}');

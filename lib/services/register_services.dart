@@ -1,8 +1,10 @@
-// register_services.dart
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
 
-class ApiService {
+class RegisterService {
   static const String baseUrl = 'https://medconnect-one-pi.vercel.app';
 
   Future<Map<String, dynamic>> register({
@@ -13,6 +15,7 @@ class ApiService {
     required String nationalId,
     required String phone,
     required String licenseNumber,
+    XFile? profileImage,
   }) async {
     try {
       final url = Uri.parse('$baseUrl/api/api/v1/doctor/register');
@@ -31,43 +34,24 @@ class ApiService {
         'license_number': licenseNumber,
       });
 
-      print('🔐 [register_services] register request: ${url.toString()}');
-      print('🔐 [register_services] request headers: $headers');
-      print('🔐 [register_services] request body: ${jsonEncode({
-        'full_name': fullName,
-        'email': email,
-        'password': '***hidden***',
-        'password_confirmation': '***hidden***',
-        'address': address,
-        'national_id': nationalId,
-        'phone': phone,
-        'license_number': licenseNumber,
-      })}');
-
       final response = await http.post(url, headers: headers, body: body);
-      print('📥 [register_services] response status: ${response.statusCode}');
-      print('📥 [register_services] response body: ${response.body}');
-      final String rawBody = response.body;
-      dynamic responseData;
-      try {
-        responseData = jsonDecode(rawBody);
-      } catch (_) {
-        responseData = null;
-      }
+      final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final dynamic data = responseData is Map<String, dynamic> && responseData['data'] is Map<String, dynamic>
-            ? responseData['data']
-            : responseData;
-        final String? profileImageUrl = data is Map<String, dynamic>
-            ? (data['profile_image_url']?.toString() ?? data['profile_image']?.toString())
-            : null;
+        final token = responseData['data']?['token'] ?? responseData['token'];
+  if (token != null) {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_token', token);
+  }
+        // ✅ لو في صورة، ارفعها بعد التسجيل
+        if (profileImage != null) {
+          await updateProfileImage(profileImage);
+        }
 
         return {
           'success': true,
           'message': responseData['message'] ?? 'Registration successful',
           'data': responseData,
-          'profile_Image_Url': profileImageUrl,
         };
       } else if (response.statusCode == 422) {
         return {
@@ -86,18 +70,92 @@ class ApiService {
         return {
           'success': false,
           'statusCode': response.statusCode,
-          'message': responseData is Map<String, dynamic>
-              ? (responseData['message']?.toString() ?? 'Unexpected error')
-              : rawBody,
-          'errors': responseData is Map<String, dynamic> ? (responseData['errors'] ?? {}) : {},
+          'message': responseData['message'] ?? 'Unexpected error',
+          'errors': responseData['errors'] ?? {},
         };
       }
     } catch (e) {
-      print('❌ [register_services] exception: $e');
       return {
         'success': false,
         'message': 'Network error: ${e.toString()}',
       };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateProfileImage(XFile imageFile) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+
+      final uri = Uri.parse('$baseUrl/api/api/v1/doctor/update/image');
+      final request = http.MultipartRequest('POST', uri);
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      final bytes = await imageFile.readAsBytes();
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'profile_image_url',
+          bytes,
+          filename: imageFile.name,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'image_url': data['data']['profile_image_url'],
+          'message': data['message'] ?? 'Profile image updated successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Update failed',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteProfileImage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+
+      final uri = Uri.parse('$baseUrl/api/api/v1/doctor/delete/image');
+      final response = await http.delete(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'],
+          'image_url': data['data']['profile_image_url'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Delete failed',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 }

@@ -27,6 +27,7 @@ dependencies:
   flutter_icons_plus: ^1.0.3
   flutter_inappwebview: ^6.1.5
   shimmer: ^3.0.0
+  dio: ^5.9.2
   
 
 

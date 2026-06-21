@@ -90,15 +90,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         );
         
         // Navigate back to login after 2 seconds
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/signin',
-              (route) => false,
-            );
-          }
-        });
+        
       } else {
         setState(() {
           _isSubmitting = false;

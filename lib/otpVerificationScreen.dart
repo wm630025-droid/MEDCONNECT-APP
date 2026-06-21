@@ -12,11 +12,9 @@ class OtpVerificationScreen extends StatefulWidget {
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
-  final List<TextEditingController> _otpControllers = List.generate(
-    6, // Changed from 4 to 6 digits
-    (_) => TextEditingController(),
-  );
-  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode()); // Changed to 4
+  final List<TextEditingController> _otpControllers = List.generate(4, (_) => TextEditingController());
+final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+ // Changed to 4
   bool _isVerifying = false;
   bool _showSuccessMessage = true;
   bool _isResending = false;
@@ -25,13 +23,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void initState() {
     super.initState();
     // Add listeners for auto-focus
-    for (int i = 0; i < 6; i++) {
-      _otpControllers[i].addListener(() {
-        if (_otpControllers[i].text.length == 1 && i < 5) {
-          _focusNodes[i + 1].requestFocus();
-        }
-      });
+   for (int i = 0; i < 4; i++) { // ✅
+  _otpControllers[i].addListener(() {
+    if (_otpControllers[i].text.length == 1 && i < 3) { // ✅
+      _focusNodes[i + 1].requestFocus();
     }
+  });
+}
   }
 
   @override
@@ -370,13 +368,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                     ),
                                   ),
                                 ),
-                                onChanged: (value) {
-                                  if (value.length == 1 && index < 5) {
-                                    _focusNodes[index + 1].requestFocus();
-                                  } else if (value.isEmpty && index > 0) {
-                                    _focusNodes[index - 1].requestFocus();
-                                  }
-                                },
+onChanged: (value) {
+  if (value.length == 1 && index < 3) { // ✅
+    _focusNodes[index + 1].requestFocus();
+  } else if (value.isEmpty && index > 0) {
+    _focusNodes[index - 1].requestFocus();
+  }
+},
                               ),
                             );
                           }),
