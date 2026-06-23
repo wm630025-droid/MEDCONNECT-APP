@@ -59,10 +59,24 @@ Future<List<EquipmentList>> getAllEquipmentLists() async {
   if (response.statusCode == 200) {
      print('Response Body#######################: ${response.body}'); // ✅ Debug print
     print('Response Status: ${response.statusCode}');
-    final Map<String, dynamic> data = json.decode(response.body);
-    final List<dynamic> listsData = data['data'];
-    print('Decoded Data: $data'); // ✅ Debug print
-    return listsData.map((json) => EquipmentList.fromJson(json)).toList();
+ final Map<String, dynamic> data = json.decode(response.body);
+    
+    // ✅ معالجة الحالة لو data['data'] كانت Map مش List
+    if (data['data'] is List) {
+      return (data['data'] as List)
+          .map((json) => EquipmentList.fromJson(json))
+          .toList();
+    } else if (data['data'] is Map) {
+      // ✅ لو data['data'] كانت Map فاضية {} أو فيها id: []
+      return [];
+    } else {
+      return [];
+    }
+    
+    // final Map<String, dynamic> data = json.decode(response.body);
+    // final List<dynamic> listsData = data['data'];
+    // print('Decoded Data: $data'); // ✅ Debug print
+    // return listsData.map((json) => EquipmentList.fromJson(json)).toList();
   } else {
     throw Exception('Error fetching lists: ${response.statusCode}');
   }
@@ -76,9 +90,23 @@ Future<List<EquipmentList>> getSimpleLists() async {
     headers: headers,
   );
   if (response.statusCode == 200) {
+    print('----------------------------------');
+    print('Response Body (Simple Lists): ${response.body}'); // ✅ Debug print
+    print('Response Status (Simple Lists): ${response.statusCode}');
     final Map<String, dynamic> data = json.decode(response.body);
-    final List<dynamic> listsData = data['data'];
-    return listsData.map((json) => EquipmentList.fromJson(json)).toList();
+    
+    if (data['data'] is List) {
+      return (data['data'] as List)
+          .map((json) => EquipmentList.fromJson(json))
+          .toList();
+    } else if (data['data'] is Map) {
+      return [];
+    } else {
+      return [];
+    }
+    // final Map<String, dynamic> data = json.decode(response.body);
+    // final List<dynamic> listsData = data['data'];
+    // return listsData.map((json) => EquipmentList.fromJson(json)).toList();
   } else {
     throw Exception('Error fetching simple lists: ${response.statusCode}');
   }

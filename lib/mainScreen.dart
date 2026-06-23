@@ -25,7 +25,7 @@ class _MainScreenState extends State<MainScreen> {
     const CartPage(),
      MessagesScreen(),
      EquipmentListsScreen(),
-      DoctorProfilePage(),
+     // DoctorProfilePage(),
 
   ];
 

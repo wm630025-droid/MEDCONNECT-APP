@@ -6,6 +6,7 @@ import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/models/rental_item.dart';
 import 'package:medconnect_app/models/review.dart';
+import 'package:medconnect_app/providers/notification_provider.dart';
 import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/services/cart_services.dart';
 import 'package:medconnect_app/services/equipment_service.dart' as EquipmentApiService;
@@ -33,7 +34,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Product? _product;
   bool isLoading = true;
   String? _error;
-bool _isNotified = false;
+//bool _isNotified = false;
+
+
+bool get isOutOfStock => _product!.stock == 0 && _product!.restockDate == null;
+bool get isRentable => _product!.isRentable && (_product!.rentalStock ?? 0) > 0;
+bool get canBuy => _product!.stock > 0;
+bool get showNotifyMe => _product!.stock == 0 && _product!.restockDate != null;
 
 List<Review> get reviews => _product?.reviews ?? [];
   final ApiService _apiService = ApiService();
@@ -46,17 +53,65 @@ List<Review> get reviews => _product?.reviews ?? [];
     selectedPurchase = 0; // يفتح على تبويب Rent
   }
   }
+Future<void> _fetchReviews() async {
+  if (_product == null) return;
+  try {
+    final reviews = await _apiService.getProductReviews(_product!.id);
+    reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final updatedReviews = reviews.map((r) {
+      return Review(
+        id: r.id,
+        doctorId: r.doctorId,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+        productId: r.productId,
+        doctorName: r.doctorName,
+        canDelete: r.doctorId == ApiService.doctorId,
+      );
+    }).toList();
 
+    if (mounted) {
+      setState(() {
+        _product = Product(
+          id: _product!.id,
+          supplierId: _product!.supplierId,
+          name: _product!.name,
+          brand: _product!.brand,
+          price: _product!.price,
+          imagePath: _product!.imagePath,
+          stock: _product!.stock,
+          isRentable: _product!.isRentable,
+          restockDate: _product!.restockDate,
+          status: _product!.status,
+          images: _product!.images,
+          description: _product!.description,
+          specification: _product!.specification,
+          warranty: _product!.warranty,
+          configuration: _product!.configuration,
+          dailyRent: _product!.dailyRent,
+          rentalStock: _product!.rentalStock,
+          setupDuration: _product!.setupDuration,
+          supplierData: _product!.supplierData,
+          reviews: updatedReviews,
+        );
+      });
+    }
+  } catch (e) {
+    print('❌ Error fetching reviews: $e');
+  }
+}
   Future<void> _loadProduct() async {
     // لو المنتج جاي من HomeScreen (مش محتاج API)
     if (widget.product != null) {
       if (mounted) {
          setState(() {
         _product = widget.product;
+        isLoading = false;
       });
       }
-    
-  await _checkNotificationStatus();
+    await _fetchReviews(); // ✅ جلب التعليقات بعد تحميل المنتج
+  //await _checkNotificationStatus();
   return; // ✅ رجوع عشان ما ينفذش الكود اللي بعده
   }
     // // لو محتاجين نجيب من API
@@ -88,7 +143,7 @@ List<Review> get reviews => _product?.reviews ?? [];
       }).toList();
 if (mounted) {
       setState(() {
-        _product = freshproduct;
+     //   _product = freshproduct;
 
         _product = Product(
         id: freshproduct.id,
@@ -104,9 +159,11 @@ if (mounted) {
         images: freshproduct.images,
         description: freshproduct.description,
         specification: freshproduct.specification,
+        configuration: freshproduct.configuration,
         warranty: freshproduct.warranty,
         setupDuration: freshproduct.setupDuration,
         supplierData: freshproduct.supplierData,
+        dailyRent: freshproduct.dailyRent,
         reviews: updatedReviews, // ✅ من API منفصل
       );
                       isLoading = false;
@@ -114,7 +171,7 @@ if (mounted) {
       });
 }
 
- await _checkNotificationStatus();
+// await _checkNotificationStatus();
 
     } catch (e) {
       if (mounted) {
@@ -128,29 +185,29 @@ if (mounted) {
   }
 
 // ✅ دالة منفصلة عشان نجيب isNotified
-Future<void> _checkNotificationStatus() async {
-  if (_product == null) return;
-  final isNotified = await _apiService.isNotified(_product!.id);
-  if (mounted) {
-    setState(() {
-      _isNotified = isNotified;
-    });
-  }
-}
+// Future<void> _checkNotificationStatus() async {
+//   if (_product == null) return;
+//   final isNotified = await _apiService.isNotified(_product!.id);
+//   if (mounted) {
+//     setState(() {
+//       _isNotified = isNotified;
+//     });
+//   }
+// }
   // -------- Rent --------
   DateTime? rentStartDate;
   DateTime? rentEndDate;
   int rentQuantity = 1; 
 
   // -------- Buy --------
-  String selectedConfig = "Standard Unit";
-  double get price {
-    return selectedConfig == "Total price"
-        ? _product!.price
-        : _product!.price; // Example price difference
-  }
+  // String selectedConfig = "Standard Unit";
+  // double get price {
+  //   return selectedConfig == "Total price"
+  //       ? _product!.price
+  //       : _product!.price; // Example price difference
+  // }
 
-  String selectedWarranty = "";
+  // String selectedWarranty = "";
 
   // -------- Reviews --------
 double get averageRating {
@@ -367,82 +424,103 @@ void _showCreateListFirstDialog(Product product) async {
 
   @override
   Widget build(BuildContext context) {
-  if (isLoading) {
+   (isLoading) {
   return Scaffold(
     appBar: AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
       title: const Text("Product Details", style: TextStyle(color: Colors.black)),
-      iconTheme: const IconThemeData(color: Colors.black),
+    //  iconTheme: const IconThemeData(color: Colors.black),
     ),
-    body: SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // صورة المنتج
-          ShimmerSkeleton(
-            width: double.infinity,
-            height: 260,
-            borderRadius: BorderRadius.circular(0),
+     body: const Center(child: CircularProgressIndicator()),
+      );
+  };
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text("Product Details")),
+   body:  Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_error!),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadProduct,
+                child: const Text('Retry'),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-
-          // اسم المنتج
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 24, borderRadius: BorderRadius.circular(6)),
-          ),
-          const SizedBox(height: 10),
-
-          // الوصف
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: 200, height: 14, borderRadius: BorderRadius.circular(4)),
-          ),
-          const SizedBox(height: 16),
-
-          // زرار Wishlist و Equipment
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(child: ShimmerSkeleton(width: double.infinity, height: 40, borderRadius: BorderRadius.circular(8))),
-                const SizedBox(width: 12),
-                Expanded(child: ShimmerSkeleton(width: double.infinity, height: 40, borderRadius: BorderRadius.circular(8))),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Supplier card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 70, borderRadius: BorderRadius.circular(14)),
-          ),
-          const SizedBox(height: 16),
-
-          // Rent/Buy switch
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 44, borderRadius: BorderRadius.circular(30)),
-          ),
-          const SizedBox(height: 16),
-
-          // Config card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 150, borderRadius: BorderRadius.circular(16)),
-          ),
-        ],
-      ),
-    ),
+        ),
   );
-}
+  }
+   //SingleChildScrollView(
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           // صورة المنتج
+//           ShimmerSkeleton(
+//             width: double.infinity,
+//             height: 260,
+//             borderRadius: BorderRadius.circular(0),
+//           ),
+//           const SizedBox(height: 16),
+
+//           // اسم المنتج
+//           Padding(
+//             padding: const EdgeInsets.symmetric(horizontal: 16),
+//             child: ShimmerSkeleton(width: double.infinity, height: 24, borderRadius: BorderRadius.circular(6)),
+//           ),
+//           const SizedBox(height: 10),
+
+//           // الوصف
+//           Padding(
+//             padding: const EdgeInsets.symmetric(horizontal: 16),
+//             child: ShimmerSkeleton(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+//           ),
+//           const SizedBox(height: 6),
+//           Padding(
+//             padding: const EdgeInsets.symmetric(horizontal: 16),
+//             child: ShimmerSkeleton(width: 200, height: 14, borderRadius: BorderRadius.circular(4)),
+//           ),
+//           const SizedBox(height: 16),
+
+//           // زرار Wishlist و Equipment
+//           Padding(
+//             padding: const EdgeInsets.symmetric(horizontal: 16),
+//             child: Row(
+//               children: [
+//                 Expanded(child: ShimmerSkeleton(width: double.infinity, height: 40, borderRadius: BorderRadius.circular(8))),
+//                 const SizedBox(width: 12),
+//                 Expanded(child: ShimmerSkeleton(width: double.infinity, height: 40, borderRadius: BorderRadius.circular(8))),
+//               ],
+//             ),
+//           ),
+//           const SizedBox(height: 16),
+
+//           // Supplier card
+//           Padding(
+//             padding: const EdgeInsets.symmetric(horizontal: 16),
+//             child: ShimmerSkeleton(width: double.infinity, height: 70, borderRadius: BorderRadius.circular(14)),
+//           ),
+//           const SizedBox(height: 16),
+
+//           // Rent/Buy switch
+//           Padding(
+//             padding: const EdgeInsets.symmetric(horizontal: 16),
+//             child: ShimmerSkeleton(width: double.infinity, height: 44, borderRadius: BorderRadius.circular(30)),
+//           ),
+//           const SizedBox(height: 16),
+
+//           // Config card
+//           Padding(
+//             padding: const EdgeInsets.symmetric(horizontal: 16),
+//             child: ShimmerSkeleton(width: double.infinity, height: 150, borderRadius: BorderRadius.circular(16)),
+//           ),
+//         ],
+//       ),
+//     ),
+//   );
+// }
 
     if (_product == null) {
       return Scaffold(
@@ -637,7 +715,7 @@ void _showCreateListFirstDialog(Product product) async {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          "Main Clinic",
+                          "Cairo", // Replace with actual location if available
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.grey,
@@ -742,7 +820,7 @@ void _showCreateListFirstDialog(Product product) async {
     String supplierName = ' '; // اسم افتراضي
 
     if (_product!.supplierData != null) {
-      supplierName = _product!.supplierData!['company_name'] ?? 'xxxxxx';
+      supplierName = _product!.supplierData!['company_name'] ?? ' ';
       print('🏢 Supplier from API: $supplierName');
     } else {
       print('⚠️ No supplier data available, using brand: $supplierName');
@@ -874,6 +952,8 @@ void _showCreateListFirstDialog(Product product) async {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildProductInfo(),
+        const SizedBox(height: 16),
         const Text(
           "Rental Period",
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -967,52 +1047,104 @@ Widget _buildQuantitySelector() {
       ),
     ),
   );
-
-  // ---------------- BUY ----------------
-  Widget _buyConfig() => _card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Configuration",
-          style: TextStyle(fontWeight: FontWeight.bold),
+Widget _buildProductInfo() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Configuration
+      const Text(
+        "Configuration",
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 8),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Text(
+        child: Text(
             _product!.configuration == 0
                 ? "No configuration"
                 : "${_product!.configuration} ",
 
             style: const TextStyle(fontSize: 14),
           ),
-        ),
+      ),
+      const SizedBox(height: 16),
 
-        const SizedBox(height: 16),
-        const Text("Warranty", style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Text(
-            _product!.warranty == 0 || _product!.warranty.isEmpty
-                ? "No warranty"
-                : "${_product!.warranty} ",
-            style: const TextStyle(fontSize: 14),
-          ),
+      // Warranty
+      const Text(
+        "Warranty",
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 8),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
         ),
+        child: Text(
+          _product!.warranty == "0" || _product!.warranty.isEmpty
+              ? "No warranty"
+              : "${_product!.warranty} months",
+          style: const TextStyle(fontSize: 14),
+        ),
+      ),
+    ],
+  );
+}
+  // ---------------- BUY ----------------
+  Widget _buyConfig() => _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // const Text(
+        //   "Configuration",
+        //   style: TextStyle(fontWeight: FontWeight.bold),
+        // ),
+        // const SizedBox(height: 8),
+        // Container(
+        //   width: double.infinity,
+        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        //   decoration: BoxDecoration(
+        //     color: Colors.grey.shade100,
+        //     borderRadius: BorderRadius.circular(12),
+        //     border: Border.all(color: Colors.grey.shade300),
+        //   ),
+        //   child: Text(
+        //     _product!.configuration == 0
+        //         ? "No configuration"
+        //         : "${_product!.configuration} ",
+
+        //     style: const TextStyle(fontSize: 14),
+        //   ),
+        // ),
+
+        // const SizedBox(height: 16),
+        // const Text("Warranty", style: TextStyle(fontWeight: FontWeight.bold)),
+        // const SizedBox(height: 8),
+        // Container(
+        //   width: double.infinity,
+        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        //   decoration: BoxDecoration(
+        //     color: Colors.grey.shade100,
+        //     borderRadius: BorderRadius.circular(12),
+        //     border: Border.all(color: Colors.grey.shade300),
+        //   ),
+        //   child: Text(
+        //     _product!.warranty == 0 || _product!.warranty.isEmpty
+        //         ? "No warranty"
+        //         : "${_product!.warranty} ",
+        //     style: const TextStyle(fontSize: 14),
+        //   ),
+        // ),
+        _buildProductInfo(),
         const SizedBox(height: 20),
         locationAndSetupTime(),
         const SizedBox(height: 20),
@@ -1354,7 +1486,7 @@ Future<void> _submitReview() async {
     if (result['success'] == true) {
       // ✅ إضافة التقييم محلياً (أو إعادة تحميل المنتج)
       final newReview = Review(
-        id: DateTime.now().millisecondsSinceEpoch,
+        id: result['data']['id'], // Assuming the API returns the new review ID
         productId: _product!.id,
         doctorId: ApiService.doctorId ?? 0,
         rating: userRating,
@@ -1404,6 +1536,7 @@ Future<void> _submitReview() async {
   }
 }
 Future<void> _deleteReview(Review review) async {
+  
   final shouldDelete = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -1641,17 +1774,19 @@ Future<void> _deleteReview(Review review) async {
 
   // ---------------- ACTION BUTTON ----------------
   Widget _buildNotifyButton() {
+    final notificationProvider = Provider.of<NotificationProvider>(context);
+final isNotified = notificationProvider.isNotified(_product!.id);
   return SizedBox(
     width: double.infinity,
     child: Padding(
       padding: const EdgeInsets.all(12.0),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: _isNotified ? Colors.red.shade100 : Colors.amber,
+          backgroundColor: isNotified ? Color.fromARGB(255, 238, 235, 235) : Colors.amber,
           padding: const EdgeInsets.symmetric(vertical: 14),
         ),
         onPressed: () async {
-          if (_isNotified) {
+          if (isNotified) {
             final confirm = await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
@@ -1667,8 +1802,8 @@ Future<void> _deleteReview(Review review) async {
       
             try {
               await _apiService.undoRestockNotification(_product!.id);
-              setState(() => _isNotified = false);
-              Navigator.pop(context,true);
+              notificationProvider.setNotified(_product!.id, false);
+              
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification cancelled')));
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))));
@@ -1676,8 +1811,8 @@ Future<void> _deleteReview(Review review) async {
           } else {
             try {
               await _apiService.requestRestockNotification(_product!.id);
-              setState(() => _isNotified = true);
-              Navigator.pop(context,true);
+              notificationProvider.setNotified(_product!.id, true);
+            
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification requested!')));
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))));
@@ -1685,8 +1820,8 @@ Future<void> _deleteReview(Review review) async {
           }
         },
         child: Text(
-          _isNotified ? "Un Notify" : "Notify Me",
-          style: TextStyle(color: _isNotified ? Colors.red : Colors.black, fontWeight: FontWeight.bold),
+          isNotified ? "Un Notify" : "Notify Me",
+          style: TextStyle(color: isNotified ? Colors.red : Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
     ),
@@ -1698,7 +1833,7 @@ Future<void> _deleteReview(Review review) async {
   if (_product!.stock == 0 && _product!.restockDate != null) {
   return _buildNotifyButton();
 }
-  if(_product!.stock == 0 && _product!.restockDate == null){
+  if(_product!.stock == 0 && _product!.restockDate == null ){
     return Padding(padding: const EdgeInsets.all(12),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
@@ -1804,7 +1939,7 @@ Future<void> _deleteReview(Review review) async {
             :  Colors.grey,
       ),
       
-    onPressed: _product!.isRentable ? _rentNow : null,
+    onPressed: _product!.isRentable && _product!.rentalStock! > 0 ? _rentNow : null,
     child: const Text(
       'Rent Now',
      style: const TextStyle(

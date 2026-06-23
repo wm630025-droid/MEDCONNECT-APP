@@ -163,6 +163,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _loading = false;
     });
     }
+    
 
     // ✅ بعد تحميل الرسائل نحددها كمقروءة
     await _api.markConversationAsRead(conversationId!);
@@ -173,6 +174,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _error = e.toString();
       });
     }
+  }
   }
   //  Future<void> _loadMessages() async {
   //     if (conversationId == null) return;
@@ -204,8 +206,26 @@ class _ChatScreenState extends State<ChatScreen> {
           isMe: true,
         ),
       );
-      if(mounted) {
+    });
+     
+      _controller.clear();
+      try{
+ final response = await _api.sendMessage(
+      receiverId: widget.receiverId, // ✅ من الـ widget
+      message: text,
+    );
+
+    final newMsg = response['message'];
+    final conv = response['conversation'];
+
+    // ✅ لو أول رسالة، ناخد conversationId
+    if (conversationId == null && conv != null) {
       setState(() {
+        conversationId = conv['id'];
+      });
+      _startPolling(); // ✅ نبدأ نسمع رسائل جديدة
+    }
+setState(() {
       final index = _messages.indexWhere((m) => m.id == tempId);
       if (index != -1) {
         _messages[index] = ChatMessage(
@@ -214,11 +234,10 @@ class _ChatScreenState extends State<ChatScreen> {
           type: 'text',
           time: DateTime.now(),
           isMe: true,
-        ));
-      });
+        );
       }
-      _controller.clear();
-      Navigator.pop(context,true);
+    });
+    //  Navigator.pop(context,true);
     } catch (e) {
       print(e);
       
@@ -261,6 +280,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     });
+  
   }
   }
 
@@ -408,4 +428,4 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-}
+  }

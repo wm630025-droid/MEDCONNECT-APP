@@ -11,6 +11,7 @@ class Product {
 final double? dailyRent; // ✅ جديد (مهم للإيجار)
 
   final String imagePath;
+   int? rentalStock;
   final int stock;
   final bool isRentable;
   final DateTime? restockDate;
@@ -37,6 +38,7 @@ final double? dailyRent; // ✅ جديد (مهم للإيجار)
     required this.stock,
     required this.isRentable,
     this.restockDate,
+    
     required this.status,
     required this.images,
     this.configuration,
@@ -50,7 +52,7 @@ final double? dailyRent; // ✅ جديد (مهم للإيجار)
 
     required this.reviews,
     this.dailyRent, // ✅ جديد (مهم للإيجار)
-  
+    this.rentalStock,
   });
   
   
@@ -96,6 +98,11 @@ if (json['rental_details'] != null && json['rental_details']['price_daily'] != n
       dailyRent = null;
     }
 
+int?rentalStock;
+if (json['rental_details'] != null ) {
+      rentalStock = json['rental_details']['stock_units']??0;
+    }
+
     return Product(
       id: json['id'],
       supplierId: json['supplier_id'] ?? 0,
@@ -118,8 +125,10 @@ if (json['rental_details'] != null && json['rental_details']['price_daily'] != n
        configuration: configurationValue,
 
 
+
        reviews: reviewsList,
         dailyRent: dailyRent,
+        rentalStock: rentalStock,
     );
   }
   

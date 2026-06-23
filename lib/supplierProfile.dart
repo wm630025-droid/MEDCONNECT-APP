@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/core/app_colorSupplier.dart';
 import 'package:medconnect_app/homeScreen.dart';
+import 'package:medconnect_app/models/equipment_model.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/productDetails.dart';
+import 'package:medconnect_app/providers/notification_provider.dart';
 //import 'package:medconnect_app/providers/wishlist_provider.dart';
 import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/services/cart_services.dart';
+import 'package:medconnect_app/services/equipment_service.dart' as EquipmentApiService;
+import 'package:provider/provider.dart';
 //import 'package:provider/provider.dart';
 
 class SupplierProfileScreen extends StatefulWidget {
@@ -40,6 +44,8 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
   int _totalPages = 1;
   bool _isLoadingMore = false;
   final ScrollController _scrollController = ScrollController();
+
+ // Map<int, bool> _notifyStatus = {}; // productId -> isNotified
 
   final ApiService _apiService = ApiService();
 
@@ -113,6 +119,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         /// perPage: 50, // يجيب أكبر عدد عشان البحث يكون دقيق
       );
 
+
       setState(() {
         _products = result['products'];
         _totalPages = result['lastPage'];
@@ -127,6 +134,17 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
           print('✅ Image URL: ${_supplierData?['company_image_url']}');
         }
       });
+
+// بعد إضافة المنتجات
+for (var product in result['products']) {
+  if (product.stock == 0 && product.restockDate != null) {
+    final isNotified = await _apiService.isNotified(product.id);
+    Provider.of<NotificationProvider>(context, listen: false)
+        .setNotified(product.id, isNotified);
+  }
+}
+
+
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -180,13 +198,151 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
 
         print('🔄 Products after add: ${_products.length}');
       });
+
+
+
+      // بعد إضافة المنتجات
+for (var product in result['products']) {
+  if (product.stock == 0 && product.restockDate != null) {
+    final isNotified = await _apiService.isNotified(product.id);
+    Provider.of<NotificationProvider>(context, listen: false)
+        .setNotified(product.id, isNotified);
+  }
+}
     } catch (e) {
       setState(() {
         _isLoadingMore = false;
       });
     }
   }
+void _showAddToListDialog(Product product) async {
+  try {
+    final lists = await EquipmentApiService.getSimpleLists();
+    if (lists.isEmpty) {
+      _showCreateListFirstDialog(product);
+      return;
+    }
 
+    final selectedList = await showDialog<EquipmentList>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Add to Equipment List"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ...lists.map((list) => ListTile(
+              title: Text(list.listName),
+              onTap: () => Navigator.pop(ctx, list),
+            )),
+            const Divider(),
+            ListTile(
+              title: const Text("+ Create New List"),
+              onTap: () => Navigator.pop(ctx, null),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedList != null) {
+      await EquipmentApiService.addItemToList(selectedList.id, product.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Added to list")),
+      );
+    } else {
+      _showCreateNewListDialog(product);
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: $e")),
+    );
+  }
+}
+
+void _showCreateNewListDialog(Product product) async {
+  final controller = TextEditingController();
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text("New List Name"),
+      content: TextField(controller: controller),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text("Create"),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true && controller.text.isNotEmpty) {
+    try {
+      await EquipmentApiService.createEquipmentList(controller.text);
+      final newLists = await EquipmentApiService.getSimpleLists();
+      final newList = newLists.firstWhere((l) => l.listName == controller.text);
+      await EquipmentApiService.addItemToList(newList.id, product.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("List created and item added")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  }
+}
+void _showCreateListFirstDialog(Product product) async {
+  final controller = TextEditingController();
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text("No Lists Found"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text("You don't have any equipment lists yet."),
+          const SizedBox(height: 16),
+          TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: "Enter list name",
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text("Create"),
+        ),
+      ],
+    ),
+  );
+  
+  if (confirmed == true && controller.text.isNotEmpty) {
+    try {
+      await EquipmentApiService.createEquipmentList(controller.text);
+      final newLists = await EquipmentApiService.getSimpleLists();
+      final newList = newLists.firstWhere((l) => l.listName == controller.text);
+      await EquipmentApiService.addItemToList(newList.id, product.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("List created and item added")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.toString().replaceAll('Exception:', '')}")),
+      );
+    }
+  }
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -523,6 +679,10 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
   final CartService _cartService = CartService();
 
   Widget _productCard(Product product) {
+
+final notificationProvider = Provider.of<NotificationProvider>(context);
+final isNotified = notificationProvider.isNotified(product.id);
+
     print('🃏 Product card: ${product.id} - ${product.name}');
 
     bool isOutOfStock = product.stock == 0;
@@ -580,6 +740,8 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -594,7 +756,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
                       "Out of Stock",
                       style: TextStyle(color: Colors.red, fontSize: 12),
                     ),
-                   if (product.isRentable && product.stock > 0)
+                   if (product.isRentable && product.rentalStock! > 0)
                     const Text(
                       "available for rent",
                       style: TextStyle(color: Colors.blue, fontSize: 12),
@@ -611,15 +773,38 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
               children: [
             if (product.stock == 0 && product.restockDate != null)
                       IconButton(
-                        icon: const Icon(Icons.notifications_active, color: Colors.black),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("We'll notify you when available"),
-            ),
-                          );
-                        },
-                      ),
+                        icon: Icon(Icons.notifications_active, 
+                        color: isNotified ? Colors.amber : Colors.black),
+                         onPressed: () async {
+                    if (isNotified) {
+                      // ✅ Undo
+                      await _apiService.undoRestockNotification(product.id);
+                      notificationProvider.setNotified(product.id, false);
+                     
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Notification cancelled')),
+                      );
+                    } else {
+                      // ✅ Request
+                      await _apiService.requestRestockNotification(product.id);
+                      notificationProvider.setNotified(product.id, true);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Notification requested!')),
+                      );
+                    }
+                  },
+                ),
+
+            //             onPressed: () {
+
+            //               ScaffoldMessenger.of(context).showSnackBar(
+            // const SnackBar(
+            //   content: Text("We'll notify you when available"),
+            // ),
+            //               );  
+
+            //             },
+                      
                 
              const SizedBox(width: 6),
                     if (product.stock > 0)
@@ -701,7 +886,9 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
                 //// equipment list botton
                 IconButton(
                   icon: Icon(Icons.playlist_add, color: Colors.grey[700]),
-                  onPressed: () {},
+                  onPressed: () {
+                      _showAddToListDialog(product);
+                  },
                 ),
               ],
             ),
