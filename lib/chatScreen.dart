@@ -418,36 +418,36 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               children: [
                 /// زرار الإرفاق
-                IconButton(
-                  icon: const Icon(Icons.attach_file),
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (_) {
-                        return Wrap(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.image),
-                              title: const Text("Send Image"),
-                              onTap: () {
-                                Navigator.pop(context);
-                                sendAttachment("image");
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.insert_drive_file),
-                              title: const Text("Send File"),
-                              onTap: () {
-                                Navigator.pop(context);
-                                sendAttachment("file");
-                              },
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                ),
+                // IconButton(
+                //   icon: const Icon(Icons.attach_file),
+                //   onPressed: () {
+                //     showModalBottomSheet(
+                //       context: context,
+                //       builder: (_) {
+                //         return Wrap(
+                //           children: [
+                //             ListTile(
+                //               leading: const Icon(Icons.image),
+                //               title: const Text("Send Image"),
+                //               onTap: () {
+                //                 Navigator.pop(context);
+                //                 sendAttachment("image");
+                //               },
+                //             ),
+                //             ListTile(
+                //               leading: const Icon(Icons.insert_drive_file),
+                //               title: const Text("Send File"),
+                //               onTap: () {
+                //                 Navigator.pop(context);
+                //                 sendAttachment("file");
+                //               },
+                //             ),
+                //           ],
+                //         );
+                //       },
+                //     );
+                //   },
+                // ),
 
                 /// TextField
                 Expanded(

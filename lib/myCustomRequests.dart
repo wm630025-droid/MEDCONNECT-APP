@@ -253,7 +253,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                                       ),
                                     )
                                   : const Text(
-                                      'Load More',
+                                      'See More',
                                       style: TextStyle(
                                         color: Colors.blueAccent,
                                       ),
@@ -415,7 +415,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                                     right: 0,
                                     top: 0,
                                     child: Container(
-                                      padding: const EdgeInsets.all(2),
+                                      padding: const EdgeInsets.all(3),
                                       decoration: const BoxDecoration(
                                         color: Colors.red,
                                         shape: BoxShape.circle,
@@ -423,7 +423,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                                       child: Text(
                                         '$count',
                                         style: const TextStyle(
-                                          fontSize: 10,
+                                          fontSize: 12,
                                           color: Colors.white,
                                         ),
                                       ),

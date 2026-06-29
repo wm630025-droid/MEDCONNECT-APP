@@ -72,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _categoriesError;
 
   // Products variables
+  bool _isFirstLoad = true; // ✅ أول مرة تحميل
   bool _isLoadingProducts = true;
   String? _productsError;
   bool _isSearchingLoading = false;   // ✅ جديد
@@ -123,7 +124,7 @@ void _startPolling() {
 
   Future<void> _loadProducts({bool loadMore = false, bool forceRefresh = false}) async {
      if (!mounted) return;
-     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh) {
+     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh&& !_isFirstLoad) {
     setState(() {
       _allProducts = ApiService.cachedProducts!;
       displayedProducts = List.from(_allProducts);
@@ -143,17 +144,23 @@ void _startPolling() {
       return;
     }
 
-    if (!loadMore) {
+    if (!loadMore && !forceRefresh) {
       setState(() {
         _isLoadingProducts = true;
         _productsError = null;
         _currentPage = 1;
         _allProducts = [];
       });
-    } else {
+    } else if(loadMore){
       setState(() {
         _isLoadingMore = true;
       });
+    }else if(forceRefresh){
+  setState(() {
+      _isLoadingProducts = true;
+      _productsError = null;
+      _currentPage = 1;
+    });
     }
 
     try {
@@ -167,6 +174,10 @@ if (!mounted) return;
           _allProducts.addAll(result['products']);
         } else {
           _allProducts = result['products'];
+
+            if (_currentPage == 1) {
+          ApiService.cachedProducts = _allProducts;
+        }
         }
         displayedProducts = List.from(_allProducts);
         _totalPages = result['lastPage'];
@@ -174,6 +185,7 @@ if (!mounted) return;
         _currentPage++;
         _isLoadingProducts = false;
         _isLoadingMore = false;
+        _isFirstLoad=false;
       });
 
       for (var product in _allProducts) {
@@ -191,6 +203,7 @@ if (!mounted) return;
         _productsError = e.toString();
         _isLoadingProducts = false;
         _isLoadingMore = false;
+        _isFirstLoad=false;
       });
     }
   }
@@ -998,7 +1011,7 @@ void _showCategoriesTopSheet() {
   }
 
   Widget buildCategories() {
-    if (_isLoadingCategories) {
+    if (_isLoadingCategories && _categories.isEmpty) {
       return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -1083,7 +1096,7 @@ void _showCategoriesTopSheet() {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.50,
+          childAspectRatio: 0.45,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -1130,7 +1143,7 @@ void _showCategoriesTopSheet() {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.50,
+            childAspectRatio: 0.45,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
@@ -1226,7 +1239,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          ProductDetailsPage(productId: p.id, product: p),
+                          ProductDetailsPage(productId: p.id),
                     ),
                   );
 
@@ -1309,7 +1322,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                 ),
               ),
 
-              if (p.stock == 0&& p.isRentable == false && p.rentalStock!=0)
+              if (p.isRentable == false || p.rentalStock==0)
                 Padding(
                   padding: const EdgeInsets.all(7.0),
                   child: const Text(
