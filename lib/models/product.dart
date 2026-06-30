@@ -100,7 +100,7 @@ if (json['rental_details'] != null && json['rental_details']['price_daily'] != n
 
 int?rentalStock;
 if (json['rental_details'] != null ) {
-      rentalStock = json['rental_details']['stock_units']??0;
+      rentalStock = json['rental_details']['available_units']??0;
     }
 
     return Product(

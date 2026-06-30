@@ -198,6 +198,7 @@ void initState() {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       body: Stack(
         children: [
           // Main Content
@@ -208,7 +209,7 @@ void initState() {
                 expandedHeight: 0,
                 floating: true,
                 pinned: true,
-                backgroundColor: colorScheme.surface,
+                backgroundColor: Colors.white,
                 surfaceTintColor: Colors.transparent,
                 elevation: 1,
                 shadowColor: Colors.black.withOpacity(0.05),
@@ -232,21 +233,21 @@ void initState() {
                   ),
                 ),
                 centerTitle: true,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.settings),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Settings coming soon'),
-                          behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    color: colorScheme.onSurface,
-                  ),
-                ],
+                // actions: [
+                //   IconButton(
+                //     icon: const Icon(Icons.settings),
+                //     onPressed: () {
+                //       ScaffoldMessenger.of(context).showSnackBar(
+                //         const SnackBar(
+                //           content: Text('Settings coming soon'),
+                //           behavior: SnackBarBehavior.floating,
+                //           duration: Duration(seconds: 1),
+                //         ),
+                //       );
+                //     },
+                //     color: colorScheme.onSurface,
+                //   ),
+                // ],
               ),
 
               // Main Profile Content
@@ -377,7 +378,7 @@ void initState() {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: colorScheme.primary,
+        color: Colors.blue,
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 2),
       ),
@@ -432,7 +433,7 @@ Widget _buildDefaultAvatar(bool isDark, ColorScheme colorScheme) {
   Widget _buildPersonalInfoSection(bool isDark, ColorScheme colorScheme) {
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -452,7 +453,7 @@ Widget _buildDefaultAvatar(bool isDark, ColorScheme colorScheme) {
                 Icon(
                   Icons.verified_user,
                   size: 20,
-                  color: colorScheme.primary,
+                  color: Colors.blue,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -497,7 +498,7 @@ Widget _buildDefaultAvatar(bool isDark, ColorScheme colorScheme) {
   Widget _buildProfessionalCredentialsSection(bool isDark, ColorScheme colorScheme) {
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -517,7 +518,7 @@ Widget _buildDefaultAvatar(bool isDark, ColorScheme colorScheme) {
                 Icon(
                   Icons.badge,
                   size: 20,
-                  color: colorScheme.primary,
+                  color: Colors.blue,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -557,7 +558,7 @@ Widget _buildDefaultAvatar(bool isDark, ColorScheme colorScheme) {
   Widget _buildAddressSection(bool isDark, ColorScheme colorScheme) {
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -580,7 +581,7 @@ Widget _buildDefaultAvatar(bool isDark, ColorScheme colorScheme) {
                     Icon(
                       Icons.location_on,
                       size: 20,
-                      color: colorScheme.primary,
+                      color: Colors.blue,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -663,7 +664,7 @@ Widget _buildDefaultAvatar(bool isDark, ColorScheme colorScheme) {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: colorScheme.surface,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(

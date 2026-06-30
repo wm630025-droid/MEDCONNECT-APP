@@ -11,6 +11,7 @@ class ChatModel {
   final String time;
   final bool isOnline;
   final int unreadCount;
+  final String? imageUrl;
 
   ChatModel({
     required this.name,
@@ -18,6 +19,7 @@ class ChatModel {
     required this.time,
     required this.isOnline,
     required this.unreadCount,
+    this.imageUrl,
   });
 }
 
@@ -78,6 +80,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
         final int convId = conv['id'];
         final other = conv['other_user'];
         print('conversation ID added : $convId');
+        String? imageUrl;
+        if (other['supplier'] != null &&
+            other['supplier']['company_image_url'] != null) {
+          imageUrl = other['supplier']['company_image_url'];
+        }
 
         final messages = await _api.getMessages(convId);
 
@@ -108,6 +115,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             time: lastTime,
             isOnline: false,
             unreadCount: unreadCount,
+            imageUrl: imageUrl,
           ),
         );
         ids.add(convId);
@@ -238,9 +246,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF101C22)
-          : const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text("Supplier Chats"),
         backgroundColor: Colors.white,
@@ -279,9 +285,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 return ListTile(
                   leading: Stack(
                     children: [
-                      const CircleAvatar(
+                       CircleAvatar(
                         radius: 25,
-                        backgroundColor: Color.fromARGB(255, 232, 232, 236),
+                        backgroundColor: Colors.grey.shade200,
+                        backgroundImage:
+                            chat.imageUrl != null && chat.imageUrl!.isNotEmpty
+                            ? NetworkImage(chat.imageUrl!)
+                            : null,
+                        child: chat.imageUrl == null || chat.imageUrl!.isEmpty
+                            ? const Icon(Icons.person, color: Colors.grey)
+                            : null,
                       ),
 
                       if (chat.isOnline)

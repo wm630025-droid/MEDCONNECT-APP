@@ -84,6 +84,7 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
         appBar: AppBar(
           title: const Text('Payment Gateway'),
           leading: IconButton(

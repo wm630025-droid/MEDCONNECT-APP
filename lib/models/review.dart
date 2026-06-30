@@ -7,6 +7,8 @@ class Review {
   final String? doctorName;
   bool canDelete ;
   final int productId;
+  
+  final String?  profileImageUrl;
 
   Review({
     required this.id,
@@ -16,10 +18,15 @@ class Review {
     required this.createdAt,
     required this.doctorName,
     this.canDelete = false, 
+     this.profileImageUrl,
     required this.productId,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
+    String? profileImageUrl;
+    if (json['doctor'] != null && json['doctor']['profile_image_url'] != null) {
+      profileImageUrl = json['doctor']['profile_image_url'];
+    }
      String? doctorName;
   if (json['doctor'] != null && json['doctor']['all_user'] != null) {
     doctorName = json['doctor']['all_user']['fullname'];
@@ -31,7 +38,8 @@ class Review {
       comment: json['comment'],
       createdAt: DateTime.parse(json['created_at']),
       doctorName:doctorName,
-      productId: json['product_id']
+      productId: json['product_id'],
+      profileImageUrl: profileImageUrl
 
       
     );

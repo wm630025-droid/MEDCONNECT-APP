@@ -40,7 +40,7 @@ class _doctorAccountPageState extends State<doctorAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       // bottomNavigationBar: const BottomNavBar(),
       body: SafeArea(
         child: ListView(
@@ -87,6 +87,7 @@ class _DashboardHeaderState extends State<DashboardHeader> {
   @override
   Widget build(BuildContext context) {
     return Padding(
+      
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,25 +247,30 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
   Widget build(BuildContext context) {
     return sectionCard(
       title: "Recent Orders",
-      child: _isLoading
-          ? _buildShimmer()
-          : _error != null
-          ? _buildErrorWidget()
-          : _orders.isEmpty
-          ? const Padding(
+      child:Column(
+        children: [
+        if (_isLoading)
+            _buildShimmer()
+          else if (_error != null)
+            _buildErrorWidget()
+          else if (_orders.isEmpty)
+            const Padding(
               padding: EdgeInsets.all(24),
-              child: Center(child: Text('No recent orders')),
+              child: Center(
+                child: Text('No recent orders'),
+              ),
             )
-          : Column(
-              children: [
-                ..._orders.map((order) => _buildOrderRow(order)).toList(),
-                const SizedBox(height: 12),
-                _buildViewAllButton(context),
-              ],
-            ),
+          else
+            ..._orders.map((order) => _buildOrderRow(order)).toList(),
+
+          const SizedBox(height: 12),
+
+          // ✅ الزر دايماً موجود تحت المحتوى (حتى أثناء التحميل)
+          _buildViewAllButton(context),
 
       //const SizedBox(height: 12),
-
+        ],
+      ),
       // 🔵 View All Orders Button
     );
   }
@@ -562,13 +568,14 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text(
           'All Orders',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.black,),
         ),
-        backgroundColor: AppColors.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: RefreshIndicator(onRefresh: _refreshOrders, child: _buildBody()),
     );
@@ -828,7 +835,7 @@ class OldChatsSection extends StatelessWidget {
                 leading: const Icon(Icons.forum),
                 title: const Text(
                   "Tab To View All Chats",
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(fontWeight: FontWeight.w600,color: Colors.blue),
                 ),
                 //subtitle: const Text("Re: Anesthesia Machine"),
                 trailing: const Icon(Icons.arrow_right),
@@ -990,7 +997,7 @@ class CustomRequestsSection extends StatelessWidget {
             leading: const Icon(Icons.edit_note),
             title: const Text(
               "Tab To View All Custom Requests",
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600,color: Colors.blue),
             ),
             // subtitle: const Text("3 quotes received"),
             onTap: () {

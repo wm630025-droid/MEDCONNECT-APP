@@ -124,7 +124,7 @@ void _startPolling() {
 
   Future<void> _loadProducts({bool loadMore = false, bool forceRefresh = false}) async {
      if (!mounted) return;
-     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh&& !_isFirstLoad) {
+     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh ) {
     setState(() {
       _allProducts = ApiService.cachedProducts!;
       displayedProducts = List.from(_allProducts);
@@ -427,196 +427,196 @@ if (!mounted) return;
       ),
     );
   }
-Widget _buildDrawer() {
-  return Drawer(
-    child: Column(
-      children: [
-        // ========== Header ==========
-        Container(
-          height: 180,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0066FF), Color(0xFF0088FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(24),
-              bottomRight: Radius.circular(24),
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircleAvatar(
-                radius: 40,
-                backgroundColor: Colors.white,
-                child: Icon(
-                  Icons.person,
-                  size: 50,
-                  color: Color(0xFF0066FF),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                ApiService.doctorName ?? 'Doctor',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              // Text(
-              //   ApiService.doctorEmail ?? '',
-              //   style: const TextStyle(
-              //     color: Colors.white70,
-              //     fontSize: 14,
-              //   ),
-              // ),
-            ],
-          ),
-        ),
+// Widget _buildDrawer() {
+//   return Drawer(
+//     child: Column(
+//       children: [
+//         // ========== Header ==========
+//         Container(
+//           height: 180,
+//           width: double.infinity,
+//           decoration: const BoxDecoration(
+//             gradient: LinearGradient(
+//               colors: [Color(0xFF0066FF), Color(0xFF0088FF)],
+//               begin: Alignment.topLeft,
+//               end: Alignment.bottomRight,
+//             ),
+//             borderRadius: BorderRadius.only(
+//               bottomLeft: Radius.circular(24),
+//               bottomRight: Radius.circular(24),
+//             ),
+//           ),
+//           child: Column(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               const CircleAvatar(
+//                 radius: 40,
+//                 backgroundColor: Colors.white,
+//                 child: Icon(
+//                   Icons.person,
+//                   size: 50,
+//                   color: Color(0xFF0066FF),
+//                 ),
+//               ),
+//               const SizedBox(height: 8),
+//               Text(
+//                 ApiService.doctorName ?? 'Doctor',
+//                 style: const TextStyle(
+//                   color: Colors.white,
+//                   fontSize: 18,
+//                   fontWeight: FontWeight.bold,
+//                 ),
+//               ),
+//               // Text(
+//               //   ApiService.doctorEmail ?? '',
+//               //   style: const TextStyle(
+//               //     color: Colors.white70,
+//               //     fontSize: 14,
+//               //   ),
+//               // ),
+//             ],
+//           ),
+//         ),
 
-        const SizedBox(height: 16),
+//         const SizedBox(height: 16),
 
-        // ========== Menu Items ==========
-        _buildDrawerItem(
-          icon: Icons.home,
-          title: 'Home',
-          onTap: () {
-            Navigator.pop(context);
-          },
-        ),
-        _buildDrawerItem(
-          icon: Icons.person,
-          title: 'Profile',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const DoctorProfilePage()),
-            );
-          },
-        ),
-        _buildDrawerItem(
-          icon: Icons.shopping_bag,
-          title: 'My Orders',
-          onTap: () {
-            Navigator.pop(context);
+//         // ========== Menu Items ==========
+//         _buildDrawerItem(
+//           icon: Icons.home,
+//           title: 'Home',
+//           onTap: () {
+//             Navigator.pop(context);
+//           },
+//         ),
+//         _buildDrawerItem(
+//           icon: Icons.person,
+//           title: 'Profile',
+//           onTap: () {
+//             Navigator.pop(context);
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (_) => const DoctorProfilePage()),
+//             );
+//           },
+//         ),
+//         _buildDrawerItem(
+//           icon: Icons.shopping_bag,
+//           title: 'My Orders',
+//           onTap: () {
+//             Navigator.pop(context);
 
-            // TODO: اذهب لصفحة الطلبات
-          },
-        ),
-        // _buildDrawerItem(
-        //   icon: Icons.favorite,
-        //   title: 'Wishlist',
-        //   onTap: () {
-        //     Navigator.pop(context);
-        //     Navigator.push(
-        //       context,
-        //       MaterialPageRoute(builder: (_) => const WishlistPage()),
-        //     );
-        //   },
-        // ),
-        _buildDrawerItem(
-          icon: Icons.chat,
-          title: 'Messages',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => MessagesScreen()),
-            );
-          },
-        ),
-        _buildDrawerItem(
-          icon: Icons.inventory_2,
-          title: 'Equipment Lists',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const EquipmentListsScreen()),
-            );
-          },
-        ),
-        _buildDrawerItem(
-          icon: Icons.request_page,
-          title: 'Custom Requests',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MyCustomRequestsPage()),
-            );
-          },
-        ),
+//             // TODO: اذهب لصفحة الطلبات
+//           },
+//         ),
+//         // _buildDrawerItem(
+//         //   icon: Icons.favorite,
+//         //   title: 'Wishlist',
+//         //   onTap: () {
+//         //     Navigator.pop(context);
+//         //     Navigator.push(
+//         //       context,
+//         //       MaterialPageRoute(builder: (_) => const WishlistPage()),
+//         //     );
+//         //   },
+//         // ),
+//         _buildDrawerItem(
+//           icon: Icons.chat,
+//           title: 'Messages',
+//           onTap: () {
+//             Navigator.pop(context);
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (_) => MessagesScreen()),
+//             );
+//           },
+//         ),
+//         _buildDrawerItem(
+//           icon: Icons.inventory_2,
+//           title: 'Equipment Lists',
+//           onTap: () {
+//             Navigator.pop(context);
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (_) => const EquipmentListsScreen()),
+//             );
+//           },
+//         ),
+//         _buildDrawerItem(
+//           icon: Icons.request_page,
+//           title: 'Custom Requests',
+//           onTap: () {
+//             Navigator.pop(context);
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (_) => const MyCustomRequestsPage()),
+//             );
+//           },
+//         ),
 
-        const Spacer(),
+//         const Spacer(),
 
-        const Divider(),
-        // ========== Logout ==========
-        _buildDrawerItem(
-          icon: Icons.logout,
-          title: 'Sign Out',
-          iconColor: Colors.red,
-          titleColor: Colors.red,
-          onTap: () {
-            Navigator.pop(context);
-            _handleLogout();
-          },
-        ),
-        const SizedBox(height: 24),
-      ],
-    ),
-  );
-}
-Widget _buildDrawerItem({
-  required IconData icon,
-  required String title,
-  required VoidCallback onTap,
-  Color iconColor = Colors.grey,
-  Color titleColor = Colors.black,
-}) {
-  return ListTile(
-    leading: Icon(icon, color: iconColor),
-    title: Text(
-      title,
-      style: TextStyle(color: titleColor),
-    ),
-    trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-    onTap: onTap,
-  );
-}
-void _handleLogout() async {
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Sign Out'),
-      content: const Text('Are you sure you want to sign out?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-        ),
-      ],
-    ),
-  );
+//         const Divider(),
+//         // ========== Logout ==========
+//         _buildDrawerItem(
+//           icon: Icons.logout,
+//           title: 'Sign Out',
+//           iconColor: Colors.red,
+//           titleColor: Colors.red,
+//           onTap: () {
+//             Navigator.pop(context);
+//             _handleLogout();
+//           },
+//         ),
+//         const SizedBox(height: 24),
+//       ],
+//     ),
+//   );
+// }
+// Widget _buildDrawerItem({
+//   required IconData icon,
+//   required String title,
+//   required VoidCallback onTap,
+//   Color iconColor = Colors.grey,
+//   Color titleColor = Colors.black,
+// }) {
+//   return ListTile(
+//     leading: Icon(icon, color: iconColor),
+//     title: Text(
+//       title,
+//       style: TextStyle(color: titleColor),
+//     ),
+//     trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+//     onTap: onTap,
+//   );
+// }
+// void _handleLogout() async {
+//   final confirm = await showDialog<bool>(
+//     context: context,
+//     builder: (ctx) => AlertDialog(
+//       title: const Text('Sign Out'),
+//       content: const Text('Are you sure you want to sign out?'),
+//       actions: [
+//         TextButton(
+//           onPressed: () => Navigator.pop(ctx, false),
+//           child: const Text('Cancel'),
+//         ),
+//         TextButton(
+//           onPressed: () => Navigator.pop(ctx, true),
+//           child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+//         ),
+//       ],
+//     ),
+//   );
 
-  if (confirm == true) {
-    await ApiService().logout();
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const IntroScreen()),
-      (route) => false,
-    );
-  }
-}
+//   if (confirm == true) {
+//     await ApiService().logout();
+//     Navigator.pushAndRemoveUntil(
+//       context,
+//       MaterialPageRoute(builder: (_) => const IntroScreen()),
+//       (route) => false,
+//     );
+//   }
+//}
  Widget _searchResultsApi() {
   if (searchResults.isEmpty) {
     return const Text("No products found");
@@ -1239,7 +1239,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          ProductDetailsPage(productId: p.id),
+                          ProductDetailsPage(productId: p.id,product: p,),
                     ),
                   );
 

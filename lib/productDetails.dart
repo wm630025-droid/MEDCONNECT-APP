@@ -229,6 +229,30 @@ double get averageRating {
 
 
 Future<void> _rentNow() async {
+  if (rentStartDate == null || rentEndDate == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please select both start and end dates'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 3),
+      ),
+    );
+    return;
+  }
+
+  // ✅ التحقق من أن End Date بعد Start Date
+  if (rentEndDate!.isBefore(rentStartDate!)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('End date must be after start date'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 3),
+      ),
+    );
+    return;
+  }
   String formatDate(DateTime date) {
      return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
 
@@ -426,6 +450,7 @@ void _showCreateListFirstDialog(Product product) async {
   Widget build(BuildContext context) {
   if (isLoading) {
   return Scaffold(
+    backgroundColor: const Color(0xFFF5F5F5),
     appBar: AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
@@ -872,9 +897,9 @@ void _showCreateListFirstDialog(Product product) async {
                       children: [
                         const Icon(Icons.star, color: Colors.amber, size: 16),
                         const SizedBox(width: 4),
-                        const Text(
-                          "4.8 (120 Reviews)",
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        Text(
+                          "$averageRating (${reviews.length} Reviews)",
+                          style: const TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                       ],
                     ),
@@ -1352,9 +1377,14 @@ Widget _buildProductInfo() {
             children: [
               Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 16,
-                    child: Icon(Icons.person, size: 16),
+                   backgroundImage: r.profileImageUrl != null
+                        ?  NetworkImage(r.profileImageUrl!)
+                        : null,
+                    child: r.profileImageUrl == null
+                        ? const Icon(Icons.person, size: 24)
+                        : null,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

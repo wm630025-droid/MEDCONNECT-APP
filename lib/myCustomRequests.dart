@@ -138,9 +138,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF101C22)
-          : const Color(0xFFF8F9FA),
+   backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -398,6 +396,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => SupplierBidsPage(
+                                    request: request,
                                     customRequestId: request.id,
                                     customRequestBudget: budget,
                                   ),
@@ -646,6 +645,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
         context,
         MaterialPageRoute(
           builder: (_) => AcceptedSupplierDetailsPage(
+            request : request,
             offer: acceptedOffer,
             requestBudget: originalBudget,
           ),

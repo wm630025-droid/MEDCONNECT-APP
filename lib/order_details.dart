@@ -122,7 +122,7 @@ void initState() {
     const outlineColor = Color(0xFFE0E0E0);
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: const Color(0xFFF5F5F5),
 
       // ================= Bottom Navigation =================
       bottomNavigationBar: Container(

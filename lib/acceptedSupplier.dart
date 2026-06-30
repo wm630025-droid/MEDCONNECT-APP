@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
 import 'package:medconnect_app/core/app_colorAccepted.dart';
+import 'package:medconnect_app/models/custom_request_model.dart';
 //import 'package:medconnect_app/models/custom_request_model.dart';
 import 'package:medconnect_app/models/offer_request.dart';
 import 'package:medconnect_app/myCustomRequests.dart';
+import 'package:medconnect_app/supplierProfile.dart';
 //import 'package:medconnect_app/responseScreen.dart';
 
 class AcceptedSupplierDetailsPage extends StatelessWidget {
   final OfferRequest offer;
   final String requestBudget;
-  const AcceptedSupplierDetailsPage({super.key,required this.offer,required this.requestBudget});
+  final CustomRequest request;
+  const AcceptedSupplierDetailsPage({super.key,required this.offer,required this.requestBudget, required this.request});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
@@ -48,11 +52,11 @@ class AcceptedSupplierDetailsPage extends StatelessWidget {
                 const SizedBox(height: 20),
                 _budgetSection(isDark,offer,requestBudget),
                 const SizedBox(height: 20),
-                _statusCard(isDark,offer),
+                _statusCard(isDark,request),
               ],
             ),
           ),
-          _chatButton(),
+          _chatButton(offer.supplierId, offer.supplier.companyName,context),
         ],
       ),
     );
@@ -224,7 +228,7 @@ Widget _budgetCard({
     ),
   );
 }
-Widget _statusCard(bool isDark,OfferRequest offer) {
+Widget _statusCard(bool isDark,CustomRequest request) {
   return Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
@@ -248,7 +252,7 @@ Widget _statusCard(bool isDark,OfferRequest offer) {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            offer.status,
+            request.status,
             style: const TextStyle(
               color: AppColors.assigned,
               fontWeight: FontWeight.bold,
@@ -259,13 +263,23 @@ Widget _statusCard(bool isDark,OfferRequest offer) {
     ),
   );
 }
-Widget _chatButton() {
+Widget _chatButton(int supplierId, String supplierName,context) {
   return Padding(
     padding: const EdgeInsets.all(16),
     child: SizedBox(
       width: 300,
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SupplierProfileScreen(
+                supplierId: supplierId,
+                supplierName: supplierName,
+              ),
+            ),
+          );
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
         padding: const EdgeInsets.symmetric(vertical: 18),
@@ -276,7 +290,7 @@ Widget _chatButton() {
       ),
       icon: const Icon(Icons.chat, size: 20, color: Colors.white),
       label: const Text(
-        "Chat with Supplier",
+        "Show Supplier profile",
         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
         color: Colors.white),
       ),
