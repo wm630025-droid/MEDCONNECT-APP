@@ -59,7 +59,7 @@ class OrderServices {
       List<dynamic> ordersJson = [];
       int lastPage = data['last_page'] ?? 1;
       int perPageResponse = data['per_page'] ?? perPage;
-      int total = data['total'] ?? 0;
+      int subtotal = data['subtotal'] ?? 0;
 
       if (dataPayload is List) {
         ordersJson = dataPayload;
@@ -72,7 +72,7 @@ class OrderServices {
 
         lastPage = dataPayload['last_page'] ?? lastPage;
         perPageResponse = dataPayload['per_page'] ?? perPageResponse;
-        total = dataPayload['total'] ?? total;
+        subtotal = dataPayload['subtotal'] ?? subtotal;
       }
 
       final orders = ordersJson
@@ -89,7 +89,7 @@ class OrderServices {
         'orders': orders,
         'lastPage': lastPage,
         'perPage': perPageResponse,
-        'total': total == 0 ? orders.length : total,
+        'total': subtotal == 0 ? orders.length : subtotal,
       };
     }
 

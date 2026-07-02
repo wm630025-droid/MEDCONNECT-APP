@@ -831,107 +831,77 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                if (product.stock == 0 && product.restockDate != null)
-                  IconButton(
-                    icon: Icon(
-                      Icons.notifications_active,
-                      color: isNotified ? Colors.amber : Colors.black,
-                    ),
-                    onPressed: () async {
-                      if (isNotified) {
-                        // ✅ Undo
-                        await _apiService.undoRestockNotification(product.id);
-                        notificationProvider.setNotified(product.id, false);
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Notification cancelled'),
-                          ),
-                        );
-                      } else {
-                        // ✅ Request
-                        await _apiService.requestRestockNotification(
-                          product.id,
-                        );
-                        notificationProvider.setNotified(product.id, true);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Notification requested!'),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-
-                //             onPressed: () {
-
-                //               ScaffoldMessenger.of(context).showSnackBar(
-                // const SnackBar(
-                //   content: Text("We'll notify you when available"),
-                // ),
-                //               );
-
-                //             },
-                const SizedBox(width: 6),
-                if (product.stock > 0)
-                  IconButton(
-                    icon: const Icon(
-                      Icons.shopping_cart_outlined,
-                      color: Colors.black,
-                    ),
-                    onPressed: () async {
-                      //there is change by mohamed
-                      final result = await _cartService.addToCart(
-                        productId: product.id,
-                        quantity: 1,
-                        type: "sale",
-                      );
-
-                      if (result['success'] != false) {
-                        // ✅ ضيفه local برضو لو عايز
-                        cartItemsGlobal.add(
-                          CartItem(
-                            daily_rent: 0,
-                            name: product.name,
-                            image: product.imagePath,
-                            quantity: 1,
-                            price: product.price,
-                            type: 'sale',
-                            dateRange: '',
-                            id: product.id,
-                            productId: product.id,
-                          ),
-                        );
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("${product.name} added to cart ✅"),
-                            duration: const Duration(seconds: 2),
-                            backgroundColor: Colors.blue,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            action: SnackBarAction(
-                              label: "View Cart",
-                              textColor: Colors.white,
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => CartPage()),
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      } else {
-                        //there is change by mohamed
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(result['message'] ?? "Error")),
-                        );
-                      }
-                    },
-                  ), // IconButton(
+            if (product.stock == 0 && product.restockDate != null)
+                      IconButton(
+                        icon: const Icon(Icons.notifications_active, color: Colors.black),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("We'll notify you when available"),
+            ),
+                          );
+                        },
+                      ),
+                
+             const SizedBox(width: 6),
+                    if (product.stock > 0)
+                    
+                      IconButton(
+                        icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black),
+                        onPressed: () async {  //there is change by mohamed
+                          final result = await _cartService.addToCart(
+            productId: product.id,
+            quantity: 1,
+            type: "sale",
+                          );
+            
+                          if (result['success'] != false) {
+            // ✅ ضيفه local برضو لو عايز
+            cartItemsGlobal.add(
+              CartItem(
+                dailyPrice: product.dailyPrice ?? 0,
+                name: product.name,
+                image: product.imagePath,
+                quantity: 1,
+                price: product.price,
+                type: 'sale',
+                dateRange: '',
+                id: product.id,
+                productId: product.id,
+              ),
+            );
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("${product.name} added to cart ✅"),
+                duration: const Duration(seconds: 2),
+              backgroundColor: Colors.blue,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              action: SnackBarAction(
+                label: "View Cart",
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => CartPage()),
+                  );
+                },
+              ),
+              
+              
+              ),
+            );
+                          } else { //there is change by mohamed
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(result['message'] ?? "Error")),
+            );
+                          }
+                        },
+                      
+                      ),    // IconButton(
                 //   icon: Icon(
                 //     isInWishlist ? Icons.favorite : Icons.favorite_border,
                 //     color: isInWishlist ? Colors.red : Colors.grey,

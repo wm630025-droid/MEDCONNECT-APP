@@ -11,11 +11,10 @@ import 'package:medconnect_app/cartScreen.dart';
 // import 'package:medconnect_app/providers/wishlist_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await ApiService.loadToken();
-
+  
+  // ✅ للـ Web بس
+ 
   final prefs = await SharedPreferences.getInstance();
   final userDataString = prefs.getString('user_data');
   if (userDataString != null) {
@@ -26,7 +25,6 @@ Future<void> main() async {
     if (token != null) {
       //await PusherService().init(token);
     }
-
 
   }
 

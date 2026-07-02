@@ -91,22 +91,22 @@ class _CheckoutAddressPageState extends State<CheckoutAddressPage> {
   }
 
   List<CartItem> get cartItemsForCheckout {
-    if (widget.isRentalMode && widget.rentalItem != null) {
-      return [
-        CartItem(
-          id: widget.rentalItem!.productId,
-          name: widget.rentalItem!.name,
-          image: widget.rentalItem!.image,
-          quantity: widget.rentalItem!.quantity,
-          price: widget.rentalItem!.price,
-          type: 'rent',
-          daily_rent: widget.rentalItem!.price / 30,
-          productId: widget.rentalItem!.productId,
-        ),
-      ];
-    }
-    return widget.cartItems ?? cartItemsGlobal;
+  if (widget.isRentalMode && widget.rentalItem != null) {
+    return [
+      CartItem(
+        id: widget.rentalItem!.productId,
+        name: widget.rentalItem!.name,
+        image: widget.rentalItem!.image,
+        price: widget.rentalItem!.price ?? 0,
+        quantity: widget.rentalItem!.quantity,
+        type: 'rental',
+        dailyPrice: widget.rentalItem!.dailyPrice, // ✅ بدل price / 30
+        productId: widget.rentalItem!.productId,
+      ),
+    ];
   }
+  return widget.cartItems ?? cartItemsGlobal;
+}
 
   @override
   Widget build(BuildContext context) {

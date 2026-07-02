@@ -25,13 +25,15 @@ dependencies:
   file_picker: ^8.0.0+1
   image_picker: ^1.1.0
   flutter_icons_plus: ^1.0.3
-  flutter_inappwebview: ^6.1.5
   shimmer: ^3.0.0
   dio: ^5.9.2
   pusher_channels_flutter: ^2.6.0
   
   
   
+  webview_flutter: ^4.4.2
+  flutter_inappwebview: ^5.8.0 
+ 
   
 
 

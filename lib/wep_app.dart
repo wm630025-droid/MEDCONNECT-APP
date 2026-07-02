@@ -18,187 +18,153 @@ class InAppWebViewScreen extends StatefulWidget {
 }
 
 class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
-  InAppWebViewController? webViewController;
+  InAppWebViewController? _controller;
   double _progress = 0;
-  bool _canGoBack = false;
-  bool _showOrdersButton = false;
+  Uri? _initialUrl;
 
-  void _showErrorDialog(String message) {
-    showDialog(
+  @override
+  void initState() {
+    super.initState();
+    _initialUrl = Uri.tryParse(widget.url);
+    if (_initialUrl == null || !_initialUrl!.hasScheme) {
+      if (widget.url.isNotEmpty) {
+        final httpsUrl = Uri.tryParse('https://${widget.url}');
+        if (httpsUrl != null && httpsUrl.hasScheme) {
+          _initialUrl = httpsUrl;
+        }
+      }
+    }
+
+    if (_initialUrl == null || !_initialUrl!.hasScheme) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showInvalidUrlDialog();
+      });
+    }
+  }
+
+  Future<void> _showInvalidUrlDialog() async {
+    if (!mounted) return;
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Error'),
-        content: Text(message),
+        title: const Text('Invalid URL'),
+        content: const Text('The payment link is invalid and cannot be opened.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('OK'),
           ),
         ],
       ),
     );
+    if (mounted) Navigator.of(context).pop(false);
   }
 
-  Future<bool> _onWillPop() async {
-    if (webViewController != null && await webViewController!.canGoBack()) {
-      await webViewController!.goBack();
-      return false;
+  Future<void> _checkForSuccess() async {
+    try {
+      final result = await _controller?.evaluateJavascript(source: '''
+        (function() {
+          var text = document.body.innerText || '';
+          if (
+            text.includes('Payment Successful!') ||
+            text.includes('Payment Success') ||
+            text.includes('Successfully Paid') ||
+            text.includes('Transaction Successful')
+          ) {
+            return 'success';
+          }
+          if (
+            text.includes('Payment Failed') ||
+            text.includes('Transaction Failed') ||
+            text.includes('Payment Unsuccessful')
+          ) {
+            return 'failed';
+          }
+          return 'not_found';
+        })()
+      ''');
+
+      print('📄 Success check result: $result');
+
+      if (result == 'success') {
+        if (mounted) Navigator.of(context).pop(true);
+      } else if (result == 'failed') {
+        if (mounted) Navigator.of(context).pop(false);
+      }
+    } catch (e) {
+      print('❌ JS error: $e');
     }
-    return true;
   }
 
- Future<void> _checkForSuccess(InAppWebViewController controller) async {
-  try {
-    // ✅ اطبع النص الحقيقي للصفحة عشان نشوف إيه المكتوب
-    final pageText = await controller.evaluateJavascript(source: '''
-      document.body.innerText
-    ''');
-    print('📄 Full page text: $pageText');
-
-    final result = await controller.evaluateJavascript(source: '''
-      (function() {
-        var text = document.body.innerText || '';
-        if (
-          text.includes('Payment Successful!') ||
-          text.includes('Payment Success') ||
-          text.includes('Successfully Paid') ||
-          text.includes('Transaction Successful')
-        ) {
-          return 'found';
-        }
-        return 'not_found';
-      })()
-    ''');
-
-    print('📄 Success check result: $result');
-
-    if (result == 'found') {
-      if (mounted) setState(() => _showOrdersButton = true);
-    }
-  } catch (e) {
-    print('❌ JS error: $e');
-  }
-}
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
-        appBar: AppBar(
-          title: const Text('Payment Gateway'),
-          leading: IconButton(
-            icon: Icon(_canGoBack ? Icons.arrow_back : Icons.close),
-            onPressed: () async {
-              if (_canGoBack && webViewController != null) {
-                await webViewController!.goBack();
-              } else {
-                Navigator.of(context).pop();
-              }
-            },
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Payment Gateway'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _controller?.reload(),
           ),
-          actions: [
-            if (!_showOrdersButton)
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () => webViewController?.reload(),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_progress < 1.0)
+            LinearProgressIndicator(value: _progress),
+          Expanded(
+            child: InAppWebView(
+              initialUrlRequest: URLRequest(
+                url: _initialUrl,
               ),
-          ],
-        ),
-        body: Column(
-          children: [
-            if (_progress < 1.0)
-              LinearProgressIndicator(value: _progress),
-
-            // ✅ زرار View Orders بيظهر لما الدفع ينجح
-            if (_showOrdersButton)
-              Container(
-                width: double.infinity,
-                color: Colors.green.shade50,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+              initialOptions: InAppWebViewGroupOptions(
+                crossPlatform: InAppWebViewOptions(
+                  javaScriptEnabled: true,
+                  useShouldOverrideUrlLoading: true,
+                  userAgent: 'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36',
                 ),
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onPressed: () {
-                    // ✅ لو في callback من الصفحة اللي فتحت الـ WebView
-                    if (widget.onSuccess != null) {
-                      widget.onSuccess!();
-                    } else {
-                      Navigator.of(context).pop(true); // بيرجع true للصفحة السابقة
-                    }
-                  },
-                  icon: const Icon(Icons.receipt_long, color: Colors.white),
-                  label: const Text(
-                    'View My Orders',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                android: AndroidInAppWebViewOptions(
+                  supportMultipleWindows: true,
                 ),
               ),
+              onWebViewCreated: (controller) {
+                _controller = controller;
+              },
+              onProgressChanged: (controller, progress) {
+                if (mounted) setState(() => _progress = progress / 100);
+              },
+              onLoadStop: (controller, url) async {
+                print('📄 Page finished: $url');
+                await _checkForSuccess();
+              },
+              shouldOverrideUrlLoading: (controller, navigationAction) async {
+                final url = navigationAction.request.url.toString();
+                print('🔗 Navigating to: $url');
 
-           Expanded(
-  child: InAppWebView(
-    initialUrlRequest: URLRequest(url: WebUri(widget.url)),
-    
-    // 1️⃣ هنا غير الـ initialOptions
-    initialOptions: InAppWebViewGroupOptions(
-      crossPlatform: InAppWebViewOptions(
-        useShouldOverrideUrlLoading: true,
-        javaScriptEnabled: true,
-        javaScriptCanOpenWindowsAutomatically: true, // ✅ أضف ده
-      ),
-      android: AndroidInAppWebViewOptions(
-        supportMultipleWindows: true, // ✅ أضف ده
-      ),
-    ),
+                if (url.startsWith('myapp://payment-success') ||
+                    url.contains('payment-success')) {
+                  if (mounted) Navigator.of(context).pop(true);
+                  return NavigationActionPolicy.CANCEL;
+                }
 
-    onWebViewCreated: (controller) {
-      webViewController = controller;
-    },
-    onProgressChanged: (controller, progress) {
-      setState(() => _progress = progress / 100);
-    },
-    onUpdateVisitedHistory: (controller, url, androidIsReload) async {
-      final canGoBack = await controller.canGoBack();
-      setState(() => _canGoBack = canGoBack);
-    },
-    onLoadStop: (controller, url) async {
-      await _checkForSuccess(controller);
-    },
+                if (url.startsWith('myapp://payment-failed') ||
+                    url.contains('payment-failed')) {
+                  if (mounted) Navigator.of(context).pop(false);
+                  return NavigationActionPolicy.CANCEL;
+                }
 
-    // 2️⃣ هنا أضف الـ onCreateWindow
-    onCreateWindow: (controller, createWindowAction) async {
-      final url = createWindowAction.request.url;
-      if (url != null) {
-        await controller.loadUrl(
-          urlRequest: URLRequest(url: url),
-        );
-      }
-      return true;
-    },
-
-    shouldOverrideUrlLoading: (controller, navigationAction) async {
-      return NavigationActionPolicy.ALLOW;
-    },
-    onReceivedError: (controller, request, error) {
-      print('WebView error: ${error.type} - ${error.description}');
-      _showErrorDialog('Failed to load page: ${error.description}');
-    },
-  ),
-),
-          ],
-        ),
+                return NavigationActionPolicy.ALLOW;
+              },
+             onLoadError: (controller, url, code, message) {
+  print('WebView error: $code - $message');
+},
+            ),
+          ),
+        ],
       ),
     );
   }
