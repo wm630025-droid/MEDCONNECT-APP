@@ -11,15 +11,15 @@ class ChatModel {
   final String time;
   final bool isOnline;
   final int unreadCount;
+  final String? imageUrl;
 
   ChatModel({
-    
     required this.name,
     required this.lastMessage,
     required this.time,
     required this.isOnline,
     required this.unreadCount,
-
+    this.imageUrl,
   });
 }
 
@@ -39,29 +39,33 @@ class _MessagesScreenState extends State<MessagesScreen> {
   bool _loading = true;
   String? _error;
   List<int> _conversationIds = [];
- //Timer? _refreshTimer; 
+  List<int> receiverIds = [];
+  //Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchConversations();
+
     filteredChats = _chats;
+
     // _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
     //   if(mounted) _fetchConversations();
     // });
   }
+
   @override
   void dispose() {
-    
     //_refreshTimer?.cancel();
     super.dispose();
   }
+
   Future<void> _fetchConversations() async {
     if (mounted) {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
     }
 
     try {
@@ -71,56 +75,70 @@ class _MessagesScreenState extends State<MessagesScreen> {
       List<int> ids = [];
 
       for (var conv in convs) {
-  if (!mounted) return; // ✅ أضف دي في أول الـ loop
+        if (!mounted) return; // ✅ أضف دي في أول الـ loop
 
-  final int convId = conv['id'];
-  final other = conv['other_user'];
+        final int convId = conv['id'];
+        final other = conv['other_user'];
+        print('conversation ID added : $convId');
+        String? imageUrl;
+        if (other['supplier'] != null &&
+            other['supplier']['company_image_url'] != null) {
+          imageUrl = other['supplier']['company_image_url'];
+        }
 
-  final messages = await _api.getMessages(convId);
+        final messages = await _api.getMessages(convId);
 
-  if (!mounted) return; // ✅ وبعد كل await
+        if (!mounted) return; // ✅ وبعد كل await
 
-  int unreadCount = 0;
-  String lastMessage = '';
-  String lastTime = '';
+        int unreadCount = 0;
+        String lastMessage = '';
+        String lastTime = '';
 
-  for (var msg in messages) {
-    final isMe = msg['sender']['role'] == 'doctor';
-    final readAt = msg['read_at'];
+        for (var msg in messages) {
+          final isMe = msg['sender']['role'] == 'doctor';
+          final readAt = msg['read_at'];
 
-    if (!isMe && readAt == null) {
-      unreadCount++;
-    }
+          if (!isMe && readAt == null) {
+            unreadCount++;
+          }
 
-    if (msg == messages.last) {
-      lastMessage = msg['body'];
-      lastTime = _formatTime(msg['created_at']);
-    }
-  }
+          if (msg == messages.last) {
+            lastMessage = msg['body'];
+            lastTime = _formatTime(msg['created_at']);
+          }
+        }
 
-  loaded.add(ChatModel(
-    name: other['fullname'],
-    lastMessage: lastMessage,
-    time: lastTime,
-    isOnline: false,
-    unreadCount: unreadCount,
-  ));
-  ids.add(convId);
-}
-if (mounted) {
-      setState(() {
-        _chats = loaded;
-        filteredChats = loaded;
-        _conversationIds = ids;
-        _loading = false;
-      });
-}
+        loaded.add(
+          ChatModel(
+            name: other['fullname'],
+            lastMessage: lastMessage,
+            time: lastTime,
+            isOnline: false,
+            unreadCount: unreadCount,
+            imageUrl: imageUrl,
+          ),
+        );
+        ids.add(convId);
+        receiverIds.add(other['id']);
+      }
+      if (mounted) {
+        setState(() {
+          _chats = loaded;
+          filteredChats = loaded;
+          _conversationIds = ids;
+          receiverIds = receiverIds;
+          _loading = false;
+        });
+      }
+      print('📦 conversationIds: $_conversationIds');
+      print('📦 receiverIds: $receiverIds');
+      print('loaded ${loaded.length} chats');
     } catch (e) {
       if (mounted) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
       }
     }
   }
@@ -207,10 +225,10 @@ if (mounted) {
 
   void searchChats(String query) {
     if (query.isEmpty) {
-      if(mounted) {
-      setState(() {
-        filteredChats = _chats;
-      });
+      if (mounted) {
+        setState(() {
+          filteredChats = _chats;
+        });
       }
       return;
     }
@@ -218,24 +236,21 @@ if (mounted) {
     final results = _chats.where((chat) {
       return chat.name.toLowerCase().contains(query.toLowerCase());
     }).toList();
-if (mounted) {
-    setState(() {
-      filteredChats = results;
-    });
-}
+    if (mounted) {
+      setState(() {
+        filteredChats = results;
+      });
+    }
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF101C22)
-          : const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text("Supplier Chats"),
         backgroundColor: Colors.white,
-        ),
+      ),
       body: Column(
         children: [
           // 🔎 Search Bar
@@ -263,7 +278,6 @@ if (mounted) {
           // 📋 Chat List
           Expanded(
             child: ListView.builder(
-              
               itemCount: filteredChats.length,
               itemBuilder: (context, index) {
                 final chat = filteredChats[index];
@@ -271,9 +285,16 @@ if (mounted) {
                 return ListTile(
                   leading: Stack(
                     children: [
-                      const CircleAvatar(
+                       CircleAvatar(
                         radius: 25,
-                        backgroundColor: Color.fromARGB(255, 232, 232, 236),
+                        backgroundColor: Colors.grey.shade200,
+                        backgroundImage:
+                            chat.imageUrl != null && chat.imageUrl!.isNotEmpty
+                            ? NetworkImage(chat.imageUrl!)
+                            : null,
+                        child: chat.imageUrl == null || chat.imageUrl!.isEmpty
+                            ? const Icon(Icons.person, color: Colors.grey)
+                            : null,
                       ),
 
                       if (chat.isOnline)
@@ -328,20 +349,28 @@ if (mounted) {
                     overflow: TextOverflow.ellipsis,
                   ),
                   trailing: Text(chat.time),
-                  onTap: () {
+                  onTap: () async {
+                    print('========== TAP ON CHAT ==========');
+                    print('📦 Index: $index');
+                    print('📦 conversationIds: $_conversationIds');
+                    print('📦 receiverIds: $receiverIds');
                     final id = _conversationIds[index];
-                    
-                    final shouldRefrech = Navigator.push(
+                    final receiverId = receiverIds[index];
+                    //   if (id == null || receiverId == null) return;
+                    print('📦 id: $id');
+                    print('📦 receiverId: $receiverId');
+                    final shouldRefrech = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ChatScreen(
                           chatName: chat.name,
                           conversationId: id,
-                          receiverId: id, // ممكن تحتاجي ID المورد مش المحادثة
+                          receiverId:
+                              receiverId, // ممكن تحتاجي ID المورد مش المحادثة
                         ),
                       ),
                     );
-                    if(shouldRefrech == true){
+                    if (shouldRefrech == true) {
                       _fetchConversations();
                     }
                   },

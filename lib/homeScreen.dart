@@ -2,17 +2,23 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
+import 'package:medconnect_app/doctorProfile.dart';
+import 'package:medconnect_app/equipmentListScreen.dart';
 import 'package:medconnect_app/introScreen.dart';
+import 'package:medconnect_app/massegesScreen.dart';
 import 'package:medconnect_app/models/category.dart';
 import 'package:medconnect_app/models/equipment_model.dart';
+import 'package:medconnect_app/myCustomRequests.dart';
 import 'package:medconnect_app/productDetails.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/doctorAccount.dart';
+import 'package:medconnect_app/providers/notification_provider.dart';
 //import 'package:medconnect_app/providers/wishlist_provider.dart';
 import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/services/equipment_service.dart'
     as EquipmentApiService;
 import 'package:medconnect_app/services/search_services.dart';
+import 'package:provider/provider.dart';
 //import 'package:provider/provider.dart';
 import '../models/Search_model.dart';
 import 'package:medconnect_app/services/cart_services.dart';
@@ -66,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _categoriesError;
 
   // Products variables
+  bool _isFirstLoad = true; // ✅ أول مرة تحميل
   bool _isLoadingProducts = true;
   String? _productsError;
   bool _isSearchingLoading = false;   // ✅ جديد
@@ -75,7 +82,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final ScrollController _scrollController = ScrollController();
 
-  Map<int, bool> _notifyStatus = {};
+  //Map<int, bool> _notifyStatus = {};
+  
 
   Timer? _pollTimer;
   bool _forceRefresh = false;
@@ -116,7 +124,7 @@ void _startPolling() {
 
   Future<void> _loadProducts({bool loadMore = false, bool forceRefresh = false}) async {
      if (!mounted) return;
-     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh) {
+     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh ) {
     setState(() {
       _allProducts = ApiService.cachedProducts!;
       displayedProducts = List.from(_allProducts);
@@ -136,17 +144,23 @@ void _startPolling() {
       return;
     }
 
-    if (!loadMore) {
+    if (!loadMore && !forceRefresh) {
       setState(() {
         _isLoadingProducts = true;
         _productsError = null;
         _currentPage = 1;
         _allProducts = [];
       });
-    } else {
+    } else if(loadMore){
       setState(() {
         _isLoadingMore = true;
       });
+    }else if(forceRefresh){
+  setState(() {
+      _isLoadingProducts = true;
+      _productsError = null;
+      _currentPage = 1;
+    });
     }
 
     try {
@@ -160,6 +174,10 @@ if (!mounted) return;
           _allProducts.addAll(result['products']);
         } else {
           _allProducts = result['products'];
+
+            if (_currentPage == 1) {
+          ApiService.cachedProducts = _allProducts;
+        }
         }
         displayedProducts = List.from(_allProducts);
         _totalPages = result['lastPage'];
@@ -167,13 +185,14 @@ if (!mounted) return;
         _currentPage++;
         _isLoadingProducts = false;
         _isLoadingMore = false;
+        _isFirstLoad=false;
       });
 
       for (var product in _allProducts) {
         if (product.stock == 0 && product.restockDate != null) {
           final isNotified = await _apiService.isNotified(product.id);
-          if (!mounted) return;
-          _notifyStatus[product.id] = isNotified;
+          Provider.of<NotificationProvider>(context, listen: false)
+              .setNotified(product.id, isNotified);
         }
       }
       if (!mounted) return;
@@ -184,6 +203,7 @@ if (!mounted) return;
         _productsError = e.toString();
         _isLoadingProducts = false;
         _isLoadingMore = false;
+        _isFirstLoad=false;
       });
     }
   }
@@ -317,7 +337,7 @@ if (!mounted) return;
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.black),
+            icon: const Icon(Icons.settings, color: Colors.black),
             onPressed: () {
               Navigator.push(
                 context,
@@ -388,7 +408,7 @@ if (!mounted) return;
           ///////////////////////////////////////////////////////////////////////
         ],
       ),
-
+   // drawer: _buildDrawer(), // افتح الدروير
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -407,7 +427,196 @@ if (!mounted) return;
       ),
     );
   }
+// Widget _buildDrawer() {
+//   return Drawer(
+//     child: Column(
+//       children: [
+//         // ========== Header ==========
+//         Container(
+//           height: 180,
+//           width: double.infinity,
+//           decoration: const BoxDecoration(
+//             gradient: LinearGradient(
+//               colors: [Color(0xFF0066FF), Color(0xFF0088FF)],
+//               begin: Alignment.topLeft,
+//               end: Alignment.bottomRight,
+//             ),
+//             borderRadius: BorderRadius.only(
+//               bottomLeft: Radius.circular(24),
+//               bottomRight: Radius.circular(24),
+//             ),
+//           ),
+//           child: Column(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               const CircleAvatar(
+//                 radius: 40,
+//                 backgroundColor: Colors.white,
+//                 child: Icon(
+//                   Icons.person,
+//                   size: 50,
+//                   color: Color(0xFF0066FF),
+//                 ),
+//               ),
+//               const SizedBox(height: 8),
+//               Text(
+//                 ApiService.doctorName ?? 'Doctor',
+//                 style: const TextStyle(
+//                   color: Colors.white,
+//                   fontSize: 18,
+//                   fontWeight: FontWeight.bold,
+//                 ),
+//               ),
+//               // Text(
+//               //   ApiService.doctorEmail ?? '',
+//               //   style: const TextStyle(
+//               //     color: Colors.white70,
+//               //     fontSize: 14,
+//               //   ),
+//               // ),
+//             ],
+//           ),
+//         ),
 
+//         const SizedBox(height: 16),
+
+//         // ========== Menu Items ==========
+//         _buildDrawerItem(
+//           icon: Icons.home,
+//           title: 'Home',
+//           onTap: () {
+//             Navigator.pop(context);
+//           },
+//         ),
+//         _buildDrawerItem(
+//           icon: Icons.person,
+//           title: 'Profile',
+//           onTap: () {
+//             Navigator.pop(context);
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (_) => const DoctorProfilePage()),
+//             );
+//           },
+//         ),
+//         _buildDrawerItem(
+//           icon: Icons.shopping_bag,
+//           title: 'My Orders',
+//           onTap: () {
+//             Navigator.pop(context);
+
+//             // TODO: اذهب لصفحة الطلبات
+//           },
+//         ),
+//         // _buildDrawerItem(
+//         //   icon: Icons.favorite,
+//         //   title: 'Wishlist',
+//         //   onTap: () {
+//         //     Navigator.pop(context);
+//         //     Navigator.push(
+//         //       context,
+//         //       MaterialPageRoute(builder: (_) => const WishlistPage()),
+//         //     );
+//         //   },
+//         // ),
+//         _buildDrawerItem(
+//           icon: Icons.chat,
+//           title: 'Messages',
+//           onTap: () {
+//             Navigator.pop(context);
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (_) => MessagesScreen()),
+//             );
+//           },
+//         ),
+//         _buildDrawerItem(
+//           icon: Icons.inventory_2,
+//           title: 'Equipment Lists',
+//           onTap: () {
+//             Navigator.pop(context);
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (_) => const EquipmentListsScreen()),
+//             );
+//           },
+//         ),
+//         _buildDrawerItem(
+//           icon: Icons.request_page,
+//           title: 'Custom Requests',
+//           onTap: () {
+//             Navigator.pop(context);
+//             Navigator.push(
+//               context,
+//               MaterialPageRoute(builder: (_) => const MyCustomRequestsPage()),
+//             );
+//           },
+//         ),
+
+//         const Spacer(),
+
+//         const Divider(),
+//         // ========== Logout ==========
+//         _buildDrawerItem(
+//           icon: Icons.logout,
+//           title: 'Sign Out',
+//           iconColor: Colors.red,
+//           titleColor: Colors.red,
+//           onTap: () {
+//             Navigator.pop(context);
+//             _handleLogout();
+//           },
+//         ),
+//         const SizedBox(height: 24),
+//       ],
+//     ),
+//   );
+// }
+// Widget _buildDrawerItem({
+//   required IconData icon,
+//   required String title,
+//   required VoidCallback onTap,
+//   Color iconColor = Colors.grey,
+//   Color titleColor = Colors.black,
+// }) {
+//   return ListTile(
+//     leading: Icon(icon, color: iconColor),
+//     title: Text(
+//       title,
+//       style: TextStyle(color: titleColor),
+//     ),
+//     trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+//     onTap: onTap,
+//   );
+// }
+// void _handleLogout() async {
+//   final confirm = await showDialog<bool>(
+//     context: context,
+//     builder: (ctx) => AlertDialog(
+//       title: const Text('Sign Out'),
+//       content: const Text('Are you sure you want to sign out?'),
+//       actions: [
+//         TextButton(
+//           onPressed: () => Navigator.pop(ctx, false),
+//           child: const Text('Cancel'),
+//         ),
+//         TextButton(
+//           onPressed: () => Navigator.pop(ctx, true),
+//           child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+//         ),
+//       ],
+//     ),
+//   );
+
+//   if (confirm == true) {
+//     await ApiService().logout();
+//     Navigator.pushAndRemoveUntil(
+//       context,
+//       MaterialPageRoute(builder: (_) => const IntroScreen()),
+//       (route) => false,
+//     );
+//   }
+//}
  Widget _searchResultsApi() {
   if (searchResults.isEmpty) {
     return Padding(
@@ -862,7 +1071,7 @@ void _showCategoriesTopSheet() {
   }
 
   Widget buildCategories() {
-    if (_isLoadingCategories) {
+    if (_isLoadingCategories && _categories.isEmpty) {
       return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -947,7 +1156,7 @@ void _showCategoriesTopSheet() {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.50,
+          childAspectRatio: 0.45,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -994,7 +1203,7 @@ void _showCategoriesTopSheet() {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.50,
+            childAspectRatio: 0.45,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
@@ -1058,6 +1267,8 @@ Widget _skeletonProductCard() {
   // PRODUCT CARD
   // ---------------------
   Widget _productCard(Product p) {
+    final notificationProvider = Provider.of<NotificationProvider>(context);
+final isNotified = notificationProvider.isNotified(p.id);
    // final wishlistProvider = Provider.of<WishlistProvider>(
    //   context,
     //  listen: true,
@@ -1093,12 +1304,12 @@ Widget _skeletonProductCard() {
                     ),
                   );
 
-                  if (result == true && mounted) {
-                    final isNotified = await _apiService.isNotified(p.id);
-                    setState(() {
-                      _notifyStatus[p.id] = isNotified;
-                    });
-                  }
+                  // if (result == true && mounted) {
+                  //   final isNotified = await _apiService.isNotified(p.id);
+                  //   setState(() {
+                  //     _notifyStatus[p.id] = isNotified;
+                  //   });
+                  // }
                 },
                 //#####################################################
                 child: ClipRRect(
@@ -1172,7 +1383,7 @@ Widget _skeletonProductCard() {
                 ),
               ),
 
-              if (p.stock == 0)
+              if (p.isRentable == false || p.rentalStock==0)
                 Padding(
                   padding: const EdgeInsets.all(7.0),
                   child: const Text(
@@ -1184,7 +1395,7 @@ Widget _skeletonProductCard() {
                     ),
                   ),
                 ),
-              if (p.isRentable && p.stock > 0)
+              if (p.isRentable && p.rentalStock!>0)
                 Padding(
                   padding: const EdgeInsets.all(7.0),
                   child: const Text(
@@ -1425,6 +1636,8 @@ Widget _skeletonProductCard() {
   // ... كل المتغيرات
 
   Widget _buildNotifyButton(Product p) {
+    final notificationProvider = Provider.of<NotificationProvider>(context);
+final isNotified = notificationProvider.isNotified(p.id);
     return FutureBuilder<bool>(
       future: _apiService.isNotified(p.id),
       builder: (context, snapshot) {
@@ -1441,11 +1654,13 @@ Widget _skeletonProductCard() {
             onPressed: () async {
               if (isNotified) {
                 await _apiService.undoRestockNotification(p.id);
+                notificationProvider.setNotified(p.id, false);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Notification cancelled')),
                 );
               } else {
                 await _apiService.requestRestockNotification(p.id);
+                notificationProvider.setNotified(p.id, true);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Notification requested!')),
                 );
@@ -1467,6 +1682,10 @@ Widget _skeletonProductCard() {
 
 
   Widget _buildActionButton(Product p) {
+final bool isOutOfStock = p.stock == 0;
+  final bool isRentable = p.isRentable && (p.rentalStock ?? 0) > 0;
+  final bool canBuy = p.stock > 0;
+
     // ✅ حالة 1: Out of Stock (stock == 0) و restock_date == null
     if (p.stock == 0 && p.restockDate == null) {
   return SizedBox(

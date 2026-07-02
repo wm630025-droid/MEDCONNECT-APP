@@ -6,21 +6,27 @@ import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/models/rental_item.dart';
 import 'package:medconnect_app/models/review.dart';
+import 'package:medconnect_app/providers/notification_provider.dart';
 import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/services/cart_services.dart';
-import 'package:medconnect_app/services/equipment_service.dart' as EquipmentApiService;
+import 'package:medconnect_app/services/equipment_service.dart'
+    as EquipmentApiService;
 import 'package:medconnect_app/supplierProfile.dart';
 import 'package:provider/provider.dart';
 import '../providers/wishlist_provider.dart';
 import 'package:medconnect_app/shimmerSkeleton.dart';
 
-
 // ---------------- PAGE ----------------
 class ProductDetailsPage extends StatefulWidget {
   final int productId;
   final Product? product;
-    final bool openRentTab; 
-  const ProductDetailsPage({super.key, required this.productId, this.product,this.openRentTab = false});
+  final bool openRentTab;
+  const ProductDetailsPage({
+    super.key,
+    required this.productId,
+    this.product,
+    this.openRentTab = false,
+  });
 
   @override
   State<ProductDetailsPage> createState() => _ProductDetailsPageState();
@@ -33,32 +39,92 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Product? _product;
   bool isLoading = true;
   String? _error;
-bool _isNotified = false;
+  //bool _isNotified = false;
 
-List<Review> get reviews => _product?.reviews ?? [];
+  bool get isOutOfStock =>
+      _product!.stock == 0 && _product!.restockDate == null;
+  bool get isRentable =>
+      _product!.isRentable && (_product!.rentalStock ?? 0) > 0;
+  bool get canBuy => _product!.stock > 0;
+  bool get showNotifyMe =>
+      _product!.stock == 0 && _product!.restockDate != null;
+
+  List<Review> get reviews => _product?.reviews ?? [];
   final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
     _loadProduct();
-      if (widget.openRentTab) {
-    selectedPurchase = 0; // يفتح على تبويب Rent
+    if (widget.openRentTab) {
+      selectedPurchase = 0; // يفتح على تبويب Rent
+    }
   }
+
+  Future<void> _fetchReviews() async {
+    if (_product == null) return;
+    try {
+      final reviews = await _apiService.getProductReviews(_product!.id);
+      reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final updatedReviews = reviews.map((r) {
+        return Review(
+          id: r.id,
+          doctorId: r.doctorId,
+          rating: r.rating,
+          comment: r.comment,
+          createdAt: r.createdAt,
+          productId: r.productId,
+          doctorName: r.doctorName,
+          canDelete: r.doctorId == ApiService.doctorId,
+          profileImageUrl: r.profileImageUrl,
+          
+        );
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _product = Product(
+            id: _product!.id,
+            supplierId: _product!.supplierId,
+            name: _product!.name,
+            brand: _product!.brand,
+            price: _product!.price,
+            imagePath: _product!.imagePath,
+            stock: _product!.stock,
+            isRentable: _product!.isRentable,
+            restockDate: _product!.restockDate,
+            status: _product!.status,
+            images: _product!.images,
+            description: _product!.description,
+            specification: _product!.specification,
+            warranty: _product!.warranty,
+            configuration: _product!.configuration,
+            dailyRent: _product!.dailyRent,
+            rentalStock: _product!.rentalStock,
+            setupDuration: _product!.setupDuration,
+            supplierData: _product!.supplierData,
+            reviews: updatedReviews,
+          );
+        });
+      }
+    } catch (e) {
+      print('❌ Error fetching reviews: $e');
+    }
   }
 
   Future<void> _loadProduct() async {
     // لو المنتج جاي من HomeScreen (مش محتاج API)
     if (widget.product != null) {
       if (mounted) {
-         setState(() {
-        _product = widget.product;
-      });
+        setState(() {
+          _product = widget.product;
+          isLoading = false;
+        });
       }
-    
-  await _checkNotificationStatus();
-  return; // ✅ رجوع عشان ما ينفذش الكود اللي بعده
-  }
+      await _fetchReviews(); // ✅ جلب التعليقات بعد تحميل المنتج
+      //await _checkNotificationStatus();
+      return; // ✅ رجوع عشان ما ينفذش الكود اللي بعده
+    }
     // // لو محتاجين نجيب من API
     // setState(() {
     //   _isLoading = true;
@@ -71,22 +137,23 @@ List<Review> get reviews => _product?.reviews ?? [];
 print('🔍 Is rentable: ${freshproduct.isRentable}');
       final reviews = await _apiService.getProductReviews(widget.productId);
 
-    reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // الأحدث أولاً
-      final updatedReviews = reviews.map((r){
-        return Review(id: r.id,
-         doctorId: r.doctorId,
+      reviews.sort(
+        (a, b) => b.createdAt.compareTo(a.createdAt),
+      ); // الأحدث أولاً
+      final updatedReviews = reviews.map((r) {
+        print('-------------------------------------');
+        print('@@Review Url: ${r.profileImageUrl}');
+        return Review(
+          id: r.id,
+          doctorId: r.doctorId,
           rating: r.rating,
-           comment: r.comment, 
-           createdAt: r.createdAt,
-            productId: r.productId,
-            doctorName: r.doctorName,
-            canDelete: r.doctorId==ApiService.doctorId,
-            
-            
-            );
-        
-
-
+          comment: r.comment,
+          createdAt: r.createdAt,
+          productId: r.productId,
+          doctorName: r.doctorName,
+          canDelete: r.doctorId == ApiService.doctorId,
+          profileImageUrl: r.profileImageUrl,
+        );
       }).toList();
 if (mounted) {
       setState(() {
@@ -119,47 +186,47 @@ if (mounted) {
 
  await _checkNotificationStatus();
 
+      // await _checkNotificationStatus();
     } catch (e) {
       if (mounted) {
-      setState(() {
-        _error = e.toString();
-        isLoading = false;
-      });
-
+        setState(() {
+          _error = e.toString();
+          isLoading = false;
+        });
       }
     }
   }
 
-// ✅ دالة منفصلة عشان نجيب isNotified
-Future<void> _checkNotificationStatus() async {
-  if (_product == null) return;
-  final isNotified = await _apiService.isNotified(_product!.id);
-  if (mounted) {
-    setState(() {
-      _isNotified = isNotified;
-    });
-  }
-}
+  // ✅ دالة منفصلة عشان نجيب isNotified
+  // Future<void> _checkNotificationStatus() async {
+  //   if (_product == null) return;
+  //   final isNotified = await _apiService.isNotified(_product!.id);
+  //   if (mounted) {
+  //     setState(() {
+  //       _isNotified = isNotified;
+  //     });
+  //   }
+  // }
   // -------- Rent --------
   DateTime? rentStartDate;
   DateTime? rentEndDate;
-  int rentQuantity = 1; 
+  int rentQuantity = 1;
 
   // -------- Buy --------
-  String selectedConfig = "Standard Unit";
-  double get price {
-    return selectedConfig == "Total price"
-        ? _product!.price
-        : _product!.price; // Example price difference
-  }
+  // String selectedConfig = "Standard Unit";
+  // double get price {
+  //   return selectedConfig == "Total price"
+  //       ? _product!.price
+  //       : _product!.price; // Example price difference
+  // }
 
-  String selectedWarranty = "";
+  // String selectedWarranty = "";
 
   // -------- Reviews --------
-double get averageRating {
-  if (reviews.isEmpty) return 0;
-  return reviews.fold<int>(0, (sum, r) => sum + r.rating) / reviews.length;
-}
+  double get averageRating {
+    if (reviews.isEmpty) return 0;
+    return reviews.fold<int>(0, (sum, r) => sum + r.rating) / reviews.length;
+  }
 
   int userRating = 0;
   final TextEditingController reviewController = TextEditingController();
@@ -172,8 +239,155 @@ double get averageRating {
   bool isInWishlist = false;
   bool isInEquipmentList = false;
 
+  Future<void> _rentNow() async {
+    if (rentStartDate == null || rentEndDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select both start and end dates'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
 
+    // ✅ التحقق من أن End Date بعد Start Date
+    if (rentEndDate!.isBefore(rentStartDate!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('End date must be after start date'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    String formatDate(DateTime date) {
+      return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
 
+      //return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    }
+
+    print('sending rent validation');
+    print(' productId : ${_product!.id}');
+    print('quantity: $rentQuantity');
+    print("start date : ${formatDate(rentStartDate!)}");
+    print("end date : ${formatDate(rentEndDate!)}");
+
+    try {
+      final isValid = await _apiService.validateRent(
+        productId: _product!.id,
+        quantity: rentQuantity,
+        startDate: formatDate(rentStartDate!),
+        endDate: formatDate(rentEndDate!),
+      );
+
+      if (isValid) {
+        final rentalItem = RentalItem(
+          productId: _product!.id,
+          name: _product!.name,
+          price: _product!.dailyRent ?? 0.0,
+          image: _product!.imagePath,
+          quantity: rentQuantity,
+          startDate: formatDate(rentStartDate!),
+          endDate: formatDate(rentEndDate!),
+        );
+        print('Rent validated, navigating to checkout,$rentalItem');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                CheckoutAddressPage(isRentalMode: true, rentalItem: rentalItem),
+          ),
+        );
+      }
+    } catch (e) {
+      // ✅ عرض رسالة الخطأ من الـ API
+      String errorMessage = e.toString().replaceAll('Exception:', '').trim();
+
+      // لو الخطأ من الـ API نفسه (زي "not rentable" أو "Insufficient stock for rent")
+      if (errorMessage.contains('not rentable')) {
+        errorMessage = 'This product is not available for rent';
+      } else if (errorMessage.contains('Insufficient stock')) {
+        errorMessage = 'Not enough stock available for rent';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _showAddToListDialog(Product product) async {
+    try {
+      final lists = await EquipmentApiService.getSimpleLists();
+      if (lists.isEmpty) {
+        _showCreateListFirstDialog(product);
+        return;
+      }
+
+      final selectedList = await showDialog<EquipmentList>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Add to Equipment List"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...lists.map(
+                (list) => ListTile(
+                  title: Text(list.listName),
+                  onTap: () => Navigator.pop(ctx, list),
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                title: const Text("+ Create New List"),
+                onTap: () => Navigator.pop(ctx, null),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (selectedList != null) {
+        await EquipmentApiService.addItemToList(selectedList.id, product.id);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Added to list")));
+      } else {
+        _showCreateNewListDialog(product);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
+  void _showCreateNewListDialog(Product product) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("New List Name"),
+        content: TextField(controller: controller),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Create"),
+          ),
+        ],
 Future<void> _rentNow() async {
   String formatDate(DateTime date) {
     return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
@@ -232,216 +446,200 @@ Future<void> _rentNow() async {
         backgroundColor: Colors.red,
       ),
     );
-  }
-}
-  void _showAddToListDialog(Product product) async {
-  try {
-    final lists = await EquipmentApiService.getSimpleLists();
-    if (lists.isEmpty) {
-      _showCreateListFirstDialog(product);
-      return;
+    if (confirmed == true && controller.text.isNotEmpty) {
+      try {
+        await EquipmentApiService.createEquipmentList(controller.text);
+        final newLists = await EquipmentApiService.getSimpleLists();
+        final newList = newLists.firstWhere(
+          (l) => l.listName == controller.text,
+        );
+        await EquipmentApiService.addItemToList(newList.id, product.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("List created and item added")),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
     }
+  }
 
-    final selectedList = await showDialog<EquipmentList>(
+  void _showCreateListFirstDialog(Product product) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Add to Equipment List"),
+        title: const Text("No Lists Found"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ...lists.map((list) => ListTile(
-              title: Text(list.listName),
-              onTap: () => Navigator.pop(ctx, list),
-            )),
-            const Divider(),
-            ListTile(
-              title: const Text("+ Create New List"),
-              onTap: () => Navigator.pop(ctx, null),
+            const Text("You don't have any equipment lists yet."),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: "Enter list name",
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
         ),
-      ),
-    );
-
-    if (selectedList != null) {
-      await EquipmentApiService.addItemToList(selectedList.id, product.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Added to list")),
-      );
-    } else {
-      _showCreateNewListDialog(product);
-    }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Error: $e")),
-    );
-  }
-}
-
-void _showCreateNewListDialog(Product product) async {
-  final controller = TextEditingController();
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text("New List Name"),
-      content: TextField(controller: controller),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text("Create"),
-        ),
-      ],
-    ),
-  );
-  if (confirmed == true && controller.text.isNotEmpty) {
-    try {
-      await EquipmentApiService.createEquipmentList(controller.text);
-      final newLists = await EquipmentApiService.getSimpleLists();
-      final newList = newLists.firstWhere((l) => l.listName == controller.text);
-      await EquipmentApiService.addItemToList(newList.id, product.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("List created and item added")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    }
-  }
-}
-void _showCreateListFirstDialog(Product product) async {
-  final controller = TextEditingController();
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text("No Lists Found"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text("You don't have any equipment lists yet."),
-          const SizedBox(height: 16),
-          TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              hintText: "Enter list name",
-              border: OutlineInputBorder(),
-            ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Create"),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text("Create"),
-        ),
-      ],
-    ),
-  );
-  
-  if (confirmed == true && controller.text.isNotEmpty) {
-    try {
-      await EquipmentApiService.createEquipmentList(controller.text);
-      final newLists = await EquipmentApiService.getSimpleLists();
-      final newList = newLists.firstWhere((l) => l.listName == controller.text);
-      await EquipmentApiService.addItemToList(newList.id, product.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("List created and item added")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString().replaceAll('Exception:', '')}")),
-      );
+    );
+
+    if (confirmed == true && controller.text.isNotEmpty) {
+      try {
+        await EquipmentApiService.createEquipmentList(controller.text);
+        final newLists = await EquipmentApiService.getSimpleLists();
+        final newList = newLists.firstWhere(
+          (l) => l.listName == controller.text,
+        );
+        await EquipmentApiService.addItemToList(newList.id, product.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("List created and item added")),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Error: ${e.toString().replaceAll('Exception:', '')}",
+            ),
+          ),
+        );
+      }
     }
   }
-}
   // ---------------- UI ----------------
 
   @override
   Widget build(BuildContext context) {
-  if (isLoading) {
-  return Scaffold(
-    appBar: AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      title: const Text("Product Details", style: TextStyle(color: Colors.black)),
-      iconTheme: const IconThemeData(color: Colors.black),
-    ),
-    body: SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // صورة المنتج
-          ShimmerSkeleton(
-            width: double.infinity,
-            height: 260,
-            borderRadius: BorderRadius.circular(0),
+    if (isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            "Product Details",
+            style: TextStyle(color: Colors.black),
           ),
-          const SizedBox(height: 16),
+          iconTheme: const IconThemeData(color: Colors.black),
+        ),
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // صورة المنتج
+              ShimmerSkeleton(
+                width: double.infinity,
+                height: 260,
+                borderRadius: BorderRadius.circular(0),
+              ),
+              const SizedBox(height: 16),
 
-          // اسم المنتج
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 24, borderRadius: BorderRadius.circular(6)),
-          ),
-          const SizedBox(height: 10),
+              // اسم المنتج
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ShimmerSkeleton(
+                  width: double.infinity,
+                  height: 24,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              const SizedBox(height: 10),
 
-          // الوصف
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: 200, height: 14, borderRadius: BorderRadius.circular(4)),
-          ),
-          const SizedBox(height: 16),
+              // الوصف
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ShimmerSkeleton(
+                  width: double.infinity,
+                  height: 14,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ShimmerSkeleton(
+                  width: 200,
+                  height: 14,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-          // زرار Wishlist و Equipment
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(child: ShimmerSkeleton(width: double.infinity, height: 40, borderRadius: BorderRadius.circular(8))),
-                const SizedBox(width: 12),
-                Expanded(child: ShimmerSkeleton(width: double.infinity, height: 40, borderRadius: BorderRadius.circular(8))),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
+              // زرار Wishlist و Equipment
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ShimmerSkeleton(
+                        width: double.infinity,
+                        height: 40,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ShimmerSkeleton(
+                        width: double.infinity,
+                        height: 40,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
 
-          // Supplier card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 70, borderRadius: BorderRadius.circular(14)),
-          ),
-          const SizedBox(height: 16),
+              // Supplier card
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ShimmerSkeleton(
+                  width: double.infinity,
+                  height: 70,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-          // Rent/Buy switch
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 44, borderRadius: BorderRadius.circular(30)),
-          ),
-          const SizedBox(height: 16),
+              // Rent/Buy switch
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ShimmerSkeleton(
+                  width: double.infinity,
+                  height: 44,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-          // Config card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ShimmerSkeleton(width: double.infinity, height: 150, borderRadius: BorderRadius.circular(16)),
+              // Config card
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ShimmerSkeleton(
+                  width: double.infinity,
+                  height: 150,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
-}
+        ),
+      );
+    }
 
     if (_product == null) {
       return Scaffold(
@@ -553,8 +751,7 @@ void _showCreateListFirstDialog(Product product) async {
                     child: SizedBox(
                       height: 35,
                       child: ElevatedButton.icon(
-                      
-                    onPressed: () => _showAddToListDialog(_product!),
+                        onPressed: () => _showAddToListDialog(_product!),
 
                         icon: Icon(
                           Icons.playlist_add,
@@ -636,7 +833,7 @@ void _showCreateListFirstDialog(Product product) async {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          "Main Clinic",
+                          "Cairo", // Replace with actual location if available
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.grey,
@@ -741,7 +938,7 @@ void _showCreateListFirstDialog(Product product) async {
     String supplierName = ' '; // اسم افتراضي
 
     if (_product!.supplierData != null) {
-      supplierName = _product!.supplierData!['company_name'] ?? 'xxxxxx';
+      supplierName = _product!.supplierData!['company_name'] ?? ' ';
       print('🏢 Supplier from API: $supplierName');
     } else {
       print('⚠️ No supplier data available, using brand: $supplierName');
@@ -814,9 +1011,12 @@ void _showCreateListFirstDialog(Product product) async {
                       children: [
                         const Icon(Icons.star, color: Colors.amber, size: 16),
                         const SizedBox(width: 4),
-                        const Text(
-                          "4.8 (120 Reviews)",
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        Text(
+                          "$averageRating (${reviews.length} Reviews)",
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -873,6 +1073,8 @@ void _showCreateListFirstDialog(Product product) async {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildProductInfo(),
+        const SizedBox(height: 16),
         const Text(
           "Rental Period",
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -885,8 +1087,8 @@ void _showCreateListFirstDialog(Product product) async {
             Expanded(child: _dateBox("End Date", false)),
           ],
         ),
-         const SizedBox(height: 12),
-          _buildQuantitySelector(),
+        const SizedBox(height: 12),
+        _buildQuantitySelector(),
         const SizedBox(height: 16),
         locationAndSetupTime(),
         const Divider(),
@@ -902,25 +1104,26 @@ _priceRow(
       ],
     ),
   );
-Widget _buildQuantitySelector() {
-  return Row(
-    children: [
-      const Text('Quantity:'),
-      const Spacer(),
-      IconButton(
-        onPressed: rentQuantity > 1
-            ? () => setState(() => rentQuantity--)
-            : null,
-        icon: const Icon(Icons.remove),
-      ),
-      Text('$rentQuantity'),
-      IconButton(
-        onPressed: () => setState(() => rentQuantity++),
-        icon: const Icon(Icons.add),
-      ),
-    ],
-  );
-}
+  Widget _buildQuantitySelector() {
+    return Row(
+      children: [
+        const Text('Quantity:'),
+        const Spacer(),
+        IconButton(
+          onPressed: rentQuantity > 1
+              ? () => setState(() => rentQuantity--)
+              : null,
+          icon: const Icon(Icons.remove),
+        ),
+        Text('$rentQuantity'),
+        IconButton(
+          onPressed: () => setState(() => rentQuantity++),
+          icon: const Icon(Icons.add),
+        ),
+      ],
+    );
+  }
+
   Widget _dateBox(String title, bool isStart) => GestureDetector(
     onTap: () async {
       final picked = await showDatePicker(
@@ -963,12 +1166,11 @@ Widget _buildQuantitySelector() {
       ),
     ),
   );
-
-  // ---------------- BUY ----------------
-  Widget _buyConfig() => _card(
-    child: Column(
+  Widget _buildProductInfo() {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Configuration
         const Text(
           "Configuration",
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -990,8 +1192,9 @@ Widget _buildQuantitySelector() {
             style: const TextStyle(fontSize: 14),
           ),
         ),
-
         const SizedBox(height: 16),
+
+        // Warranty
         const Text("Warranty", style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Container(
@@ -1003,12 +1206,62 @@ Widget _buildQuantitySelector() {
             border: Border.all(color: Colors.grey.shade300),
           ),
           child: Text(
-            _product!.warranty == 0 || _product!.warranty.isEmpty
+            _product!.warranty == "0" || _product!.warranty.isEmpty
                 ? "No warranty"
-                : "${_product!.warranty} ",
+                : "${_product!.warranty} months",
             style: const TextStyle(fontSize: 14),
           ),
         ),
+      ],
+    );
+  }
+
+  // ---------------- BUY ----------------
+  Widget _buyConfig() => _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // const Text(
+        //   "Configuration",
+        //   style: TextStyle(fontWeight: FontWeight.bold),
+        // ),
+        // const SizedBox(height: 8),
+        // Container(
+        //   width: double.infinity,
+        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        //   decoration: BoxDecoration(
+        //     color: Colors.grey.shade100,
+        //     borderRadius: BorderRadius.circular(12),
+        //     border: Border.all(color: Colors.grey.shade300),
+        //   ),
+        //   child: Text(
+        //     _product!.configuration == 0
+        //         ? "No configuration"
+        //         : "${_product!.configuration} ",
+
+        //     style: const TextStyle(fontSize: 14),
+        //   ),
+        // ),
+
+        // const SizedBox(height: 16),
+        // const Text("Warranty", style: TextStyle(fontWeight: FontWeight.bold)),
+        // const SizedBox(height: 8),
+        // Container(
+        //   width: double.infinity,
+        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        //   decoration: BoxDecoration(
+        //     color: Colors.grey.shade100,
+        //     borderRadius: BorderRadius.circular(12),
+        //     border: Border.all(color: Colors.grey.shade300),
+        //   ),
+        //   child: Text(
+        //     _product!.warranty == 0 || _product!.warranty.isEmpty
+        //         ? "No warranty"
+        //         : "${_product!.warranty} ",
+        //     style: const TextStyle(fontSize: 14),
+        //   ),
+        // ),
+        _buildProductInfo(),
         const SizedBox(height: 20),
         locationAndSetupTime(),
         const SizedBox(height: 20),
@@ -1158,11 +1411,13 @@ Widget _buildQuantitySelector() {
             );
           }).toList()
         else
-          Padding(
-            padding: const EdgeInsets.all(8.0),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 70.0),
             child: const Text(
               "No specifications available",
               style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
             ),
           ),
 
@@ -1184,181 +1439,232 @@ Widget _buildQuantitySelector() {
     ),
   );
   // ---------------- REVIEWS ----------------
-   Widget _reviewsSection() => _card(
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Average Rating
-      Center(
-        child: Column(
-          children: [
-            const Text("Average Rating", style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 6),
-            Text(
-              averageRating.toStringAsFixed(1),
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                5,
-                (i) => Icon(
-                  i < averageRating.round() ? Icons.star : Icons.star_border,
-                  color: Colors.amber,
-                  size: 22,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "based on ${reviews.length} reviews",
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 24),
-
-      // Reviews List (من API)
-      if (reviews.isNotEmpty)
-        ...reviews.map((r) => Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 6),
-            ],
-          ),
+  Widget _reviewsSection() => _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Average Rating
+        Center(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 16,
-                    child: Icon(Icons.person, size: 16),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      r.doctorName ?? " ",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Text(
-                    "${r.createdAt.day}/${r.createdAt.month}/${r.createdAt.year}",
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
-
-                    if (r.doctorId == ApiService.doctorId) // تقييم المستخدم الحالي
-                      IconButton(
-                        onPressed: () => _deleteReview(r),
-                        icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                      ),
-
-
-
-                ],
+              const Text(
+                "Average Rating",
+                style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 6),
+              Text(
+                averageRating.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
                   5,
                   (i) => Icon(
-                    i < r.rating ? Icons.star : Icons.star_border,
+                    i < averageRating.round() ? Icons.star : Icons.star_border,
                     color: Colors.amber,
-                    size: 16,
+                    size: 22,
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(r.comment),
+              const SizedBox(height: 4),
+              Text(
+                "based on ${reviews.length} reviews",
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
             ],
           ),
-        ))
-      else
-        const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text("No reviews yet", style: TextStyle(color: Colors.grey)),
         ),
+        const SizedBox(height: 24),
 
-      const SizedBox(height: 20),
+        // Reviews List (من API)
+        if (reviews.isNotEmpty)
+          ...reviews.map(
+          
+            (r) { 
+              print('Review Url: ${r.profileImageUrl}');
+              return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.15),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                        CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey.shade200,
+              child: r.profileImageUrl != null && r.profileImageUrl!.isNotEmpty
+                  ? ClipOval(
+                      child: Image.network(
+                        r.profileImageUrl!,
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        cacheWidth: 80,
+                        cacheHeight: 80,
+                        errorBuilder: (context, error, stackTrace) {
+                          print('❌ Image load error: $error');
+                          return const Icon(Icons.person, size: 24, color: Colors.grey);
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : const Icon(Icons.person, size: 24, color: Colors.grey),
+            ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          r.doctorName ?? " ",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Text(
+                        "${r.createdAt.day}/${r.createdAt.month}/${r.createdAt.year}",
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
 
-      // Leave Review
-      const Text("Leave A Review", style: TextStyle(fontWeight: FontWeight.bold)),
-      const SizedBox(height: 10),
-      Row(
-        children: List.generate(
-          5,
-          (i) => GestureDetector(
-            onTap: () => setState(() => userRating = i + 1),
-            child: Icon(
-              i < userRating ? Icons.star : Icons.star_border,
-              color: Colors.amber,
-              size: 28,
+                      if (r.doctorId ==
+                          ApiService.doctorId) // تقييم المستخدم الحالي
+                        IconButton(
+                          onPressed: () => _deleteReview(r),
+                          icon: const Icon(
+                            Icons.delete,
+                            size: 18,
+                            color: Colors.red,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: List.generate(
+                      5,
+                      (i) => Icon(
+                        i < r.rating ? Icons.star : Icons.star_border,
+                        color: Colors.amber,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(r.comment),
+                ],
+              ),
+            );
+            },
+          ).toList() 
+        else
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text("No reviews yet", style: TextStyle(color: Colors.grey)),
+          ),
+
+        const SizedBox(height: 20),
+
+        // Leave Review
+        const Text(
+          "Leave A Review",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: List.generate(
+            5,
+            (i) => GestureDetector(
+              onTap: () => setState(() => userRating = i + 1),
+              child: Icon(
+                i < userRating ? Icons.star : Icons.star_border,
+                color: Colors.amber,
+                size: 28,
+              ),
             ),
           ),
         ),
-      ),
-      const SizedBox(height: 12),
-      TextField(
-        controller: reviewController,
-        maxLines: 3,
-        decoration: InputDecoration(
-          hintText: "Share Your Experience With This Product...",
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        const SizedBox(height: 12),
+        TextField(
+          controller: reviewController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: "Share Your Experience With This Product...",
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
-      ),
-      const SizedBox(height: 16),
-      SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF005EA6),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF005EA6),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: _submitReview,
+            child: const Text(
+              "Submit Review",
+              style: TextStyle(color: Colors.white),
             ),
           ),
-          onPressed: _submitReview,
-          child: const Text("Submit Review", style: TextStyle(color: Colors.white)),
         ),
-      ),
-    ],
-  ),
-);
-Future<void> _submitReview() async {
-  if (reviewController.text.isEmpty || userRating == 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please add a rating and comment')),
-    );
-    return;
-  }
+      ],
+    ),
+  );
+  Future<void> _submitReview() async {
+    if (reviewController.text.isEmpty || userRating == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add a rating and comment')),
+      );
+      return;
+    }
 
-  setState(() => isLoading = true);
+    setState(() => isLoading = true);
 
-  try {
-    final result = await _apiService.addReview(
-      productId: _product!.id,
-      rating: userRating,
-      comment: reviewController.text,
-    );
-
-    if (result['success'] == true) {
-      // ✅ إضافة التقييم محلياً (أو إعادة تحميل المنتج)
-      final newReview = Review(
-        id: DateTime.now().millisecondsSinceEpoch,
+    try {
+      final result = await _apiService.addReview(
         productId: _product!.id,
-        doctorId: ApiService.doctorId ?? 0,
         rating: userRating,
         comment: reviewController.text,
-        createdAt: DateTime.now(),
-        doctorName: ApiService.doctorName?? ' ',
-        canDelete: true,
       );
+
+      if (result['success'] == true) {
+        // ✅ إضافة التقييم محلياً (أو إعادة تحميل المنتج)
+        final newReview = Review(
+          id: result['data']['id'], // Assuming the API returns the new review ID
+          productId: _product!.id,
+          doctorId: ApiService.doctorId ?? 0,
+          rating: userRating,
+          comment: reviewController.text,
+          createdAt: DateTime.now(),
+          doctorName: ApiService.doctorName ?? ' ',
+          canDelete: true,
       
       setState(() {
         _product = Product(
@@ -1382,46 +1688,69 @@ Future<void> _submitReview() async {
           reviews: [newReview, ..._product!.reviews],
           dailyPrice: _product!.dailyPrice,
         );
-        userRating = 0;
-        reviewController.clear();
-        isLoading = false;
-      });
 
+        setState(() {
+          _product = Product(
+            // نسخ كل البيانات مع إضافة التقييم الجديد
+            id: _product!.id,
+            supplierId: _product!.supplierId,
+            name: _product!.name,
+            brand: _product!.brand,
+            price: _product!.price,
+            imagePath: _product!.imagePath,
+            stock: _product!.stock,
+            isRentable: _product!.isRentable,
+            restockDate: _product!.restockDate,
+            status: _product!.status,
+            images: _product!.images,
+            description: _product!.description,
+            specification: _product!.specification,
+            warranty: _product!.warranty,
+            setupDuration: _product!.setupDuration,
+            supplierData: _product!.supplierData,
+            reviews: [newReview, ..._product!.reviews],
+          );
+          userRating = 0;
+          reviewController.clear();
+          isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Review submitted successfully!')),
+        );
+      } else {
+        throw result['error'] ?? 'Failed to submit review';
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Review submitted successfully!')),
+        SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
       );
-    } else {
-      throw result['error'] ?? 'Failed to submit review';
     }
-  } catch (e) {
-    setState(() => isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
-    );
   }
-}
-Future<void> _deleteReview(Review review) async {
-  final shouldDelete = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Delete Review'),
-      content: const Text('Are you sure you want to delete this review?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Delete', style: TextStyle(color: Colors.red)),
-        ),
-      ],
-    ),
-  );
 
-  if (shouldDelete != true) return;
+  Future<void> _deleteReview(Review review) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Review'),
+        content: const Text('Are you sure you want to delete this review?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
 
-  setState(() => isLoading = true);
+    if (shouldDelete != true) return;
+
+    setState(() => isLoading = true);
 
   try {
     final result = await _apiService.deleteReview(review.id);
@@ -1454,263 +1783,194 @@ Future<void> _deleteReview(Review review) async {
         isLoading = false;
       });
 
+      if (result['success'] == true) {
+        // ✅ إزالة التقييم من القائمة محلياً
+        setState(() {
+          final updatedReviews = List<Review>.from(_product!.reviews);
+          updatedReviews.removeWhere((r) => r.id == review.id);
+          _product = Product(
+            id: _product!.id,
+            supplierId: _product!.supplierId,
+            name: _product!.name,
+            brand: _product!.brand,
+            price: _product!.price,
+            imagePath: _product!.imagePath,
+            stock: _product!.stock,
+            isRentable: _product!.isRentable,
+            restockDate: _product!.restockDate,
+            status: _product!.status,
+            images: _product!.images,
+            description: _product!.description,
+            specification: _product!.specification,
+            warranty: _product!.warranty,
+            setupDuration: _product!.setupDuration,
+            supplierData: _product!.supplierData,
+            reviews: updatedReviews,
+          );
+          isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Review deleted successfully!')),
+        );
+      } else {
+        throw Exception(result['error'] ?? 'Failed to delete review');
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Review deleted successfully!')),
+        SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
       );
-    } else {
-      throw Exception(result['error'] ?? 'Failed to delete review');
     }
-  } catch (e) {
-    setState(() => isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))),
-    );
   }
-}
-  // Widget _reviewsSection() => _card(
-  //   child: Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       // ---------- Average Rating ----------
-  //       Center(
-  //         child: Column(
-  //           children: [
-  //             const Text(
-  //               "Average Rating",
-  //               style: TextStyle(color: Colors.grey),
-  //             ),
-  //             const SizedBox(height: 6),
-  //             Text(
-  //               averageRating.toStringAsFixed(1),
-  //               style: const TextStyle(
-  //                 fontSize: 32,
-  //                 fontWeight: FontWeight.bold,
-  //               ),
-  //             ),
-  //             const SizedBox(height: 4),
-  //             Row(
-  //               mainAxisAlignment: MainAxisAlignment.center,
-  //               children: List.generate(
-  //                 5,
-  //                 (i) => Icon(
-  //                   i < averageRating.round() ? Icons.star : Icons.star_border,
-  //                   color: Colors.amber,
-  //                   size: 22,
-  //                 ),
-  //               ),
-  //             ),
-  //             const SizedBox(height: 4),
-  //             Text(
-  //               "based on ${reviews.length} reviews",
-  //               style: const TextStyle(color: Colors.grey, fontSize: 12),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-
-  //       const SizedBox(height: 24),
-
-  //       // ---------- Reviews List ----------
-  //       ...reviews.map(
-  //         (r) => Container(
-  //           margin: const EdgeInsets.only(bottom: 12),
-  //           padding: const EdgeInsets.all(14),
-  //           decoration: BoxDecoration(
-  //             color: Colors.white,
-  //             borderRadius: BorderRadius.circular(14),
-  //             boxShadow: [
-  //               BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 6),
-  //             ],
-  //           ),
-  //           child: Column(
-  //             crossAxisAlignment: CrossAxisAlignment.start,
-  //             children: [
-  //               Row(
-  //                 children: [
-  //                   Image.asset(
-  //                     "assets/images/doctorProfile.png",
-  //                     height: 30,
-  //                     width: 30,
-  //                   ),
-  //                   const SizedBox(width: 10),
-  //                   Expanded(
-  //                     child: Text(
-  //                       r.name,
-  //                       style: const TextStyle(fontWeight: FontWeight.bold),
-  //                     ),
-  //                   ),
-  //                   Text(
-  //                     "${r.date.day}/${r.date.month}/${r.date.year}",
-  //                     style: const TextStyle(fontSize: 11, color: Colors.grey),
-  //                   ),
-  //                 ],
-  //               ),
-  //               const SizedBox(height: 6),
-  //               Row(
-  //                 children: List.generate(
-  //                   5,
-  //                   (i) => Icon(
-  //                     i < r.rating ? Icons.star : Icons.star_border,
-  //                     color: Colors.amber,
-  //                     size: 16,
-  //                   ),
-  //                 ),
-  //               ),
-  //               const SizedBox(height: 8),
-  //               Text(r.comment),
-  //             ],
-  //           ),
-  //         ),
-  //       ),
-
-  //       const SizedBox(height: 20),
-
-  //       // ---------- Leave Review ----------
-  //       const Text(
-  //         "Leave A Review",
-  //         style: TextStyle(fontWeight: FontWeight.bold),
-  //       ),
-  //       const SizedBox(height: 10),
-
-  //       Row(
-  //         children: List.generate(
-  //           5,
-  //           (i) => GestureDetector(
-  //             onTap: () => setState(() => userRating = i + 1),
-  //             child: Icon(
-  //               i < userRating ? Icons.star : Icons.star_border,
-  //               color: Colors.amber,
-  //               size: 28,
-  //             ),
-  //           ),
-  //         ),
-  //       ),
-
-  //       const SizedBox(height: 12),
-
-  //       TextField(
-  //         controller: reviewController,
-  //         maxLines: 3,
-  //         decoration: InputDecoration(
-  //           hintText: "Share Your Experience With This Product...",
-  //           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-  //         ),
-  //       ),
-
-  //       const SizedBox(height: 16),
-
-  //       SizedBox(
-  //         width: double.infinity,
-  //         child: ElevatedButton(
-  //           style: ElevatedButton.styleFrom(
-  //             backgroundColor: const Color(0xFF005EA6),
-  //             padding: const EdgeInsets.symmetric(vertical: 14),
-  //             shape: RoundedRectangleBorder(
-  //               borderRadius: BorderRadius.circular(10),
-  //             ),
-  //           ),
-  //           onPressed: () {
-  //             if (reviewController.text.isEmpty || userRating == 0) return;
-
-  //             setState(() {
-  //               reviews.insert(
-  //                 0,
-  //                 Review(
-  //                   name: "You",
-  //                   comment: reviewController.text,
-  //                   rating: userRating,
-  //                   date: DateTime.now(),
-  //                   id: reviews.length + 1,
-  //                 ),
-  //               );
-  //               reviewController.clear();
-  //               userRating = 0;
-  //             });
-  //           },
-  //           child: const Text(
-  //             "Submit Review",
-  //             style: TextStyle(color: Colors.white),
-  //           ),
-  //         ),
-  //       ),
-  //     ],
-  //   ),
-  // );
 
   // ---------------- ACTION BUTTON ----------------
   Widget _buildNotifyButton() {
-  return SizedBox(
-    width: double.infinity,
-    child: Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _isNotified ? Colors.red.shade100 : Colors.amber,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-        ),
-        onPressed: () async {
-          if (_isNotified) {
-            final confirm = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Cancel Notification'),
-                content: const Text('Are you sure you want to cancel this notification?'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
-                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes', style: TextStyle(color: Colors.red))),
-                ],
-              ),
-            );
-            if (confirm != true) return;
-      
-            try {
-              await _apiService.undoRestockNotification(_product!.id);
-              setState(() => _isNotified = false);
-              Navigator.pop(context,true);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification cancelled')));
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))));
+    final notificationProvider = Provider.of<NotificationProvider>(context);
+    final isNotified = notificationProvider.isNotified(_product!.id);
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isNotified
+                ? Color.fromARGB(255, 238, 235, 235)
+                : Colors.amber,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          onPressed: () async {
+            if (isNotified) {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Cancel Notification'),
+                  content: const Text(
+                    'Are you sure you want to cancel this notification?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('No'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text(
+                        'Yes',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm != true) return;
+
+              try {
+                await _apiService.undoRestockNotification(_product!.id);
+                notificationProvider.setNotified(_product!.id, false);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notification cancelled')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e.toString().replaceAll('Exception:', '')),
+                  ),
+                );
+              }
+            } else {
+              try {
+                await _apiService.requestRestockNotification(_product!.id);
+                notificationProvider.setNotified(_product!.id, true);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notification requested!')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e.toString().replaceAll('Exception:', '')),
+                  ),
+                );
+              }
             }
-          } else {
-            try {
-              await _apiService.requestRestockNotification(_product!.id);
-              setState(() => _isNotified = true);
-              Navigator.pop(context,true);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification requested!')));
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception:', ''))));
-            }
-          }
-        },
-        child: Text(
-          _isNotified ? "Un Notify" : "Notify Me",
-          style: TextStyle(color: _isNotified ? Colors.red : Colors.black, fontWeight: FontWeight.bold),
+          },
+          child: Text(
+            isNotified ? "Un Notify" : "Notify Me",
+            style: TextStyle(
+              color: isNotified ? Colors.red : Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   final CartService _cartService = CartService();
   Widget _actionButton() {
-
-  if (_product!.stock == 0 && _product!.restockDate != null) {
-  return _buildNotifyButton();
-}
-  if(_product!.stock == 0 && _product!.restockDate == null){
-    return Padding(padding: const EdgeInsets.all(12),
+     if (selectedPurchase == 0) {
+    // ✅ Rent Now: يظهر لو isRentable == true و rentalStock > 0
+    final bool canRent = _product!.isRentable && (_product!.rentalStock ?? 0) > 0;
+    
+    return Padding(
+      padding: const EdgeInsets.all(12),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
-          backgroundColor: Colors.grey,
+          backgroundColor: canRent ? Colors.green : Colors.grey,
         ),
-        onPressed: null,
-        child: const Text(
-          "Out of Stock",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        onPressed: canRent ? _rentNow : null,
+        child: Text(
+          'Rent Now',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),);
+      ),
+    );
   }
-  return Padding(
+// ✅ حالة Buy
+  if (selectedPurchase == 1) {
+    // ✅ Out of Stock (stock == 0 و restockDate == null)
+    if (_product!.stock == 0 && _product!.restockDate == null) {
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            backgroundColor: Colors.grey,
+          ),
+          onPressed: null,
+          child: const Text(
+            "Out of Stock",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+    if (_product!.stock == 0 && _product!.restockDate != null) {
+      return _buildNotifyButton();
+    }
+    // if (_product!.stock == 0 && _product!.restockDate == null) {
+    //   return Padding(
+    //     padding: const EdgeInsets.all(12),
+    //     child: ElevatedButton(
+    //       style: ElevatedButton.styleFrom(
+    //         padding: const EdgeInsets.symmetric(vertical: 14),
+    //         backgroundColor: Colors.grey,
+    //       ),
+    //       onPressed: null,
+    //       child: const Text(
+    //         "Out of Stock",
+    //         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    //       ),
+    //     ),
+    //   );
+    // }
     
     padding: const EdgeInsets.all(12),
     child: selectedPurchase == 1 ? ElevatedButton(
@@ -1746,73 +2006,86 @@ Future<void> _deleteReview(Review review) async {
                   ),
                 );
 
-              //   ScaffoldMessenger.of(context).showSnackBar(
-              //     SnackBar(content: Text("${p.name} added to cart ✅")),
-              //   );
-              // } else { //there is change by mohamed
-              //   ScaffoldMessenger.of(context).showSnackBar(
-              //     SnackBar(content: Text(result['message'] ?? "Error")),
-              //   );
-              // }
-            
-              // SnackBar
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                  
-                      "Product added to cart 🛒",
-                  ),
-                  duration: const Duration(seconds: 2),
-                  backgroundColor: Colors.blue,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  action: SnackBarAction(
-                    label: "View Cart",
-                    textColor: Colors.white,
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => CartPage()),
+              onPressed:() async {
+                      //there is change by mohamed
+                      final result = await _cartService.addToCart(
+                        productId: _product!.id,
+                        quantity: 1,
+                        type: "sale",
                       );
+
+                      if (result['success'] != false) {
+                        // ✅ ضيفه local برضو لو عايز
+                        cartItemsGlobal.add(
+                          CartItem(
+                            daily_rent: 0,
+                            name: _product!.name,
+                            image: _product!.imagePath,
+                            quantity: 1,
+                            price: _product!.price,
+                            type: 'sale',
+                            dateRange: '',
+                            id: _product!.id,
+                            productId: _product!.id,
+                          ),
+                        );
+
+                        //   ScaffoldMessenger.of(context).showSnackBar(
+                        //     SnackBar(content: Text("${p.name} added to cart ✅")),
+                        //   );
+                        // } else { //there is change by mohamed
+                        //   ScaffoldMessenger.of(context).showSnackBar(
+                        //     SnackBar(content: Text(result['message'] ?? "Error")),
+                        //   );
+                        // }
+
+                        // SnackBar
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Product added to cart 🛒"),
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: Colors.blue,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            action: SnackBarAction(
+                              label: "View Cart",
+                              textColor: Colors.white,
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => CartPage()),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(result['message'] ?? "Error")),
+                        );
+                      }
                     },
-                  ),
+              child: Text(
+                "Add To Cart",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
-              );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result['message'] ?? "Error")),
-                );
-              }
-          },
-      child: Text(
-     "Add To Cart",
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ):ElevatedButton(
-       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        backgroundColor: _product!.isRentable
-            ? Colors.blue
-            :  Colors.grey,
-      ),
-      
-    onPressed: _product!.isRentable ? _rentNow : null,
-    child: const Text(
-      'Rent Now',
-     style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),),
-  ),
-  );
+              ),
+            )
+         
+              
+  
+    );
   }
+   return const SizedBox.shrink();
+  }
+  
+ 
+  
 
   // ---------------- HELPERS ----------------
   Widget _card({required Widget child}) => Padding(

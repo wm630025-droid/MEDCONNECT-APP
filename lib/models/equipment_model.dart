@@ -41,7 +41,33 @@ class EquipmentList {
     required this.items,
     this.isExpanded = true,  // ✅ أضيفي هذا السطر
   });
+// factory EquipmentList.fromJson(Map<String, dynamic> json) {
+//   List<EquipmentItem> itemsList = [];
 
+//   // ✅ معالجة items (سواء كانت List أو Map)
+//   if (json['items'] != null) {
+//     if (json['items'] is List) {
+//       itemsList = (json['items'] as List)
+//           .map((item) => EquipmentItem.fromJson(item))
+//           .toList();
+//     } else if (json['items'] is Map) {
+//       // ✅ لو items كانت Map، ناخد القيم (values) ونحولها لقائمة
+//       itemsList = (json['items'] as Map<String, dynamic>)
+//           .values
+//           .map((item) => EquipmentItem.fromJson(item))
+//           .toList();
+//     }
+//   }
+
+//   return EquipmentList(
+//     id: json['id'] ?? 0,
+//     listName: json['list_name'] ?? '',
+//     isDefault: json['is_default'] ?? false,
+//     createdAt: json['created_at'] ?? '',
+//     items: itemsList,
+//     isExpanded: json['is_expanded'] ?? true,
+//   );
+// }
   factory EquipmentList.fromJson(Map<String, dynamic> json) {
     return EquipmentList(
       id: json['id'] ?? 0,

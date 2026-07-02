@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:medconnect_app/acceptedSupplier.dart';
 import 'package:medconnect_app/chatScreen.dart';
 import 'package:medconnect_app/core/app_colorResponse.dart';
+import 'package:medconnect_app/models/custom_request_model.dart';
 import 'package:medconnect_app/models/offer_request.dart';
 //import 'package:medconnect_app/models/offer_request.dart';
 import 'package:medconnect_app/myCustomRequests.dart';
 import 'package:medconnect_app/services/api_service.dart';
+import 'package:medconnect_app/supplierProfile.dart';
 
 class SupplierBidsPage extends StatefulWidget {
   final int customRequestId;
   final String customRequestBudget;
-  const SupplierBidsPage({super.key, required this.customRequestId , required this.customRequestBudget});
+  final CustomRequest request;
+  const SupplierBidsPage({super.key, required this.customRequestId , required this.customRequestBudget, required this.request});
 
   @override
   State<SupplierBidsPage> createState() => _SupplierBidsPageState();
@@ -51,9 +54,7 @@ class _SupplierBidsPageState extends State<SupplierBidsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppColors.bgDark
-          : AppColors.bgLight,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: Colors.white,
         leading: IconButton(
@@ -93,6 +94,7 @@ class _SupplierBidsPageState extends State<SupplierBidsPage> {
               itemCount: _offers.length,
               itemBuilder: (context, index) {
                 return SupplierBidCard(
+                  request: widget.request,
                   offer: _offers[index],
                   initiallyExpanded: index == 0,
                   customRequestBudget : widget.customRequestBudget
@@ -108,13 +110,14 @@ class SupplierBidCard extends StatefulWidget {
   final bool initiallyExpanded;
   final String customRequestBudget;
     final VoidCallback? onRejected;
+    final CustomRequest request;
 
   const SupplierBidCard({
     super.key,
     required this.offer,
     this.initiallyExpanded = false,
     required this.customRequestBudget,
-    this.onRejected,
+    this.onRejected, required this.request,
   });
 
   @override
@@ -346,10 +349,11 @@ Widget _pendingButtons(BuildContext context) {
         const SizedBox(width: 8),
         Expanded(
           child: OutlinedButton(
+            
             onPressed: () {
-              _navigateToChat(context);// TODO: فتح شات مع المورد
+              _navigateToProfile(context);// TODO: فتح شات مع المورد
             },
-            child: const Text("Chat"),
+            child: const Text("Show profile",style: TextStyle (fontSize : 15,)),
           ),
         ),
         const SizedBox(width: 8),
@@ -430,6 +434,7 @@ setState((){
         context,
         MaterialPageRoute(
           builder: (_) => AcceptedSupplierDetailsPage(
+            request: widget.request,
             offer: widget.offer,
             requestBudget: widget.customRequestBudget,
           ),
@@ -632,6 +637,18 @@ setState((){
         ),
       ],
     );
+  }
+  
+  void _navigateToProfile(BuildContext context) {
+    final SupplierId= widget.offer.supplierId;
+    final supplierName= widget.offer.supplier.companyName;
+    Navigator.push(context, 
+    
+    MaterialPageRoute(builder: (_)=> SupplierProfileScreen(supplierId: SupplierId, supplierName: supplierName))
+    );
+
+
+
   }
 
   // Widget _rejectedButtons() {

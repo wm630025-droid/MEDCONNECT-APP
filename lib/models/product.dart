@@ -9,6 +9,7 @@ class Product {
   final double price;
   final double? dailyPrice; // ✅ double? مش String
   final String imagePath;
+   int? rentalStock;
   final int stock;
   final bool isRentable;
   final DateTime? restockDate;
@@ -32,6 +33,7 @@ class Product {
     required this.stock,
     required this.isRentable,
     this.restockDate,
+    
     required this.status,
     required this.images,
     this.configuration,
@@ -84,6 +86,11 @@ class Product {
       dailyPrice = double.tryParse(
         json['rental_details']['price_daily'].toString(),
       );
+    }
+
+int?rentalStock;
+if (json['rental_details'] != null ) {
+      rentalStock = json['rental_details']['available_units']??0;
     }
 
     return Product(

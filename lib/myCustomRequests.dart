@@ -138,9 +138,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF101C22)
-          : const Color(0xFFF8F9FA),
+   backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -252,8 +250,12 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Text('Load More',
-                                      style: TextStyle(color: Colors.blueAccent)),
+                                  : const Text(
+                                      'See More',
+                                      style: TextStyle(
+                                        color: Colors.blueAccent,
+                                      ),
+                                    ),
                             ),
                           ),
                         ),
@@ -309,14 +311,16 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
       ),
     );
   }
-String _formatDateString(String dateStr) {
-  try {
-    final date = DateTime.parse(dateStr);
-    return "${date.day}/${date.month}/${date.year}";
-  } catch (e) {
-    return dateStr; // لو التاريخ مش صالح
+
+  String _formatDateString(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return "${date.day}/${date.month}/${date.year}";
+    } catch (e) {
+      return dateStr; // لو التاريخ مش صالح
+    }
   }
-}
+
   Widget _buildRequestCard(CustomRequest request) {
     final isOpen = request.status.toLowerCase() == 'open';
     final isInNegotiation = request.status.toLowerCase() == 'in negotiation';
@@ -328,7 +332,7 @@ String _formatDateString(String dateStr) {
 
     final showNotification = isOpen;
     final showDelete = isDelivered || isCancelled || isExpired;
-   // final showReRequest = isCancelled || isExpired || isDelivered;
+    // final showReRequest = isCancelled || isExpired || isDelivered;
     final showCancelButton = isOpen;
     final isCardClickable = isInNegotiation || isDelivered || isShipped;
 
@@ -392,6 +396,7 @@ String _formatDateString(String dateStr) {
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => SupplierBidsPage(
+                                    request: request,
                                     customRequestId: request.id,
                                     customRequestBudget: budget,
                                   ),
@@ -409,7 +414,7 @@ String _formatDateString(String dateStr) {
                                     right: 0,
                                     top: 0,
                                     child: Container(
-                                      padding: const EdgeInsets.all(2),
+                                      padding: const EdgeInsets.all(3),
                                       decoration: const BoxDecoration(
                                         color: Colors.red,
                                         shape: BoxShape.circle,
@@ -417,7 +422,7 @@ String _formatDateString(String dateStr) {
                                       child: Text(
                                         '$count',
                                         style: const TextStyle(
-                                          fontSize: 10,
+                                          fontSize: 12,
                                           color: Colors.white,
                                         ),
                                       ),
@@ -431,7 +436,7 @@ String _formatDateString(String dateStr) {
                   ],
                 ),
               ),
-             Padding(
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   request.type,
@@ -440,32 +445,44 @@ String _formatDateString(String dateStr) {
                     fontWeight: FontWeight.w500,
                     color: Colors.blue.shade600,
                   ),
-                )
-
-
-
-             ),
+                ),
+              ),
               const SizedBox(height: 5),
               // Product Items
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: request.item
-                      .map(
-                        (item) => Text(
-                          item,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            decoration: isCancelled
-                                ? TextDecoration.lineThrough
-                                : null,
-                            // color: isCancelled ? Colors.grey : Colors.black,
+              Container(
+              //  crossAxisAlignment: CrossAxisAlignment.start,
+              
+                margin: const EdgeInsets.symmetric(horizontal: 10,),
+                
+                width: double.infinity,
+                decoration: BoxDecoration(
+                
+                  color: Colors.grey.shade100,
+         borderRadius: BorderRadius.circular(8),
+                ),
+               // color: Colors.grey.shade200,
+                child: Padding(
+
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: request.item
+                        .map(
+                          (item) => Text(
+                            item,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              decoration: isCancelled
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              // color: isCancelled ? Colors.grey : Colors.black,
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(),
+                        )
+                        .toList(),
+                  ),
                 ),
               ),
 
@@ -497,39 +514,54 @@ String _formatDateString(String dateStr) {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Column(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if(isRental)...[
-
-                             if (request.rentStartDate != null)
-                      Text(
-                        "Start: ${_formatDateString(request.rentStartDate!)}",
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    if (request.rentEndDate != null)
-                      Text(
-                        "End: ${_formatDateString(request.rentEndDate!)}",
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    const SizedBox(height: 4),
-                          ],
-                          Text(
-                            "Created: ${_formatDate(request.createdAt)}",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                          Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (isRental) ...[
+                                if (request.rentStartDate != null)
+                                  Text(
+                                    "Start: ${_formatDateString(request.rentStartDate!)}",
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                if (request.rentEndDate != null)
+                                  Text(
+                                    "End: ${_formatDateString(request.rentEndDate!)}",
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                const SizedBox(height: 4),
+                              ],
+                            ],
                           ),
-                          Text(
-                            "Expires: ${_formatDateString(request.expiresAt)}",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                          const SizedBox(width: 10),
+                          Column(
+                            children: [
+                              Text(
+                                "Created: ${_formatDate(request.createdAt)}",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              Text(
+                                "Expires: ${_formatDateString(request.expiresAt)}",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -560,8 +592,8 @@ String _formatDateString(String dateStr) {
                             ),
                           ),
 
-                     //   if (showCancelButton && (showDelete || showReRequest))
-                          const SizedBox(width: 8),
+                        //   if (showCancelButton && (showDelete || showReRequest))
+                        const SizedBox(width: 8),
                         if (showDelete)
                           SizedBox(
                             width: 100,
@@ -579,7 +611,7 @@ String _formatDateString(String dateStr) {
                               child: const Text("Delete"),
                             ),
                           ),
-                       // SizedBox(width: 5),
+                        // SizedBox(width: 5),
                         // if (showReRequest)
                         //   SizedBox(
                         //     width: 120,
@@ -628,6 +660,7 @@ String _formatDateString(String dateStr) {
         context,
         MaterialPageRoute(
           builder: (_) => AcceptedSupplierDetailsPage(
+            request : request,
             offer: acceptedOffer,
             requestBudget: originalBudget,
           ),

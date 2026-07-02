@@ -2,6 +2,7 @@ class OfferRequest {
   final int id;
   final int requestId;
   final int supplierId;
+  //final int allUserId;
   final String price;
   final int deliveryDays;
   final String? notes;
@@ -21,6 +22,7 @@ class OfferRequest {
     required this.createdAt,
     required this.updatedAt,
     required this.supplier,
+ // required this.allUserId,
   });
 
   factory OfferRequest.fromJson(Map<String, dynamic> json) {

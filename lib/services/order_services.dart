@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:medconnect_app/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:medconnect_app/models/order_model.dart';
 
@@ -10,7 +11,22 @@ class OrderServices {
     int page = 1,
     int perPage = 15,
     String status = '',
+    bool forceRefresh = false,
   }) async {
+    
+  if (!forceRefresh && 
+      page == 1 && 
+      ApiService.cachedRecentOrders != null && 
+      ApiService.cachedRecentOrdersTime != null &&
+      DateTime.now().difference(ApiService.cachedRecentOrdersTime!).inMinutes < 5) {
+    return {
+      'success': true,
+      'orders': ApiService.cachedRecentOrders!,
+      'lastPage': 1,
+      'perPage': perPage,
+      'total': ApiService.cachedRecentOrders!.length,
+    };
+  }
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
 
@@ -36,6 +52,7 @@ class OrderServices {
     );
 
     final data = jsonDecode(response.body);
+    print('order details: ${response.body} and status code ${response.statusCode} ');
 
     if (response.statusCode == 200 && data['success'] == true) {
       final dataPayload = data['data'];
@@ -61,6 +78,11 @@ class OrderServices {
       final orders = ordersJson
           .map((json) => Order.fromJson(json as Map<String, dynamic>))
           .toList();
+
+          if (page == 1) {
+      ApiService.cachedRecentOrders = orders;
+      ApiService.cachedRecentOrdersTime = DateTime.now();
+    }
 
       return {
         'success': true,

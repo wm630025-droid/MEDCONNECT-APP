@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:medconnect_app/models/category.dart';
 import 'package:medconnect_app/models/custom_request_model.dart';
 import 'package:medconnect_app/models/offer_request.dart';
+import 'package:medconnect_app/models/order_model.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/models/review.dart';
 //import 'package:medconnect_app/services/pusher_service.dart';
@@ -30,25 +31,33 @@ String _stringifyDynamicValue(dynamic value) {
 class ApiService {
   static const String baseUrl = 'https://medconnect-one-pi.vercel.app/api/api';
 
-static int? get doctorId => _doctorId;
-static int? _doctorId;
-static String? get doctorName => _doctorName;
-static String? _doctorName;
+  static int? get doctorId => _doctorId;
+  static int? _doctorId;
+  static String? get doctorName => _doctorName;
+  static String? _doctorName;
   static String? _token;
 
   static void setDoctorData(Map<String, dynamic> userData) {
-  _doctorId = userData['id'];
-  _doctorName = userData['fullname'];
-}
+    _doctorId = userData['id'];
+    _doctorName = userData['fullname'];
+  }
 
-// داخل class ApiService
-static List<Product>? cachedProducts;
-static List<Category>? cachedCategories;
+  // داخل class ApiService
+  static List<Product>? cachedProducts;
+  static List<Category>? cachedCategories;
+  static List<Order>? cachedRecentOrders;
+  static DateTime? cachedRecentOrdersTime;
+  // في lib/services/api_service.dart
+  static List<CustomRequest>? cachedCustomRequests;
+static DateTime? cachedCustomRequestsTime;
+  // static List<CustomRequest>? _cachedCustomRequests;
+  // static DateTime? _cachedCustomRequestsTime;
 
-static void clearCache() {
-  cachedProducts = null;
-}
-//static Map<String, dynamic>? _cachedSupplierData;
+  static void clearCache() {
+    cachedProducts = null;
+  }
+
+  //static Map<String, dynamic>? _cachedSupplierData;
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -125,30 +134,30 @@ static void clearCache() {
         print('✅ Login success - status 200');
         print('📦 Data: ${data['data']}');
 
-
-      //await PusherService().init(data['token']);
+        //await PusherService().init(data['token']);
         // تخزين التوكن
         if (data['data'] != null && data['token'] != null) {
           print('💾 Found token: ${data['token']}');
           await _saveToken(data['token']);
           await _saveUserData(data['data']);
-           final prefs = await SharedPreferences.getInstance();
-  final pendingImagePath = prefs.getString('pending_profile_image');
-  if (pendingImagePath != null) {
-    print('🖼️ Found pending image, uploading...');
-    final imageFile = XFile(pendingImagePath);
-final imageResult = await RegisterService.updateProfileImage(imageFile);   
- print('🖼️ Pending image upload result: $imageResult');
-    await prefs.remove('pending_profile_image'); // ✅ امسحها بعد الرفع
-  }
+          final prefs = await SharedPreferences.getInstance();
+          final pendingImagePath = prefs.getString('pending_profile_image');
+          if (pendingImagePath != null) {
+            print('🖼️ Found pending image, uploading...');
+            final imageFile = XFile(pendingImagePath);
+            final imageResult = await RegisterService.updateProfileImage(
+              imageFile,
+            );
+            print('🖼️ Pending image upload result: $imageResult');
+            await prefs.remove('pending_profile_image'); // ✅ امسحها بعد الرفع
+          }
           if (data['data'] != null && data['token'] != null) {
-  print('💾 Found token: ${data['token']}');
-  await _saveToken(data['token']);
-  await _saveUserData(data['data']);
+            print('💾 Found token: ${data['token']}');
+            await _saveToken(data['token']);
+            await _saveUserData(data['data']);
 
-  // ✅ ارفع الصورة الـ pending لو موجودة
- 
-}
+            // ✅ ارفع الصورة الـ pending لو موجودة
+          }
         } else {
           print('❌ Token not found in response!');
           print('🔍 data["data"]: ${data['data']}');
@@ -187,7 +196,6 @@ final imageResult = await RegisterService.updateProfileImage(imageFile);
     }
   }
 
-
   Future<Map<String, dynamic>> logout() async {
     try {
       final response = await http.post(
@@ -204,6 +212,11 @@ final imageResult = await RegisterService.updateProfileImage(imageFile);
         // ✅ مسح البيانات المحلية
         print("log out sucess from server");
         _token = null;
+        cachedRecentOrders = null;
+        cachedRecentOrdersTime = null;
+        // في logout
+        cachedCustomRequests = null;
+        cachedCustomRequestsTime = null;
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('auth_token');
         await prefs.remove('user_data');
@@ -261,7 +274,7 @@ final imageResult = await RegisterService.updateProfileImage(imageFile);
           List<Category> categories = (data['data'] as List)
               .map((json) => Category.fromJson(json))
               .toList();
-               cachedCategories = categories;
+          cachedCategories = categories;
 
           print('✅ Loaded ${categories.length} categories');
           return categories;
@@ -315,7 +328,6 @@ final imageResult = await RegisterService.updateProfileImage(imageFile);
 
       print('📥 Response Status: ${response.statusCode}');
       print('📦 Response Body Length: ${response.body.length} chars');
-      
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
@@ -333,12 +345,12 @@ final imageResult = await RegisterService.updateProfileImage(imageFile);
           print('✅ Loaded ${products.length} products from page $page');
           print('🏷️ Product names: ${products.map((p) => p.name).join(', ')}');
           print('=====================================');
-        if (response.statusCode == 200 && page == 1) {
-  cachedProducts = products; // خزن المنتجات
-}
+          if (response.statusCode == 200 && page == 1) {
+            cachedProducts = products; // خزن المنتجات
+          }
           return {
             'products': products,
-            
+
             'lastPage': data['last_page'] ?? 1,
             'total': data['total'] ?? 0,
             'perPage': data['per_page'] ?? perPage,
@@ -357,788 +369,860 @@ final imageResult = await RegisterService.updateProfileImage(imageFile);
       throw Exception('Error loading products: $e');
     }
   }
+
   //###################################
   // ------------------- Fetch Product By ID -------------------
-Future<Product> fetchProductById(int productId) async {
-  try {
-    if (_token == null) {
-      throw Exception('Please login first');
-    }
-
-    final uri = Uri.parse('$baseUrl/v1/product/doctor/show/$productId');
-    print('🌐 Fetching product details: $uri');
-
-    final response = await http.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      },
-    );
-
-    print('📦 Product Details Response status: ${response.statusCode}');
-    print('📦 Product Details Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      var data = jsonDecode(response.body);
-      
-      if (data['success'] == true) {
-        return Product.fromJson(data['data']);
-      } else {
-        throw Exception(data['message'] ?? 'Failed to fetch product details');
+  Future<Product> fetchProductById(int productId) async {
+    try {
+      if (_token == null) {
+        throw Exception('Please login first');
       }
-    } else if (response.statusCode == 401) {
-      throw 'Session expired. Please login again.';
-    } else if (response.statusCode == 404) {
-      throw 'Product not found';
-    } else {
-      throw 'HTTP Error: ${response.statusCode}';
-    }
-  } catch (e) {
-    print('❌ Error fetching product details: $e');
-    {
-      throw '$e';
+
+      final uri = Uri.parse('$baseUrl/v1/product/doctor/show/$productId');
+      print('🌐 Fetching product details: $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      print('📦 Product Details Response status: ${response.statusCode}');
+      print('📦 Product Details Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+
+        if (data['success'] == true) {
+          return Product.fromJson(data['data']);
+        } else {
+          throw Exception(data['message'] ?? 'Failed to fetch product details');
+        }
+      } else if (response.statusCode == 401) {
+        throw 'Session expired. Please login again.';
+      } else if (response.statusCode == 404) {
+        throw 'Product not found';
+      } else {
+        throw 'HTTP Error: ${response.statusCode}';
+      }
+    } catch (e) {
+      print('❌ Error fetching product details: $e');
+      {
+        throw '$e';
+      }
     }
   }
-}
 
+  // ------------------- Fetch Products by Supplier ID -------------------
+  Future<Map<String, dynamic>> fetchProductsBySupplierId({
+    required int supplierId,
+    // required int allUser_id,
+    int page = 1,
+    int perPage = 10,
+  }) async {
+    try {
+      print(
+        '🔵 fetchProductsBySupplierId called - supplierId: $supplierId, page: $page',
+      );
+      if (_token == null) {
+        print('❌ No token found for supplier products');
+        throw 'Please login first';
+      }
 
-// ------------------- Fetch Products by Supplier ID -------------------
-Future<Map<String, dynamic>> fetchProductsBySupplierId({
-  required int supplierId,
-  int page = 1,
-  int perPage = 10,
-}) async {
-  try {
-       print('🔵 fetchProductsBySupplierId called - supplierId: $supplierId, page: $page');
-    if (_token == null) {
-      print('❌ No token found for supplier products');
-      throw 'Please login first';
-      
-    }
+      final uri =
+          Uri.parse(
+            '$baseUrl/v1/product/supplier-profile/show/$supplierId',
+          ).replace(
+            queryParameters: {
+              'page': page.toString(),
+              'per_page': perPage.toString(),
+            },
+          );
 
-    final uri = Uri.parse('$baseUrl/v1/product/supplier-profile/show/$supplierId')
-        .replace(queryParameters: {
-      'page': page.toString(),
-      'per_page': perPage.toString(),
-    });
+      print('🌐 Fetching products for supplier $supplierId: $uri');
 
-    print('🌐 Fetching products for supplier $supplierId: $uri');
+      final response = await http.get(
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      },
-    );
+      print('📦 Response status: ${response.statusCode}');
 
-    print('📦 Response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
 
-    if (response.statusCode == 200) {
-      var data = jsonDecode(response.body);
-       print('✅ Supplier products API success: ${data['success']}');
+        print('✅ Supplier products API success: ${data['success']}');
         print('📊 Total: ${data['total']}');
         print('📄 Last page: ${data['last_page']}');
         print('📄 Current page: $page');
-      if (data['success'] == true) {
-        List<Product> products = (data['data'] as List)
-            .map((json) => Product.fromJson(json))
-            .toList();
-           // print("supplier response body: ${response.body}");
-         print('✅ Loaded ${products.length} products for supplier $supplierId');
-           print('🔍 Supplier data from API: ${data['data']?.first?['supplier']}');
-        // استخراج بيانات المورد من أول منتج (لو موجود)
-        // if (products.isNotEmpty && products.first.supplierData != null) {
-        //   _cachedSupplierData = products.first.supplierData;
-        
-      //     print('✅ Cached supplier data: ${_cachedSupplierData?['company_name']}');
-      // //  }
-        
-        return {
-          'products': products,
-          'lastPage': data['last_page'] ?? 1,
-          'total': data['total'] ?? 0,
-          'perPage': data['per_page'] ?? perPage,
-        };
-      } else {
-        throw data['message'] ?? 'Failed to fetch supplier products';
-      }
-    } else if (response.statusCode == 401) {
-      throw 'Session expired. Please login again.';
-    } else if (response.statusCode == 404) {
+
+        if (data['success'] == true) {
+          List<Product> products = (data['data'] as List)
+              .map((json) => Product.fromJson(json))
+              .toList();
+          print("supplier response body: ${response.body}");
+          print(
+            '✅ Loaded ${products.length} products for supplier $supplierId',
+          );
+          //   print('🔍 Supplier data from API: ${data['data']?.first?['supplier']}');
+          // استخراج بيانات المورد من أول منتج (لو موجود)
+          // if (products.isNotEmpty && products.first.supplierData != null) {
+          //   _cachedSupplierData = products.first.supplierData;
+
+          //     print('✅ Cached supplier data: ${_cachedSupplierData?['company_name']}');
+          // //  }
+
+          return {
+            'products': products,
+            'lastPage': data['last_page'] ?? 1,
+            'total': data['total'] ?? 0,
+            'perPage': data['per_page'] ?? perPage,
+            'supplier': data['supplier'],
+          };
+        } else {
+          throw data['message'] ?? 'Failed to fetch supplier products';
+        }
+      } else if (response.statusCode == 401) {
+        throw 'Session expired. Please login again.';
+      } else if (response.statusCode == 404) {
         print('❌ Supplier not found: $supplierId');
-      throw 'Supplier not found';
-    } else {
+        throw 'Supplier not found';
+      } else {
         print('❌ Supplier products HTTP error: ${response.statusCode}');
-      throw 'HTTP Error: ${response.statusCode}';
+        throw 'HTTP Error: ${response.statusCode}';
+      }
+    } catch (e) {
+      print('❌ Error fetching supplier products: $e');
+      throw 'Error loading supplier products: $e';
     }
-  } catch (e) {
-    print('❌ Error fetching supplier products: $e');
-    throw 'Error loading supplier products: $e';
   }
-}
 
+  //#################################
+  // في lib/services/api_service.dart
 
-//#################################
-// في lib/services/api_service.dart
+  // ------------------- Create Custom Request -------------------
+  // Future<Map<String, dynamic>> createCustomRequest(CustomRequestModel request) async {
+  //   try {
+  //     if (_token == null) throw Exception('Please login first');
 
-// ------------------- Create Custom Request -------------------
-// Future<Map<String, dynamic>> createCustomRequest(CustomRequestModel request) async {
-//   try {
-//     if (_token == null) throw Exception('Please login first');
+  //     final response = await http.post(
+  //       Uri.parse('$baseUrl/v1/customRequest/create'),
+  //       headers: {
+  //         'Accept': 'application/json',
+  //         'Authorization': 'Bearer $_token',
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: jsonEncode(request.toJson()),
+  //     );
 
-//     final response = await http.post(
-//       Uri.parse('$baseUrl/v1/customRequest/create'),
-//       headers: {
-//         'Accept': 'application/json',
-//         'Authorization': 'Bearer $_token',
-//         'Content-Type': 'application/json',
-//       },
-//       body: jsonEncode(request.toJson()),
-//     );
+  //     print('📦 Create Custom Request Response: ${response.body}');
 
-//     print('📦 Create Custom Request Response: ${response.body}');
-
-//     if (response.statusCode == 200 || response.statusCode == 201) {
-//       return jsonDecode(response.body);
-//     } else {
-//       throw Exception('Failed to createxxxxxxxxxxx custom request');
-//     }
-//   } catch (e) {
-//     print('❌ Error creating custom request: $e');
-//     throw Exception('Error: $e');
-//   }
-// }
-Future<CustomRequest> createCustomRequest(CustomRequest request) async {
-  try {
+  //     if (response.statusCode == 200 || response.statusCode == 201) {
+  //       return jsonDecode(response.body);
+  //     } else {
+  //       throw Exception('Failed to createxxxxxxxxxxx custom request');
+  //     }
+  //   } catch (e) {
+  //     print('❌ Error creating custom request: $e');
+  //     throw Exception('Error: $e');
+  //   }
+  // }
+  Future<CustomRequest> createCustomRequest(CustomRequest request) async {
+    try {
       print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print("Token : $_token");
+      print("Token : $_token");
 
       if (_token == null || _token!.isEmpty) {
-      print('❌ No token found! Please login again.');
-      throw Exception('No authentication token. Please login again.');
-    }
-    if (_token == null) throw 'Please login first';
- 
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('📤 [CREATE CUSTOM REQUEST] Sending request');
-    print('📦 Request Body: ${jsonEncode(request.toJson())}');
+        print('❌ No token found! Please login again.');
+        throw Exception('No authentication token. Please login again.');
+      }
+      if (_token == null) throw 'Please login first';
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/v1/customRequest/create'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(request.toJson()),
-    );
-
-    print('📥 Response status: ${response.statusCode}');
-    print('📥 Response body: ${response.body}');
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-      print('✅ Custom request created successfully!');
       print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      
-      // ✅ الـ Response ممكن يرجع نفس الـ data أو data['data']
-      if (data['data'] != null) {
-        return CustomRequest.fromJson(data['data']);
-      }
-      return CustomRequest.fromJson(data);
-    } else if (response.statusCode == 401) {
-      throw 'Session expired. Please login again.';
-    }
-    // else if (response.statusCode == 422) {
-    //   throw 'Rental end date must by after or equal expired date.';
-    // }
-     else {
-      throw 'Failed to create custom request';
-    }
-  } catch (e) {
-    print('❌22 Error: $e');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    throw 'Error :';
-  }
-}
-// ------------------- Get Custom Requests -------------------
-// Future<Map<String, dynamic>> getCustomRequests({
-//   int page = 1,
-//   int perPage = 15,
-//   String status = 'open', // open, applied, cancelled, expired, all
-// }) async {
-//   try {
-//     if (_token == null) throw Exception('Please login first');
+      print('📤 [CREATE CUSTOM REQUEST] Sending request');
+      print('📦 Request Body: ${jsonEncode(request.toJson())}');
 
-//     final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(queryParameters: {
-//       'page': page.toString(),
-//       'per_page': perPage.toString(),
-//       'status': status,
-//     });
+      final response = await http.post(
+        Uri.parse('$baseUrl/v1/customRequest/create'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(request.toJson()),
+      );
 
-//     final response = await http.get(
-//       uri,
-//       headers: {
-//         'Accept': 'application/json',
-//         'Authorization': 'Bearer $_token',
-//       },
-//     );
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
 
-//     print('📦 Get Custom Requests Response: ${response.body}');
-
-//     if (response.statusCode == 200) {
-//       return jsonDecode(response.body);
-//     } else {
-//       throw Exception('Failed to fetch custom requests');
-//     }
-//   } catch (e) {
-//     print('❌ Error fetching custom requests: $e');
-//     throw Exception('Error: $e');
-//   }
-// }
-Future<List<CustomRequest>> getCustomRequests({
-  int page = 1,
-  int perPage = 15,
-  String status = 'open',
-}) async {
-  try {
-    
-    if (_token == null) throw Exception('Please login first');
-   
-    final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(queryParameters: {
-      'page': page.toString(),
-      'per_page': perPage.toString(),
-      'status': status,
-    });
-
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('📤 [GET CUSTOM REQUESTS] URL: $uri');
-
-
-    final response = await http.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      },
-    );
-
-    print('📥 Response status: ${response.statusCode}');
-    print('📥 Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      
-      if (data['success'] == true) {
-        final List<dynamic> requestsData = data['data'];
-        final requests = requestsData.map((json) => CustomRequest.fromJson(json)).toList();
-        
-        print('✅ Loaded ${requests.length} custom requests');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        print('✅ Custom request created successfully!');
         print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        return requests;
-      } else {
-        throw data['message'] ?? 'Failed to fetch requests';
-      }
 
-    } else if (response.statusCode == 401) {
-      throw 'Session expired. Please login again.';
-    }
-     else {
-      throw 'Failed to fetch custom requests';
-    }
-  } catch (e) {
-    print('❌ EError: $e');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    if(e is Exception){
-    throw e.toString().replaceAll('Exeption', '').trim();
-    }
-    rethrow;
-  }
-}
-
-Future<Map<String, dynamic>> getCustomRequestsWithPagination({
-  int page = 1,
-  int perPage = 10,
-  String status = 'all',
-}) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(queryParameters: {
-      'page': page.toString(),
-      'per_page': perPage.toString(),
-      'status': status,
-    });
-
-    final response = await http.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return {
-        'requests': (data['data'] as List)
-            .map((json) => CustomRequest.fromJson(json))
-            .toList(),
-        'lastPage': data['last_page'] ?? 1,
-        'total': data['total'] ?? 0,
-      };
-    } else {
-      throw Exception('Failed to fetch custom requests');
-    }
-  } catch (e) {
-    print('❌ Error: $e');
-    throw Exception('Error: $e');
-  }
-}
-
-// ------------------- Cancel Custom Request -------------------
-Future<Map<String, dynamic>> cancelCustomRequest(int requestId) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/v1/customRequest/cancel/$requestId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      },
-    );
-
-    print('📦 Cancel Request Response (${response.statusCode}): ${response.body}');
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      final data = jsonDecode(response.body);
-      throw data['error'] ?? 'Failed to cancel request';
-    }
-  } catch (e) {
-    print('❌ Error cancelling request: $e');
-    throw 'Error: $e';
-  }
-}
-
-// ------------------- Delete Custom Request -------------------
-Future<Map<String, dynamic>> deleteCustomRequest(int requestId) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/v1/customRequest/delete/$requestId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      },
-    );
-
-    print('📦 Delete Request Response (${response.statusCode}): ${response.body}');
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      final data = jsonDecode(response.body);
-      throw data['error'] ?? 'Failed to delete request';
-    }
-  } catch (e) {
-    print('❌ Error deleting request: $e');
-    throw 'Error: $e';
-  }
-}
-
-// ------------------- Get Offer Requests by Custom Request ID -------------------
-Future<List<OfferRequest>> getOfferRequests(int customRequestId) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/v1/offerRequest/doctor/show/$customRequestId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      },
-    );
-
-    print('📦 Offer Requests Response (${response.statusCode}): ${response.body}');
-String cleanBody = response.body;
-    
-    // لو في حروف قبل {، نشيلهم
-    final startIndex = cleanBody.indexOf('{');
-    if (startIndex > 0) {
-      cleanBody = cleanBody.substring(startIndex);
-      print('🧹 Cleaned Response Body: $cleanBody');
-    }
-
-    final data = jsonDecode(cleanBody);
-    
-    print('📦 Offer Requests Response (${response.statusCode}): $data');
-    if (response.statusCode == 200) {
-     // final data = jsonDecode(response.body);
-     
-
-      if (data['success'] == true) {
-         List<dynamic> offersData = [];
-      if (data['data'] is List) {
-          offersData = data['data'];
-        } else if (data['data'] is Map && data['data'].containsKey('id')) {
-          // لو كانت { "id": [] }، نعتبرها قائمة فاضية
-          offersData = [];
-        } else if (data['data'] is Map) {
-          // لو كانت Object عادي (مش قائمة)
-          offersData = [data['data']];
+        // ✅ الـ Response ممكن يرجع نفس الـ data أو data['data']
+        if (data['data'] != null) {
+          return CustomRequest.fromJson(data['data']);
         }
-        
-        return offersData.map((json) => OfferRequest.fromJson(json)).toList();
-      } else {
-        throw data['message'] ?? 'Failed to fetch offers';
+        return CustomRequest.fromJson(data);
+      } else if (response.statusCode == 401) {
+        throw 'Session expired. Please login again.';
       }
-    } else {
-      throw 'Failed to fetch offers';
-    }
-  } catch (e) {
-    print('❌ Error fetching offers: $e');
-    throw 'Error: $e';
-  }
-}
-//##################################
-// ###### new editing ##############
-Future<Map<String, dynamic>> respondToOffer({
-  required int offerId,
-  required String response, // 'accepted' or 'rejected'
-}) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final responseBody = jsonEncode({'response': response});
-
-    final httpResponse = await http.post(
-      Uri.parse('$baseUrl/v1/offerRequest/doctor/response/$offerId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-        'Content-Type': 'application/json',
-      },
-      body: responseBody,
-    );
-
-    print('📦 Respond to Offer Response (${httpResponse.statusCode}): ${httpResponse.body}');
-
-    if (httpResponse.statusCode == 200) {
-      return jsonDecode(httpResponse.body);
-    } else {
-      final data = jsonDecode(httpResponse.body);
-      throw Exception(data['error'] ?? 'Failed to respond to offer');
-    }
-  } catch (e) {
-    print('❌ Error responding to offer: $e');
-    throw Exception('Error: $e');
-  }
-}
-
-// ------------------- Restock Notification -------------------
-Future<Map<String, dynamic>> requestRestockNotification(int productId) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/v1/restock-notification/request/$productId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-          'Content-Type': 'application/json',
-      },
-    );
-
-    print('📦 Restock Notification Response (${response.statusCode}): ${response.body}');
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      final data = jsonDecode(response.body);
-      throw data['error'] ?? 'Failed to request notification';
-    }
-  } catch (e) {
-    print('❌ Error: $e');
-    throw 'Error: $e';
-  }
-}
-
-Future<Map<String, dynamic>> undoRestockNotification(int productId) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/v1/restock-notification/undo/$productId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-          'Content-Type': 'application/json',
-      },
-    );
-
-    print('📦 Undo Restock Notification Response (${response.statusCode}): ${response.body}');
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      final data = jsonDecode(response.body);
-      throw data['error'] ?? 'Failed to undo notification';
-    }
-  } catch (e) {
-    print('❌ Error: $e');
-    throw 'Error: $e';
-  }
-}
-Future<bool> isNotified(int productId) async {
-  try {
-    if (_token == null) return false;
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/v1/restock-notification/is-notify/$productId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      },
-    );
-
-    print('📦 Is Notified Response (${response.statusCode}): ${response.body}');
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['isNotified'] == true;
-    }
-    return false;
-  } catch (e) {
-    print('❌ Error checking notification: $e');
-    return false;
-  }
-}
-
-
-// ------------------- Cart -------------------
-Future<Map<String, dynamic>> addToCart({
-  required int productId,
-  required int quantity,
-  required String type, // 'sale' or 'rent'
-}) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final response = await http.post(
-
-      Uri.parse('$baseUrl/v1/cart/add/$productId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'quantity': quantity,
-        'type': type,
-      }),
-    );
-
-    print('📦 Add to Cart Response (${response.statusCode}): ${response.body}');
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      final data = jsonDecode(response.body);
-      throw data['error'] ?? 'Failed to add to cart';
-    }
-  } catch (e) {
-    print('❌ Error: $e');
-    throw 'Error: $e';
-  }
-}
-// ------------------- Add Review -------------------
-Future<Map<String, dynamic>> addReview({
-  required int productId,
-  required int rating,
-  required String comment,
-}) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/v1/product/review/add/$productId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'rating': rating,
-        'comment': comment,
-      }),
-    );
-
-    print('📦 Add Review Response (${response.statusCode}): ${response.body}');
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      final data = jsonDecode(response.body);
-      throw data['error'] ?? 'Failed to add review';
-    }
-  } catch (e) {
-    print('❌ Error adding review: $e');
-    throw 'Error: $e';
-  }
-}
-// ------------------- Get Product Reviews -------------------
-Future<List<Review>> getProductReviews(int productId) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/v1/product/review/show/$productId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-
-      },
-    );
-
-    print('📦 Get Reviews Response (${response.statusCode}): ${response.body}');
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      print('📦************ Get Reviews Data: $data');
-      if (data['success'] == true) {
-        final List<dynamic> reviewsData = data['data'];
-        return reviewsData.map((json) => Review.fromJson(json)).toList();
-      } else {
-        throw Exception(data['message'] ?? 'Failed to fetch reviews');
+      // else if (response.statusCode == 422) {
+      //   throw 'Rental end date must by after or equal expired date.';
+      // }
+      else {
+        throw 'Failed to create custom request';
       }
-    } else {
-      throw Exception('Failed to fetch reviews');
+    } catch (e) {
+      print('❌22 Error: $e');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      throw 'Error :';
     }
-  } catch (e) {
-    print('❌ Error fetching reviews: $e');
-    throw Exception('Error: $e');
   }
-}
+  // ------------------- Get Custom Requests -------------------
+  // Future<Map<String, dynamic>> getCustomRequests({
+  //   int page = 1,
+  //   int perPage = 15,
+  //   String status = 'open', // open, applied, cancelled, expired, all
+  // }) async {
+  //   try {
+  //     if (_token == null) throw Exception('Please login first');
 
-// ------------------- Delete Review -------------------
-Future<Map<String, dynamic>> deleteReview(int reviewId) async {
-  try {
-    if (_token == null) throw Exception('Please login first');
+  //     final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(queryParameters: {
+  //       'page': page.toString(),
+  //       'per_page': perPage.toString(),
+  //       'status': status,
+  //     });
 
-    final response = await http.delete(
-      Uri.parse('$baseUrl/v1/product/review/delete/$reviewId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      },
+  //     final response = await http.get(
+  //       uri,
+  //       headers: {
+  //         'Accept': 'application/json',
+  //         'Authorization': 'Bearer $_token',
+  //       },
+  //     );
+
+  //     print('📦 Get Custom Requests Response: ${response.body}');
+
+  //     if (response.statusCode == 200) {
+  //       return jsonDecode(response.body);
+  //     } else {
+  //       throw Exception('Failed to fetch custom requests');
+  //     }
+  //   } catch (e) {
+  //     print('❌ Error fetching custom requests: $e');
+  //     throw Exception('Error: $e');
+  //   }
+  // }
+  Future<List<CustomRequest>> getCustomRequests({
+    int page = 1,
+    int perPage = 15,
+    String status = 'open',
+  }) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(
+        queryParameters: {
+          'page': page.toString(),
+          'per_page': perPage.toString(),
+          'status': status,
+        },
+      );
+
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('📤 [GET CUSTOM REQUESTS] URL: $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['success'] == true) {
+          final List<dynamic> requestsData = data['data'];
+          final requests = requestsData
+              .map((json) => CustomRequest.fromJson(json))
+              .toList();
+
+          print('✅ Loaded ${requests.length} custom requests');
+          print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          return requests;
+        } else {
+          throw data['message'] ?? 'Failed to fetch requests';
+        }
+      } else if (response.statusCode == 401) {
+        throw 'Session expired. Please login again.';
+      } else {
+        throw 'Failed to fetch custom requests';
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      if (e is Exception) {
+        throw e.toString().replaceAll('Exception', '').trim();
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getCustomRequestsWithPagination({
+    int page = 1,
+    int perPage = 10,
+    String status = 'all',
+    bool forceRefresh = false,
+  }) async {
+    try {
+      if (!forceRefresh &&
+          page == 1 &&
+          cachedCustomRequests != null &&
+          cachedCustomRequestsTime != null &&
+          DateTime.now().difference(cachedCustomRequestsTime!).inMinutes < 5) {
+        print(
+          '📦 Returning cached custom requests (${cachedCustomRequests!.length})',
+        );
+        return {
+          'requests': cachedCustomRequests!,
+          'lastPage': 1,
+          'total': cachedCustomRequests!.length,
+        };
+      }
+      if (_token == null) throw Exception('Please login first');
+
+      final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(
+        queryParameters: {
+          'page': page.toString(),
+          'per_page': perPage.toString(),
+          'status': status,
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+   final List<CustomRequest> requests = (data['data'] as List)
+          .map((json) => CustomRequest.fromJson(json))
+          .toList();
+
+      // ✅ تخزين الكاش (لو أول صفحة)
+      if (page == 1) {
+        cachedCustomRequests = requests;
+        cachedCustomRequestsTime = DateTime.now();
+        print('✅ Cached ${requests.length} custom requests');
+      }
+
+
+
+        return {
+          'requests': requests,
+          'lastPage': data['last_page'] ?? 1,
+          'total': data['total'] ?? 0,
+        };
+      } else {
+        throw Exception('Failed to fetch custom requests');
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+  // ------------------- Cancel Custom Request -------------------
+  Future<Map<String, dynamic>> cancelCustomRequest(int requestId) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/v1/customRequest/cancel/$requestId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      print(
+        '📦 Cancel Request Response (${response.statusCode}): ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final data = jsonDecode(response.body);
+        throw data['error'] ?? 'Failed to cancel request';
+      }
+    } catch (e) {
+      print('❌ Error cancelling request: $e');
+      throw 'Error: $e';
+    }
+  }
+
+  // ------------------- Delete Custom Request -------------------
+  Future<Map<String, dynamic>> deleteCustomRequest(int requestId) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/v1/customRequest/delete/$requestId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      print(
+        '📦 Delete Request Response (${response.statusCode}): ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final data = jsonDecode(response.body);
+        throw data['error'] ?? 'Failed to delete request';
+      }
+    } catch (e) {
+      print('❌ Error deleting request: $e');
+      throw 'Error: $e';
+    }
+  }
+
+  // ------------------- Get Offer Requests by Custom Request ID -------------------
+  Future<List<OfferRequest>> getOfferRequests(int customRequestId) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/v1/offerRequest/doctor/show/$customRequestId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      print(
+        '📦 Offer Requests Response (${response.statusCode}): ${response.body}',
+      );
+      String cleanBody = response.body;
+
+      // لو في حروف قبل {، نشيلهم
+      final startIndex = cleanBody.indexOf('{');
+      if (startIndex > 0) {
+        cleanBody = cleanBody.substring(startIndex);
+        print('🧹 Cleaned Response Body: $cleanBody');
+      }
+
+      final data = jsonDecode(cleanBody);
+
+      print('📦 Offer Requests Response (${response.statusCode}): $data');
+      if (response.statusCode == 200) {
+        // final data = jsonDecode(response.body);
+
+        if (data['success'] == true) {
+          List<dynamic> offersData = [];
+          if (data['data'] is List) {
+            offersData = data['data'];
+          } else if (data['data'] is Map && data['data'].containsKey('id')) {
+            // لو كانت { "id": [] }، نعتبرها قائمة فاضية
+            offersData = [];
+          } else if (data['data'] is Map) {
+            // لو كانت Object عادي (مش قائمة)
+            offersData = [data['data']];
+          }
+          print('Offer data: ${offersData}');
+          return offersData.map((json) => OfferRequest.fromJson(json)).toList();
+        } else {
+          throw data['message'] ?? 'Failed to fetch offers';
+        }
+      } else {
+        throw 'Failed to fetch offers';
+      }
+    } catch (e) {
+      print('❌ Error fetching offers: $e');
+      throw 'Error: $e';
+    }
+  }
+
+  //##################################
+  // ###### new editing ##############
+  Future<Map<String, dynamic>> respondToOffer({
+    required int offerId,
+    required String response, // 'accepted' or 'rejected'
+  }) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final responseBody = jsonEncode({'response': response});
+
+      final httpResponse = await http.post(
+        Uri.parse('$baseUrl/v1/offerRequest/doctor/response/$offerId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+        body: responseBody,
+      );
+
+      print(
+        '📦 Respond to Offer Response&&&&& (${httpResponse.statusCode}): ${httpResponse.body}',
+      );
+
+      if (httpResponse.statusCode == 200) {
+        return jsonDecode(httpResponse.body);
+      } else {
+        final data = jsonDecode(httpResponse.body);
+        throw Exception(data['error'] ?? 'Failed to respond to offer');
+      }
+    } catch (e) {
+      print('❌ Error responding to offer: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+  // ------------------- Restock Notification -------------------
+  Future<Map<String, dynamic>> requestRestockNotification(int productId) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/v1/restock-notification/request/$productId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print(
+        '📦 Restock Notification Response (${response.statusCode}): ${response.body}',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        final data = jsonDecode(response.body);
+        throw data['error'] ?? 'Failed to request notification';
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      throw 'Error: $e';
+    }
+  }
+
+  Future<Map<String, dynamic>> undoRestockNotification(int productId) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/v1/restock-notification/undo/$productId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print(
+        '📦 Undo Restock Notification Response (${response.statusCode}): ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final data = jsonDecode(response.body);
+        throw data['error'] ?? 'Failed to undo notification';
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      throw 'Error: $e';
+    }
+  }
+
+  Future<bool> isNotified(int productId) async {
+    try {
+      if (_token == null) return false;
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/v1/restock-notification/is-notify/$productId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      print(
+        '📦 Is Notified Response (${response.statusCode}): ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['isNotified'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Error checking notification: $e');
+      return false;
+    }
+  }
+
+  // ------------------- Cart -------------------
+  Future<Map<String, dynamic>> addToCart({
+    required int productId,
+    required int quantity,
+    required String type, // 'sale' or 'rent'
+  }) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/v1/cart/add/$productId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+
+        body: jsonEncode({'quantity': quantity, 'type': type}),
+      );
+
+      print(
+        '📦 Add to Cart Response (${response.statusCode}): ${response.body}',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        final data = jsonDecode(response.body);
+        throw data['error'] ?? 'Failed to add to cart';
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      throw 'Error: $e';
+    }
+  }
+
+  // ------------------- Add Review -------------------
+  Future<Map<String, dynamic>> addReview({
+    required int productId,
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/v1/product/review/add/$productId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'rating': rating, 'comment': comment}),
+      );
+
+      print(
+        '📦 Add Review Response (${response.statusCode}): ${response.body}',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        final data = jsonDecode(response.body);
+        throw data['error'] ?? 'Failed to add review';
+      }
+    } catch (e) {
+      print('❌ Error adding review: $e');
+      throw 'Error: $e';
+    }
+  }
+
+  // ------------------- Get Product Reviews -------------------
+  Future<List<Review>> getProductReviews(int productId) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/v1/product/review/show/$productId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      print(
+        '📦 Get Reviews Response (${response.statusCode}): ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('📦************ Get Reviews Data: $data');
+        if (data['success'] == true) {
+          final List<dynamic> reviewsData = data['data'];
+          return reviewsData.map((json) => Review.fromJson(json)).toList();
+        } else {
+          throw Exception(data['message'] ?? 'Failed to fetch reviews');
+        }
+      } else {
+        throw Exception('Failed to fetch reviews');
+      }
+    } catch (e) {
+      print('❌ Error fetching reviews: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+  // ------------------- Delete Review -------------------
+  Future<Map<String, dynamic>> deleteReview(int reviewId) async {
+    try {
+      if (_token == null) throw Exception('Please login first');
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/v1/product/review/delete/$reviewId'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      print(
+        '📦 Delete Review Response (${response.statusCode}): ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final data = jsonDecode(response.body);
+        throw Exception(data['error'] ?? 'Failed to delete review');
+      }
+    } catch (e) {
+      print('❌ Error deleting review: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+  //################################
+  Future<int?> getConversationIdWithSupplier(int supplierId) async {
+    try {
+      final conversations = await getConversations();
+      final found = conversations.firstWhere(
+        (conv) => conv['other_user']['id'] == supplierId,
+        orElse: () => null,
+      );
+      return found?['id'];
+    } catch (e) {
+      print('❌ Error getting conversation: $e');
+      return null;
+    }
+  }
+  // في api_service.dart
+
+  // جلب كل المحادثات (للدكتور)
+  Future<List<dynamic>> getConversations() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/v1/conversations'),
+      headers: _authHeaders(), // Authorization header
     );
-
-    print('📦 Delete Review Response (${response.statusCode}): ${response.body}');
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
       final data = jsonDecode(response.body);
-      throw Exception(data['error'] ?? 'Failed to delete review');
+      print('📦 Conversations Response: ${data['data']}');
+      return data['data'];
     }
-  } catch (e) {
-    print('❌ Error deleting review: $e');
-    throw Exception('Error: $e');
-  }
-}
-
-//################################
-Future<int?> getConversationIdWithSupplier(int supplierId) async {
-  try {
-    final conversations = await getConversations();
-    final found = conversations.firstWhere(
-      (conv) => conv['other_user']['id'] == supplierId,
-      orElse: () => null,
+    print(
+      '❌ Failed to load conversations: ${response.statusCode} - ${response.body}',
     );
-    return found?['id'];
-  } catch (e) {
-    print('❌ Error getting conversation: $e');
-    return null;
+    throw Exception('Failed to load conversations');
   }
-}
-// في api_service.dart
 
-// جلب كل المحادثات (للدكتور)
-Future<List<dynamic>> getConversations() async {
-  final response = await http.get(
-    Uri.parse('$baseUrl/v1/conversations'),
-    headers: _authHeaders(), // Authorization header
-  );
-
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    print('📦 Conversations Response: ${data['data']}');
-    return data['data'];
-    
+  Future<List<dynamic>> getMessages(int convId) async {
+    print('📤 getMessages called with convId: $convId');
+    final res = await http.get(
+      Uri.parse('$baseUrl/v1/conversations/$convId/messages'),
+      headers: _authHeaders(),
+    );
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body)['data'];
+    }
+    throw Exception('Failed to load messages');
   }
-  print('❌ Failed to load conversations: ${response.statusCode} - ${response.body}');
-  throw Exception('Failed to load conversations');
-}
 
+  // جلب جهات الاتصال (للمورد)
+  Future<List<dynamic>> getContacts() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/v1/conversations/contacts'),
+      headers: _authHeaders(),
+    );
 
-
-Future<List<dynamic>> getMessages(int convId) async {
-  final res = await http.get(
-    Uri.parse('$baseUrl/v1/conversations/$convId/messages'),
-    headers: _authHeaders(),
-  );
-  if (res.statusCode == 200) {
-    return jsonDecode(res.body)['data'];
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['data'];
+    }
+    throw Exception('Failed to load contacts');
   }
-  throw Exception('Failed to load messages');
-}
 
+  // تعليم المحادثة كمقروءة
+  Future<void> markConversationAsRead(int conversationId) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/v1/conversations/$conversationId/read'),
+      headers: _authHeaders(),
+    );
 
-// جلب جهات الاتصال (للمورد)
-Future<List<dynamic>> getContacts() async {
-  final response = await http.get(
-    Uri.parse('$baseUrl/v1/conversations/contacts'),
-    headers: _authHeaders(),
-  );
-
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    return data['data'];
+    if (response.statusCode != 200) {
+      throw Exception('Failed to mark as read');
+    }
   }
-  throw Exception('Failed to load contacts');
-}
 
-// تعليم المحادثة كمقروءة
-Future<void> markConversationAsRead(int conversationId) async {
-  final response = await http.patch(
-    Uri.parse('$baseUrl/v1/conversations/$conversationId/read'),
-    headers: _authHeaders(),
-  );
+  Future<Map<String, dynamic>> sendMessage({
+    required int receiverId,
+    required String message,
+  }) async {
+    print('Reciver ID : ${receiverId}');
+    print('Messsege ${message}');
+    try {
+      if (_token == null) throw Exception('Please login first');
 
-  if (response.statusCode != 200) {
-    throw Exception('Failed to mark as read');
+      final res = await http.post(
+        Uri.parse('$baseUrl/v1/conversations/messages'),
+        headers: {..._authHeaders(), 'Content-Type': 'application/json'},
+        body: jsonEncode({'receiver_id': receiverId, 'message': message}),
+      );
+      final data = jsonDecode(res.body);
+      print('📦 sendMessage Response: $data');
+      print('response status: ${res.statusCode}');
+      print("response body ${res.body}");
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        print('@@ send masseges response : $res');
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Failed to send message');
+      }
+    } catch (e) {
+      print('❌ sendMessage Error: $e');
+      rethrow;
+    }
+    // return jsonDecode(res.body);
   }
-}
-Future<Map<String, dynamic>> sendMessage({required int receiverId, required String message}) async {
-  final res = await http.post(
-    Uri.parse('$baseUrl/v1/conversations/messages'),
-    headers: {
-      ..._authHeaders(),
-      'Content-Type': 'application/json',
-    },
-    body: jsonEncode({
-      'receiver_id': receiverId,
-      'message': message,
-    }),
-  );
-  return jsonDecode(res.body);
-}
 
 // دالة الـ headers الموحدة
 Map<String, String> _authHeaders() {

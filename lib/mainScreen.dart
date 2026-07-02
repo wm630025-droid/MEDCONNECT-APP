@@ -25,7 +25,7 @@ class _MainScreenState extends State<MainScreen> {
     const CartPage(),
      MessagesScreen(),
      EquipmentListsScreen(),
-      DoctorProfilePage(),
+     // DoctorProfilePage(),
 
   ];
 
@@ -43,6 +43,7 @@ class _MainScreenState extends State<MainScreen> {
 
       // ====== BOTTOM NAVIGATION BAR ثابت ======
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         selectedItemColor: const Color(0xFF0A69C3),
