@@ -19,6 +19,14 @@ import 'package:medconnect_app/models/review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:medconnect_app/services/register_services.dart';
+
+String _stringifyDynamicValue(dynamic value) {
+  if (value == null) return '';
+  if (value is String) return value;
+  if (value is Map || value is List) return jsonEncode(value);
+  return value.toString();
+}
+
 class ApiService {
   static const String baseUrl = 'https://medconnect-one-pi.vercel.app/api/api';
 
@@ -1140,7 +1148,8 @@ Map<String, String> _authHeaders() {
     'Content-type': 'application/json'
   };
 }
-Future<bool> validateRent({
+// في api_service.dart
+Future<Map<String, dynamic>> validateRent({
   required int productId,
   required int quantity,
   required String startDate,
@@ -1149,32 +1158,52 @@ Future<bool> validateRent({
   try {
     final response = await http.post(
       Uri.parse('$baseUrl/v1/validateRent/$productId'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-        'Content-Type': 'application/json',
-      },
+      headers: _authHeaders(),
       body: jsonEncode({
         'quantity': quantity,
-        'rental_start_date': startDate,   // لازم M/D/YYYY
-        'rental_end_date': endDate,       // لازم M/D/YYYY
+        'rental_start_date': startDate,
+        'rental_end_date': endDate,
       }),
     );
 
-    print('📦************* Validate Rent Response (${response.statusCode}): ${response.body}');
+    print('📦 Validate Rent Response (${response.statusCode}): ${response.body}');
+    final data = jsonDecode(response.body);
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['success'] == true || data['sccuess'] == "Rent is validated";
-    } else {
-      final data = jsonDecode(response.body);
-      throw Exception(data['error'] ?? data['message'] ?? 'Validation failed');
+    final bool success = data['success'] == true ||
+        data['status'] == 'success' ||
+        data['message'] == 'Rent is validated' ||
+        data['sccuess'] == true ||
+        data['sccuess'] == 'Rent is validated';
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (success) {
+        String message = data['message'] ?? data['status'] ?? data['sccuess'] ?? 'Rent validated successfully';
+        return {
+          'success': true,
+          'message': message,
+          'paymentLink': _stringifyDynamicValue(data['payment_data']?['redirectTo']),
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['error'] ?? data['message'] ?? data['status'] ?? 'Rent validation failed',
+      };
     }
+
+    return {
+      'success': false,
+      'message': data['error'] ?? data['message'] ?? 'Validation failed with status ${response.statusCode}',
+    };
   } catch (e) {
     print('❌ Validate Rent Error: $e');
-    throw Exception('Failed to validate rent: $e');
+    return {
+      'success': false,
+      'message': 'Failed to validate rent: ${e.toString()}',
+    };
   }
 }
+
 // Future<bool> validateRent({
 //   required int productId,
 //   required int quantity,

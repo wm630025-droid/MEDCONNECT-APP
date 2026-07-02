@@ -1,10 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/models/rental_item.dart';
 import 'package:medconnect_app/services/payment_services.dart';
 import 'package:medconnect_app/doctorAccount.dart';
 import 'package:medconnect_app/wep_app.dart';
-
 
 class CheckoutPaymentPage extends StatefulWidget {
   final List<CartItem> cartItems;
@@ -62,7 +62,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       
       if (start == null || end == null) return 0;
       
-      return end.difference(start).inDays + 1;
+      return end.difference(start).inDays;
     } catch (e) {
       print('❌ Error calculating rental days: $e');
       return 0;
@@ -71,53 +71,43 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
 
   // حساب السعر اليومي
   double getDailyRate() {
-    if (widget.rentalItem == null) return 0;
-    return widget.rentalItem!.price / 30;
-  }
+  if (widget.rentalItem == null) return 0;
+  return widget.rentalItem!.dailyPrice ; // ✅ بدل price / 30
+}
 
-  // حساب إجمالي سعر الإيجار
-  double getTotalRentalPrice() {
-    if (widget.rentalItem == null) return 0;
-    
-    // إذا كان الـ cartItems يحتوي على السعر المحسوب بالفعل
-    if (widget.cartItems.isNotEmpty && widget.cartItems.first.type == 'rent') {
-      return widget.cartItems.first.price * widget.cartItems.first.quantity;
-    }
-    
-    // حساب جديد
+double getTotalRentalPrice() {
+  if (widget.rentalItem == null) return 0;
+  final dailyRate = getDailyRate();
+  final days = getRentalDays();
+  final quantity = widget.rentalItem!.quantity;
+  return dailyRate * days * quantity;
+}
+
+List<CartItem> getDisplayItems() {
+  if (widget.isRentalMode && widget.rentalItem != null) {
     final dailyRate = getDailyRate();
     final days = getRentalDays();
-    final quantity = widget.rentalItem!.quantity;
-    return dailyRate * days * quantity;
-  }
+    final totalRentalPrice = getTotalRentalPrice();
 
-  // دالة لجلب العناصر حسب الوضع
-  List<CartItem> getDisplayItems() {
-    if (widget.isRentalMode && widget.rentalItem != null) {
-      final dailyRate = getDailyRate();
-      final days = getRentalDays();
-      final totalRentalPrice = getTotalRentalPrice();
-      
-      return [
-        CartItem(
-          id: widget.rentalItem!.productId,
-          productId: widget.rentalItem!.productId,
-          name: widget.rentalItem!.name,
-          image: widget.rentalItem!.image,
-          quantity: widget.rentalItem!.quantity,
-          price: totalRentalPrice,
-          type: 'rent',
-          daily_rent: dailyRate,
-          rentalDays: days,
-          startDate: widget.rentalItem!.startDate,
-          endDate: widget.rentalItem!.endDate,
-        )
-      ];
-    } else {
-      return widget.cartItems;
-    }
+    return [
+      CartItem(
+        id: widget.rentalItem!.productId,
+        productId: widget.rentalItem!.productId,
+        name: widget.rentalItem!.name,
+        image: widget.rentalItem!.image,
+        quantity: widget.rentalItem!.quantity,
+        price: totalRentalPrice,
+        type: 'rental',
+        dailyPrice: dailyRate, // ✅ dailyPrice
+        rentalDays: days,
+        startDate: widget.rentalItem!.startDate,
+        endDate: widget.rentalItem!.endDate,
+      )
+    ];
+  } else {
+    return widget.cartItems;
   }
-
+}
   // دالة لحساب المجموع
   double calculateTotalAmount() {
     if (widget.isRentalMode && widget.rentalItem != null) {
@@ -361,7 +351,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                 fontSize: 12,
                               ),
                             ),
-                            if (item.type == 'rent') ...[
+                            if (item.type == 'rental') ...[
                               const SizedBox(height: 4),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -370,7 +360,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  'Rental • Daily: \$${item.daily_rent.toStringAsFixed(2)}',
+                                  'Rental • Daily: \$${item.dailyPrice.toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     color: Colors.blue,
                                     fontSize: 10,
@@ -388,6 +378,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                                   ),
                                 ),
                               ],
+                               if (item.startDate != null && item.endDate != null) ...[
+                              const SizedBox(height: 2),
+                              Text('${item.startDate} → ${item.endDate}', style: const TextStyle(color: Colors.grey, fontSize: 9)),
+                            ],
                             ],
                           ],
                         ),
@@ -403,10 +397,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
                               fontSize: 16,
                             ),
                           ),
-                          if (item.type == 'rent' && item.rentalDays != null) ...[
+                          if (item.type == 'rental' && item.rentalDays != null) ...[
                             const SizedBox(height: 2),
                             Text(
-                              '(\$${item.daily_rent.toStringAsFixed(2) } × ${item.rentalDays} days × ${item.quantity})',
+                              '(\$${item.dailyPrice.toStringAsFixed(2) } × ${item.rentalDays} days × ${item.quantity})',
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontSize: 9,
@@ -506,182 +500,176 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     );
   }
 
-  Future<void> _handlePlaceOrder() async {
-    final items = getDisplayItems();
-    
-    if (items.isEmpty) {
-      _showErrorDialog('No items to order');
+ Future<void> _handlePlaceOrder() async {
+  final items = getDisplayItems();
+
+  if (items.isEmpty) {
+    _showErrorDialog('No items to order');
+    return;
+  }
+
+  setState(() => isLoading = true);
+
+  try {
+    final bool isCashPayment = selectedPayment.toLowerCase() == 'cod' || selectedPayment.toLowerCase() == 'cash';
+    final bool isOnlinePayment = !isCashPayment;
+
+    // ================== حالة الإيجار ==================
+    if (widget.isRentalMode && widget.rentalItem != null) {
+      final result = await PaymentService.placeRentalOrder(
+        productId: widget.rentalItem!.productId,
+        quantity: widget.rentalItem!.quantity,
+        startDate: widget.rentalItem!.startDate,
+        endDate: widget.rentalItem!.endDate,
+        paymentType: isCashPayment ? 'cash' : 'online',
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        if (isCashPayment) {
+          _showSuccessDialog(
+            message: 'Order placed successfully',
+            invoiceNumber: result['invoiceNumber']?.toString() ?? '',
+          );
+        } else if (isOnlinePayment) {
+          // الدفع الأونلاين - انتقل مباشرة إلى رابط الدفع بدون عرض dialog
+          final paymentLink = result['redirectTo']?.toString() ?? '';
+          if (paymentLink.isNotEmpty) {
+            await _launchURL(paymentLink);
+          } else {
+            _showErrorDialog('Payment link not available');
+          }
+        }
+      } else {
+_showErrorDialog(result['message']?.toString() ?? result['error']?.toString() ?? 'Failed to place order');      }
       return;
     }
 
-    setState(() => isLoading = true);
+    // ================== حالة البيع (sale) ==================
+    // Send a single request with the full cart to avoid cart total mismatches
+    final double cartTotal = items.fold(
+      0.0,
+      (sum, i) => sum + (i.price * i.quantity),
+    );
 
-    try {
-      if (widget.isRentalMode && widget.rentalItem != null) {
-        String orderType = 'rental';
-        String? rentalStartDate = widget.rentalItem!.startDate;
-        String? rentalEndDate = widget.rentalItem!.endDate;
-        
-        final response = selectedPayment == 'cod'
-            ? await PaymentService.placeCashOrder(
-                orderType: orderType,
-                cartItems: items.map((item) => {
-                  'product_id': item.productId,
-                  'quantity': item.quantity,
-                  'price': item.price,
-                  'type': item.type,
-                  'daily_rent': item.daily_rent,
-                  'rental_days': item.rentalDays,
-                  'start_date': item.startDate,
-                  'end_date': item.endDate,
-                }).toList(),
-                cartTotal: items.fold(0.0, (sum, item) => sum + (item.price * item.quantity)),
-                rentalStartDate: rentalStartDate,
-                rentalEndDate: rentalEndDate,
-              )
-            : await PaymentService.placeOnlineOrder(
-                orderType: orderType,
-                cartItems: items.map((item) => {
-                  'product_id': item.productId.toString(),
-                  'quantity': item.quantity,
-                  'price': item.price,
-                  'type': item.type,
-                  'daily_rent': item.daily_rent,
-                  'rental_days': item.rentalDays,
-                  'start_date': item.startDate,
-                  'end_date': item.endDate,
-                }).toList(),
-                cartTotal: items.fold(0.0, (sum, item) => sum + (item.price * item.quantity)),
-                rentalStartDate: rentalStartDate,
-                rentalEndDate: rentalEndDate,
-              );
+    final List<Map<String, dynamic>> payloadItems = items.map((item) {
+      return {
+        'product_id': item.productId,
+        'quantity': item.quantity,
+        'price': item.price,
+        'type': item.type,
+        'price_daily': item.dailyPrice.toString(),
+        'rental_days': item.rentalDays,
+        'start_date': item.startDate,
+        'end_date': item.endDate,
+      };
+    }).toList();
 
-        if (!mounted) return;
-
-        if (response['success'] == true) {
-          final link = response['redirectTo'];
-          final invoice = response['invoice'].toString();
-          final message = response['status'] ?? 'Order placed successfully';
-
-          if (selectedPayment == 'online' && link != null && link.isNotEmpty) {
-            await _launchURL(link);
-           
-          } else {
-            _showSuccessDialog(
-              message: message,
-              invoice: invoice,
-              paymentLink: selectedPayment == 'online' ? link : null,
-            );
-          }
-        } else {
-          _showErrorDialog(
-            response['status'] ?? response['error'] ?? 'Failed to place order',
+    final response = isCashPayment
+        ? await PaymentService.placeCashOrder(
+            orderType: 'sale',
+            cartItems: payloadItems,
+            cartTotal: cartTotal,
+            rentalStartDate: null,
+            rentalEndDate: null,
+          )
+        : await PaymentService.placeOnlineOrder(
+            orderType: 'sale',
+            cartItems: payloadItems,
+            cartTotal: cartTotal,
+            rentalStartDate: null,
+            rentalEndDate: null,
           );
-        }
-      } else {
-        for (var item in items) {
-          final response = selectedPayment == 'cod'
-              ? await PaymentService.placeCashOrder(
-                  orderType: 'sale',
-                  cartItems: [
-                    {
-                      'product_id': item.productId.toString(),
-                      'quantity': item.quantity,
-                      'price': item.price,
-                      'type': item.type,
-                      'daily_rent': item.daily_rent,
-                      'rental_days': item.rentalDays,
-                      'start_date': item.startDate,
-                      'end_date': item.endDate,
-                    }
-                  ],
-                  cartTotal: item.price * item.quantity,
-                  rentalStartDate: null,
-                  rentalEndDate: null,
-                )
-              : await PaymentService.placeOnlineOrder(
-                  orderType: 'sale',
-                  cartItems: [
-                    {
-                      'product_id': item.productId,
-                      'quantity': item.quantity,
-                      'price': item.price,
-                      'type': item.type,
-                      'daily_rent': item.daily_rent,
-                      'rental_days': item.rentalDays,
-                      'start_date': item.startDate,
-                      'end_date': item.endDate,
-                    }
-                  ],
-                  cartTotal: item.price * item.quantity,
-                  rentalStartDate: null,
-                  rentalEndDate: null,
-                );
 
-          if (!mounted) return;
+    if (!mounted) return;
 
-          if (response['success'] == true) {
-            final link = response['redirectTo'];
-            final invoice = response['invoice'].toString();
-            final message = response['status'] ?? 'Order placed successfully';
+    if (response['success'] == true) {
+      String paymentLink = '';
+      final redirectValue = response['redirectTo'];
+      if (redirectValue is String) {
+        paymentLink = redirectValue;
+      } else if (redirectValue is Map || redirectValue is List) {
+        paymentLink = jsonEncode(redirectValue);
+      } else if (redirectValue != null) {
+        paymentLink = redirectValue.toString();
+      }
 
-            if (selectedPayment == 'online' && link != null && link.isNotEmpty) {
-              await _launchURL(link);
-            
-            } else {
-              _showSuccessDialog(
-                message: message,
-                invoice: invoice,
-                paymentLink: selectedPayment == 'online' ? link : null,
-              );
-            }
-          } else {
-            _showErrorDialog(
-              response['status'] ?? response['error'] ?? 'Failed to place order',
-            );
-            return;
-          }
+      final invoiceNumber = response['invoiceNumber']?.toString() ?? '';
+      final message = response['message'] ?? 'Order placed successfully';
+
+      if (isCashPayment) {
+        _showSuccessDialog(
+          message: message,
+          invoiceNumber: invoiceNumber,
+        );
+      } else if (isOnlinePayment) {
+        if (paymentLink.isNotEmpty) {
+          await _launchURL(paymentLink);
+        } else {
+          _showErrorDialog('Payment link not available');
         }
       }
-    } catch (e) {
-      print('❌ Exception: $e');
-      if (mounted) {
-        _showErrorDialog('An unexpected error occurred: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+    } else {
+      _showErrorDialog(
+        response['message'] ?? response['error'] ?? 'Failed to place order',
+      );
+      return;
+    }
+  } catch (e) {
+    print('❌ Exception: $e');
+    if (mounted) {
+      _showErrorDialog('An unexpected error occurred: $e');
+    }
+  } finally {
+    if (mounted) {
+      setState(() => isLoading = false);
     }
   }
+}
 
-  Future<void> _launchURL(String url) async {
+Future<void> _launchURL(String url) async {
   print('Opening WebView with URL: $url');
   if (url.isEmpty) {
     _showErrorDialog('Invalid payment link');
     return;
   }
- Navigator.push(
+
+  final result = await Navigator.push(
     context,
     MaterialPageRoute(
-      builder: (context) => InAppWebViewScreen(
-        url: url,
-        onSuccess: () {
-          // ✅ روح لصفحة الـ Orders وامسح كل الصفحات السابقة
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => AllOrdersScreen()), // غير لاسم صفحة الـ orders عندك
-            (route) => false,
-          );
-        },
-      ),
+      builder: (context) => InAppWebViewScreen(url: url),
     ),
   );
-}
 
+  if (!mounted) return;
+
+  if (result == true) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => AllOrdersScreen(
+      )),
+      (route) => false,
+    );
+  } else if (result == false) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CheckoutPaymentPage(
+          cartItems: widget.cartItems,
+          subtotal: widget.subtotal ,
+          total: widget.total,
+          selectedAddress: widget.selectedAddress,
+          isRentalMode: widget.isRentalMode,
+          rentalItem: widget.rentalItem,
+        ),
+      ),
+    );
+  }
+}
   void _showSuccessDialog({
     required String message,
-    String? invoice,
+    String? invoiceNumber,
     String? paymentLink,
   }) {
     showDialog(
@@ -700,10 +688,10 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(message),
-            if (invoice != null) ...[
+            if (invoiceNumber != null) ...[
               const SizedBox(height: 12),
               Text(
-                'Invoice: $invoice',
+                'Invoice: $invoiceNumber',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0D6EFD),
@@ -743,6 +731,7 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
       ),
     );
   }
+  
 
   void _showErrorDialog(String message) {
     showDialog(
@@ -774,4 +763,3 @@ class _CheckoutPaymentPageState extends State<CheckoutPaymentPage> {
     );
   }
 }
-

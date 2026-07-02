@@ -637,7 +637,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
             // ✅ ضيفه local برضو لو عايز
             cartItemsGlobal.add(
               CartItem(
-                daily_rent: 0,
+                dailyPrice: product.dailyPrice ?? 0,
                 name: product.name,
                 image: product.imagePath,
                 quantity: 1,

@@ -410,9 +410,69 @@ if (!mounted) return;
 
  Widget _searchResultsApi() {
   if (searchResults.isEmpty) {
-    return const Text("No products found");
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off_rounded,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "Couldn't find your product?",
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "لو مش لاقي المنتج اللي بتدور عليه، تقدر تعمل طلب مخصص دلوقتي وهنوفره لك",
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 22),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>  doctorAccountPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.add_box_outlined, size: 20),
+            label: const Text(
+              "Create Custom Request",
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3A7DFF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 14,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
-
   return GridView.builder(
     itemCount: searchResults.length,
     shrinkWrap: true,
@@ -1028,7 +1088,8 @@ Widget _skeletonProductCard() {
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          ProductDetailsPage(productId: p.id, product: p),
+                          ProductDetailsPage(        productId: p.id ,
+),
                     ),
                   );
 
@@ -1484,7 +1545,7 @@ if (!mounted) return;
                 // ✅ ضيفه local برضو لو عايز
                 cartItemsGlobal.add(
                   CartItem(
-                    daily_rent: 0,
+                    dailyPrice: p.dailyPrice ?? 0,
                     name: p.name,
                     image: p.imagePath,
                     quantity: 1,

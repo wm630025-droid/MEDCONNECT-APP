@@ -233,7 +233,7 @@ class _WishlistPageState extends State<WishlistPage> {
             price: product.price,
             type: 'rent',
             dateRange: '3 Days',
-            daily_rent:0,
+            dailyPrice: product.dailyPrice ?? 0,
             id: product.id,
             productId: product.id,
           ),
@@ -247,7 +247,7 @@ class _WishlistPageState extends State<WishlistPage> {
       } else {
         cartItemsGlobal.add(
           CartItem(
-            daily_rent:0,
+            dailyPrice: product.dailyPrice ?? 0,
             name: product.name,
             image: product.imagePath,
             quantity: 1,

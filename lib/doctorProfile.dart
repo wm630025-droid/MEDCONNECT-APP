@@ -174,7 +174,7 @@ Future<void> _deleteProfileImage() async {
         address = data['address'] ?? '';
         governorate = data['governorate'] ?? '';
         issueAuthority = data["doctor"]["doctor_license"]['issue_authority'] ?? '';
-        profileImageUrl = data["doctor"]['profile_image_url'] ?? '';
+        profileImageUrl = data['doctor']['profile_image_url'] ?? '';
 
         isLoading = false;
       });
@@ -250,22 +250,27 @@ void initState() {
               ),
 
               // Main Profile Content
+             // Main Profile Content
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    const SizedBox(height: 16),
-                    _buildProfileHeader(isDark, colorScheme),
-                    const SizedBox(height: 24),
-                    _buildPersonalInfoSection(isDark, colorScheme),
-                    const SizedBox(height: 20),
-                    _buildProfessionalCredentialsSection(isDark, colorScheme),
-                    const SizedBox(height: 20),
-                    _buildAddressSection(isDark, colorScheme),
-                    const SizedBox(height: 20),
-                    _buildChangePasswordButton(isDark, colorScheme),
-                    const SizedBox(height: 80), // Bottom padding for fixed navbar
-                  ]),
+                  delegate: SliverChildListDelegate(
+                    isLoading
+                        ? _buildSkeletonList(isDark, colorScheme)
+                        : [
+                            const SizedBox(height: 16),
+                            _buildProfileHeader(isDark, colorScheme),
+                            const SizedBox(height: 24),
+                            _buildPersonalInfoSection(isDark, colorScheme),
+                            const SizedBox(height: 20),
+                            _buildProfessionalCredentialsSection(isDark, colorScheme),
+                            const SizedBox(height: 20),
+                            _buildAddressSection(isDark, colorScheme),
+                            const SizedBox(height: 20),
+                            _buildChangePasswordButton(isDark, colorScheme),
+                            const SizedBox(height: 80),
+                          ],
+                  ),
                 ),
               ),
             ],
@@ -880,6 +885,168 @@ Widget _buildDefaultAvatar(bool isDark, ColorScheme colorScheme) {
           ),
         ),
       ), 
+    );
+  }
+  // ================= Skeleton Loader =================
+  List<Widget> _buildSkeletonList(bool isDark, ColorScheme colorScheme) {
+    return [
+      const SizedBox(height: 16),
+      _buildSkeletonHeader(),
+      const SizedBox(height: 24),
+      _buildSkeletonCard(fieldsCount: 3, isDark: isDark, colorScheme: colorScheme),
+      const SizedBox(height: 20),
+      _buildSkeletonCard(fieldsCount: 2, isDark: isDark, colorScheme: colorScheme),
+      const SizedBox(height: 20),
+      _buildSkeletonAddressCard(isDark, colorScheme),
+      const SizedBox(height: 20),
+      _buildSkeletonButtonCard(isDark, colorScheme),
+      const SizedBox(height: 80),
+    ];
+  }
+
+  Widget _buildSkeletonHeader() {
+    return Center(
+      child: Column(
+        children: const [
+          ShimmerSkeleton(
+            width: 128,
+            height: 128,
+            borderRadius: BorderRadius.all(Radius.circular(64)),
+          ),
+          SizedBox(height: 16),
+          ShimmerSkeleton(width: 140, height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonCard({
+    required int fieldsCount,
+    required bool isDark,
+    required ColorScheme colorScheme,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                ShimmerSkeleton(width: 20, height: 20, borderRadius: BorderRadius.all(Radius.circular(4))),
+                SizedBox(width: 8),
+                ShimmerSkeleton(width: 160, height: 16),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            for (int i = 0; i < fieldsCount; i++) ...[
+              const ShimmerSkeleton(width: 90, height: 10),
+              const SizedBox(height: 6),
+              ShimmerSkeleton(
+                width: double.infinity,
+                height: 42,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              if (i != fieldsCount - 1) const SizedBox(height: 16),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonAddressCard(bool isDark, ColorScheme colorScheme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Row(
+                  children: [
+                    ShimmerSkeleton(width: 20, height: 20, borderRadius: BorderRadius.all(Radius.circular(4))),
+                    SizedBox(width: 8),
+                    ShimmerSkeleton(width: 80, height: 16),
+                  ],
+                ),
+                ShimmerSkeleton(width: 20, height: 20, borderRadius: BorderRadius.all(Radius.circular(4))),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            ShimmerSkeleton(
+              width: double.infinity,
+              height: 60,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonButtonCard(bool isDark, ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        children: const [
+          ShimmerSkeleton(
+            width: 40,
+            height: 40,
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerSkeleton(width: 120, height: 16),
+                SizedBox(height: 6),
+                ShimmerSkeleton(width: 160, height: 12),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -67,6 +67,8 @@ List<Review> get reviews => _product?.reviews ?? [];
     //print(" product config : ${_product!.configuration}");
     try {
       final freshproduct = await _apiService.fetchProductById(widget.productId);
+      print('🔍 Product rental details: ${freshproduct.dailyPrice}');
+print('🔍 Is rentable: ${freshproduct.isRentable}');
       final reviews = await _apiService.getProductReviews(widget.productId);
 
     reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // الأحدث أولاً
@@ -107,7 +109,8 @@ if (mounted) {
         warranty: freshproduct.warranty,
         setupDuration: freshproduct.setupDuration,
         supplierData: freshproduct.supplierData,
-        reviews: updatedReviews, // ✅ من API منفصل
+        reviews: updatedReviews,
+        dailyPrice: freshproduct.dailyPrice ?? 0,
       );
                       isLoading = false;
 
@@ -173,64 +176,60 @@ double get averageRating {
 
 Future<void> _rentNow() async {
   String formatDate(DateTime date) {
-     return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
-
-    //return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
   }
 
-  print('sending rent validation');
-  print(' productId : ${_product!.id}');
-  print('quantity: $rentQuantity');
-  print("start date : ${formatDate(rentStartDate!)}");
-   print("end date : ${formatDate(rentEndDate!)}");
-
-  try{
-
-  final isValid = await _apiService.validateRent(
-    productId: _product!.id,
-    quantity: rentQuantity,
-    startDate: formatDate(rentStartDate!),
-    endDate: formatDate(rentEndDate!),
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: CircularProgressIndicator()),
   );
 
-  if (isValid) {
-    final rentalItem = RentalItem(
+  try {
+    final validateResult = await _apiService.validateRent(
       productId: _product!.id,
-      name: _product!.name,
-      price: _product!.dailyRent  ?? 0.0,
-      image: _product!.imagePath,
       quantity: rentQuantity,
       startDate: formatDate(rentStartDate!),
       endDate: formatDate(rentEndDate!),
     );
-    print('Rent validated, navigating to checkout,$rentalItem');
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CheckoutAddressPage(
-          isRentalMode: true,
-          rentalItem: rentalItem,
+
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    if (validateResult['success'] == true) {
+      final rentalItem = RentalItem(
+        productId: _product!.id,
+        name: _product!.name,
+        dailyPrice: _product!.dailyPrice ?? 0.0,
+        image: _product!.imagePath,
+        quantity: rentQuantity,
+        startDate: formatDate(rentStartDate!),
+        endDate: formatDate(rentEndDate!),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CheckoutAddressPage(
+            isRentalMode: true,
+            rentalItem: rentalItem,
+          ),
         ),
-      ),
-    );
-  } 
-  } catch(e){
-    // ✅ عرض رسالة الخطأ من الـ API
-    String errorMessage = e.toString().replaceAll('Exception:', '').trim();
-    
-    // لو الخطأ من الـ API نفسه (زي "not rentable" أو "Insufficient stock for rent")
-    if (errorMessage.contains('not rentable')) {
-      errorMessage = 'This product is not available for rent';
-    } else if (errorMessage.contains('Insufficient stock')) {
-      errorMessage = 'Not enough stock available for rent';
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(validateResult['message'] ?? 'Validation failed'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-    
+  } catch (e) {
+    if (mounted) Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(errorMessage),
+        content: Text(e.toString().replaceAll('Exception:', '').trim()),
         backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -891,18 +890,15 @@ void _showCreateListFirstDialog(Product product) async {
         const SizedBox(height: 16),
         locationAndSetupTime(),
         const Divider(),
-        _priceRow("Daily Rent", "\$${_product!.dailyRent?.toStringAsFixed(2) ?? '0.00'}"),
-
-       // _priceRow("Security Deposit", "\$${(_product!.price * .2).toStringAsFixed(0)}"),
-       // const SizedBox(height: 8),
-        _priceRow(
-          "Total Rent",
-          "\$${(rentDays * rentQuantity * (_product!.dailyRent ?? 0.0)).toStringAsFixed(2)}",
-          // rentDays == 0
-          //     ? "\$0.00"
-          //     : "\$${(rentDays * 50 + 200).toStringAsFixed(2)}",
-          bold: true,
-        ),
+       _priceRow(
+  "Daily Rent",
+  "\$${(_product!.dailyPrice ?? 0.0).toStringAsFixed(2)}",
+),
+_priceRow(
+  "Total Rent",
+  "\$${(rentDays * rentQuantity * (_product!.dailyPrice ?? 0.0)).toStringAsFixed(2)}",
+  bold: true,
+),
       ],
     ),
   );
@@ -1384,6 +1380,7 @@ Future<void> _submitReview() async {
           setupDuration: _product!.setupDuration,
           supplierData: _product!.supplierData,
           reviews: [newReview, ..._product!.reviews],
+          dailyPrice: _product!.dailyPrice,
         );
         userRating = 0;
         reviewController.clear();
@@ -1452,6 +1449,7 @@ Future<void> _deleteReview(Review review) async {
           setupDuration: _product!.setupDuration,
           supplierData: _product!.supplierData,
           reviews: updatedReviews,
+          dailyPrice: _product!.dailyPrice,
         );
         isLoading = false;
       });
@@ -1736,7 +1734,7 @@ Future<void> _deleteReview(Review review) async {
                 // ✅ ضيفه local برضو لو عايز
                 cartItemsGlobal.add(
                   CartItem(
-                    daily_rent: 0,
+                    dailyPrice: _product!.dailyPrice ?? 0,
                     name: _product!.name,
                     image: _product!.imagePath,
                     quantity: 1,

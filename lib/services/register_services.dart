@@ -27,7 +27,7 @@ class RegisterService {
         'full_name': fullName,
         'email': email,
         'password': password,
-        'password_confirmation': password,
+        'password_confirmation': password, 
         'address': address,
         'national_id': nationalId,
         'phone': phone,
