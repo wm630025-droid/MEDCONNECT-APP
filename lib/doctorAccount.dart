@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 //import 'package:medconnect_app/acceptedSupplier.dart';
 import 'package:medconnect_app/customRequest.dart';
@@ -8,6 +10,7 @@ import 'package:medconnect_app/core/app_colorDoctor.dart';
 import 'package:medconnect_app/doctorProfile.dart';
 import 'package:medconnect_app/models/order_model.dart';
 import 'package:medconnect_app/order_details.dart';
+import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/services/order_services.dart';
 import 'package:medconnect_app/services/Get_doctor_profile.dart';
 //import 'package:medconnect_app/Screens/homeScreen.dart';
@@ -212,14 +215,32 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
   List<Order> _orders = [];
   bool _isLoading = true;
   String? _error;
+  bool _isFirstLoad = true; // ✅ أول مرة
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _loadRecentOrders();
+     _startPolling();
   }
-
-  Future<void> _loadRecentOrders() async {
+ void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _loadRecentOrders(forceRefresh: true);
+      }
+    });
+  }
+  Future<void> _loadRecentOrders({bool forceRefresh =false}) async {
+     if (ApiService.cachedRecentOrders != null && 
+        !forceRefresh && 
+        !_isFirstLoad) {
+      setState(() {
+        _orders = ApiService.cachedRecentOrders!;
+        _isLoading = false;
+      });
+      return;
+    }
     setState(() {
       _isLoading = true;
       _error = null;
@@ -228,12 +249,15 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
     try {
       final result = await OrderServices.fetchDoctorOrders(
         page: 1,
-        perPage: 3, // ✅ 3 orders بس
+        perPage: 3, 
+        // ✅ 3 orders بس
+        forceRefresh: forceRefresh,
       );
 
       setState(() {
         _orders = result['orders'] as List<Order>;
         _isLoading = false;
+        _isFirstLoad = false; // ✅ تم التحميل الأول
       });
     } catch (e) {
       setState(() {
@@ -242,6 +266,11 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
       });
     }
   }
+    @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +278,7 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
       title: "Recent Orders",
       child:Column(
         children: [
-        if (_isLoading)
+        if (_isLoading && _orders.isEmpty)
             _buildShimmer()
           else if (_error != null)
             _buildErrorWidget()
@@ -835,7 +864,7 @@ class OldChatsSection extends StatelessWidget {
                 leading: const Icon(Icons.forum),
                 title: const Text(
                   "Tab To View All Chats",
-                  style: TextStyle(fontWeight: FontWeight.w600,color: Colors.blue),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.blue),
                 ),
                 //subtitle: const Text("Re: Anesthesia Machine"),
                 trailing: const Icon(Icons.arrow_right),
@@ -997,7 +1026,7 @@ class CustomRequestsSection extends StatelessWidget {
             leading: const Icon(Icons.edit_note),
             title: const Text(
               "Tab To View All Custom Requests",
-              style: TextStyle(fontWeight: FontWeight.w600,color: Colors.blue),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,color: Colors.blue),
             ),
             // subtitle: const Text("3 quotes received"),
             onTap: () {

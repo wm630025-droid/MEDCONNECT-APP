@@ -449,25 +449,40 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
               ),
               const SizedBox(height: 5),
               // Product Items
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: request.item
-                      .map(
-                        (item) => Text(
-                          item,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            decoration: isCancelled
-                                ? TextDecoration.lineThrough
-                                : null,
-                            // color: isCancelled ? Colors.grey : Colors.black,
+              Container(
+              //  crossAxisAlignment: CrossAxisAlignment.start,
+              
+                margin: const EdgeInsets.symmetric(horizontal: 10,),
+                
+                width: double.infinity,
+                decoration: BoxDecoration(
+                
+                  color: Colors.grey.shade100,
+         borderRadius: BorderRadius.circular(8),
+                ),
+               // color: Colors.grey.shade200,
+                child: Padding(
+
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: request.item
+                        .map(
+                          (item) => Text(
+                            item,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              decoration: isCancelled
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              // color: isCancelled ? Colors.grey : Colors.black,
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(),
+                        )
+                        .toList(),
+                  ),
                 ),
               ),
 

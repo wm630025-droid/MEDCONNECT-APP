@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/services/api_service.dart';
+
 //import 'package:medconnect_app/services/pusher_service.dart';
 //ClientException with SocketException: Failed host lookup: 'pub.dev' (OS Error: No such host is known, errno = 11001), uri=https://pub.dev/api/packages/dio/advisories
 // Failed to update packages.
@@ -46,23 +47,24 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _error;
   int? conversationId;
   Timer? _pollTimer;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-     print('🟢 ChatScreen initState');
-  print('📦 widget.conversationId: ${widget.conversationId}');
-  print('📦 widget.receiverId: ${widget.receiverId}');
+    print('🟢 ChatScreen initState');
+    print('📦 widget.conversationId: ${widget.conversationId}');
+    print('📦 widget.receiverId: ${widget.receiverId}');
 
     if (widget.conversationId != null) {
-       print('✅ conversationId set to: $conversationId');
+      print('✅ conversationId set to: $conversationId');
       conversationId = widget.conversationId;
       _loadMessages();
       // _subscribeToPusher();
       _startPolling();
     } else {
-       print('⚠️ conversationId is null, calling _fetchOrCreateConversation');
-     // _loading = false;
+      print('⚠️ conversationId is null, calling _fetchOrCreateConversation');
+      // _loading = false;
       _fetchOrCreateConversation();
     }
   }
@@ -95,13 +97,14 @@ class _ChatScreenState extends State<ChatScreen> {
   // }
 
   void _startPolling() {
-    _pollTimer = Timer.periodic( Duration(seconds: 5), (Timer) {
-      if(mounted && conversationId != null) {
+    _pollTimer = Timer.periodic(Duration(seconds: 5), (Timer) {
+      if (mounted && conversationId != null) {
         _checkNewMessages();
       }
     });
   }
-    Future<void> _checkNewMessages() async {
+
+  Future<void> _checkNewMessages() async {
     if (conversationId == null) return;
 
     try {
@@ -124,9 +127,10 @@ class _ChatScreenState extends State<ChatScreen> {
       print('Error checking new messages: $e');
     }
   }
+
   @override
   void dispose() {
-     _pollTimer?.cancel();
+    _pollTimer?.cancel();
     // if (conversationId != null) {
     //   PusherService().unsubscribeFromConversation(conversationId!);
     // }
@@ -144,20 +148,20 @@ class _ChatScreenState extends State<ChatScreen> {
       );
       if (found != null) {
         conversationId = found['id'];
-         print('✅ Found conversation: $conversationId');
+        print('✅ Found conversation: $conversationId');
         await _loadMessages();
         _startPolling();
       } else {
-           print('⚠️ No conversation found, waiting for first message');
+        print('⚠️ No conversation found, waiting for first message');
         setState(() {
-          _loading=false;
+          _loading = false;
         });
         // في حالة لسه مفيش محادثة، هتعملي create أول رسالة
         // مش موجود الصراحة في الـ APIs، ممكن أول رسالة تعملها
       }
     } catch (e) {
       setState(() {
-        _loading=false;
+        _loading = false;
         _error = e.toString();
       });
       print(e);
@@ -167,34 +171,42 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadMessages() async {
     if (conversationId == null) return;
 
-  try {
-    final messages = await _api.getMessages(conversationId!);
-    if (mounted) {
-    setState(() {
-      _messages = messages.map((m) {
-        return ChatMessage(
-          id: m['id'],
-          text: m['body'],
-          type: 'text',
-          time: DateTime.parse(m['created_at']),
-          isMe: m['sender']['role'] == 'doctor',
-        );
-      }).toList();
-      _loading = false;
-    });
-    }
-    
+    try {
+      final messages = await _api.getMessages(conversationId!);
+      if (mounted) {
+        setState(() {
+          _messages = messages.map((m) {
+            return ChatMessage(
+              id: m['id'],
+              text: m['body'],
+              type: 'text',
+              time: DateTime.parse(m['created_at']),
+              isMe: m['sender']['role'] == 'doctor',
+            );
+          }).toList();
+          _loading = false;
+        });
 
-    // ✅ بعد تحميل الرسائل نحددها كمقروءة
-    await _api.markConversationAsRead(conversationId!);
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _loading = false;
-        _error = e.toString();
-      });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+      // ✅ بعد تحميل الرسائل نحددها كمقروءة
+      await _api.markConversationAsRead(conversationId!);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e.toString();
+        });
+      }
     }
-  }
   }
   //  Future<void> _loadMessages() async {
   //     if (conversationId == null) return;
@@ -231,60 +243,67 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     });
-     
-      _controller.clear();
-      try{
- final response = await _api.sendMessage(
-      receiverId: widget.receiverId, // ✅ من الـ widget
-      message: text,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+
+    _controller.clear();
+    try {
+      final response = await _api.sendMessage(
+        receiverId: widget.receiverId, // ✅ من الـ widget
+        message: text,
+      );
       print('📦 Full sendMessage Response: $response'); // ✅ برينت
 
-    // ✅ تحقق من وجود البيانات قبل استخدامها
-  //  Navigator.pop(context,true);
-    final data = response['data'];
-    final newMsg =data['message'];
-    final conv = data['conversation'];
+      // ✅ تحقق من وجود البيانات قبل استخدامها
+      //  Navigator.pop(context,true);
+      final data = response['data'];
+      final newMsg = data['message'];
+      final conv = data['conversation'];
 
-
-
-    // ✅ لو أول رسالة، ناخد conversationId
-    if (conversationId == null && conv != null) {
-      setState(() {
-        conversationId = conv['id'];
-      });
-      _startPolling(); // ✅ نبدأ نسمع رسائل جديدة
-    }
-       if (newMsg != null && newMsg['id'] != null) {
-      setState(() {
-        final index = _messages.indexWhere((m) => m.id == tempId);
-        if (index != -1) {
-          _messages[index] = ChatMessage(
-            id: newMsg['id'],
-            text: text,
-            type: 'text',
-            time: DateTime.now(),
-            isMe: true,
-          );
-        }
-      });
-    }
-// setState(() {
-//       final index = _messages.indexWhere((m) => m.id == tempId);
-//       if (index != -1) {
-//         _messages[index] = ChatMessage(
-//           id: newMsg['id'],
-//           text: text,
-//           type: 'text',
-//           time: DateTime.now(),
-//           isMe: true,
-//         );
-//       }
-//     });
-     // Navigator.pop(context,true);
+      // ✅ لو أول رسالة، ناخد conversationId
+      if (conversationId == null && conv != null) {
+        setState(() {
+          conversationId = conv['id'];
+        });
+        _startPolling(); // ✅ نبدأ نسمع رسائل جديدة
+      }
+      if (newMsg != null && newMsg['id'] != null) {
+        setState(() {
+          final index = _messages.indexWhere((m) => m.id == tempId);
+          if (index != -1) {
+            _messages[index] = ChatMessage(
+              id: newMsg['id'],
+              text: text,
+              type: 'text',
+              time: DateTime.now(),
+              isMe: true,
+            );
+          }
+        });
+      }
+      // setState(() {
+      //       final index = _messages.indexWhere((m) => m.id == tempId);
+      //       if (index != -1) {
+      //         _messages[index] = ChatMessage(
+      //           id: newMsg['id'],
+      //           text: text,
+      //           type: 'text',
+      //           time: DateTime.now(),
+      //           isMe: true,
+      //         );
+      //       }
+      //     });
+      // Navigator.pop(context,true);
     } catch (e) {
       print(e);
-      
+
       setState(() {
         _messages.removeWhere((m) => m.id == tempId);
       });
@@ -312,20 +331,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // زرار الإرفاق (دلوقتي تجريبي)
   void sendAttachment(String type) {
-    if(mounted) {
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch,
-          text: type == "image" ? "Image Sent" : "File Sent",
-          type: type,
-          time: DateTime.now(),
-          isMe: true,
-        ),
-      );
-    });
-  
-  }
+    if (mounted) {
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            id: DateTime.now().millisecondsSinceEpoch,
+            text: type == "image" ? "Image Sent" : "File Sent",
+            type: type,
+            time: DateTime.now(),
+            isMe: true,
+          ),
+        );
+      });
+    }
   }
 
   String formatTime(DateTime time) {
@@ -342,11 +360,11 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
 
       body: Column(
-        
         children: [
           /// الرسائل
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(12),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
@@ -474,4 +492,4 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-  }
+}

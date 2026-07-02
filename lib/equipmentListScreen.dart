@@ -628,6 +628,7 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
                       // ✅ قائمة فاضية - جملة تضغط تودي لـ HomeScreen
                       if (list.items.isEmpty)
                         Container(
+                          width: double.infinity,
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
                             color: Colors.grey[50],
@@ -662,7 +663,7 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
                                   );
                                 },
                                 child: Text(
-                                  'Tap here to go to Home and search for products',
+                                  'search for products',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: AppColors.primary,
