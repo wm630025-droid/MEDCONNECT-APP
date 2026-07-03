@@ -7,8 +7,6 @@ import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/splashScreen.dart';
 import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/cartScreen.dart';
-// import 'package:medconnect_app/wishList.dart';
-// import 'package:medconnect_app/providers/wishlist_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 Future<void> main() async {

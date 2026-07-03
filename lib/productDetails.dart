@@ -13,7 +13,6 @@ import 'package:medconnect_app/services/equipment_service.dart'
     as EquipmentApiService;
 import 'package:medconnect_app/supplierProfile.dart';
 import 'package:provider/provider.dart';
-import '../providers/wishlist_provider.dart';
 import 'package:medconnect_app/shimmerSkeleton.dart';
 
 // ---------------- PAGE ----------------
@@ -39,7 +38,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Product? _product;
   bool isLoading = true;
   String? _error;
-  //bool _isNotified = false;
 
   bool get isOutOfStock =>
       _product!.stock == 0 && _product!.restockDate == null;
@@ -77,7 +75,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           doctorName: r.doctorName,
           canDelete: r.doctorId == ApiService.doctorId,
           profileImageUrl: r.profileImageUrl,
-          
         );
       }).toList();
 
@@ -99,7 +96,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             specification: _product!.specification,
             warranty: _product!.warranty,
             configuration: _product!.configuration,
-            dailyRent: _product!.dailyRent,
+            dailyPrice: _product!.dailyPrice ?? 0.0,
             rentalStock: _product!.rentalStock,
             setupDuration: _product!.setupDuration,
             supplierData: _product!.supplierData,
@@ -122,19 +119,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         });
       }
       await _fetchReviews(); // ✅ جلب التعليقات بعد تحميل المنتج
-      //await _checkNotificationStatus();
       return; // ✅ رجوع عشان ما ينفذش الكود اللي بعده
     }
-    // // لو محتاجين نجيب من API
-    // setState(() {
-    //   _isLoading = true;
-    //   _error = null;
-    // });
-    //print(" product config : ${_product!.configuration}");
+
     try {
-      final freshproduct = await _apiService.fetchProductById(widget.productId);
+      final freshproduct = 
+          await _apiService.fetchProductById(widget.productId);
       print('🔍 Product rental details: ${freshproduct.dailyPrice}');
-print('🔍 Is rentable: ${freshproduct.isRentable}');
+      print('🔍 Is rentable: ${freshproduct.isRentable}');
       final reviews = await _apiService.getProductReviews(widget.productId);
 
       reviews.sort(
@@ -155,38 +147,34 @@ print('🔍 Is rentable: ${freshproduct.isRentable}');
           profileImageUrl: r.profileImageUrl,
         );
       }).toList();
-if (mounted) {
-      setState(() {
-        _product = freshproduct;
+      if (mounted) {
+        setState(() {
+          _product = freshproduct;
 
-        _product = Product(
-        id: freshproduct.id,
-        supplierId: freshproduct.supplierId,
-        name: freshproduct.name,
-        brand: freshproduct.brand,
-        price: freshproduct.price,
-        imagePath: freshproduct.imagePath,
-        stock: freshproduct.stock,
-        isRentable: freshproduct.isRentable,
-        restockDate: freshproduct.restockDate,
-        status: freshproduct.status,
-        images: freshproduct.images,
-        description: freshproduct.description,
-        specification: freshproduct.specification,
-        warranty: freshproduct.warranty,
-        setupDuration: freshproduct.setupDuration,
-        supplierData: freshproduct.supplierData,
-        reviews: updatedReviews,
-        dailyPrice: freshproduct.dailyPrice ?? 0,
-      );
-                      isLoading = false;
-
-      });
-}
-
- await _checkNotificationStatus();
-
-      // await _checkNotificationStatus();
+          _product = Product(
+            id: freshproduct.id,
+            supplierId: freshproduct.supplierId,
+            name: freshproduct.name,
+            brand: freshproduct.brand,
+            price: freshproduct.price,
+            imagePath: freshproduct.imagePath,
+            stock: freshproduct.stock,
+            isRentable: freshproduct.isRentable,
+            restockDate: freshproduct.restockDate,
+            status: freshproduct.status,
+            images: freshproduct.images,
+            description: freshproduct.description,
+            specification: freshproduct.specification,
+            warranty: freshproduct.warranty,
+            setupDuration: freshproduct.setupDuration,
+            supplierData: freshproduct.supplierData,
+            reviews: updatedReviews,
+            dailyPrice: freshproduct.dailyPrice ?? 0,
+            rentalStock: freshproduct.rentalStock ?? 0,
+          );
+          isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -196,32 +184,10 @@ if (mounted) {
       }
     }
   }
-
-  // ✅ دالة منفصلة عشان نجيب isNotified
-  // Future<void> _checkNotificationStatus() async {
-  //   if (_product == null) return;
-  //   final isNotified = await _apiService.isNotified(_product!.id);
-  //   if (mounted) {
-  //     setState(() {
-  //       _isNotified = isNotified;
-  //     });
-  //   }
-  // }
   // -------- Rent --------
   DateTime? rentStartDate;
   DateTime? rentEndDate;
   int rentQuantity = 1;
-
-  // -------- Buy --------
-  // String selectedConfig = "Standard Unit";
-  // double get price {
-  //   return selectedConfig == "Total price"
-  //       ? _product!.price
-  //       : _product!.price; // Example price difference
-  // }
-
-  // String selectedWarranty = "";
-
   // -------- Reviews --------
   double get averageRating {
     if (reviews.isEmpty) return 0;
@@ -239,91 +205,91 @@ if (mounted) {
   bool isInWishlist = false;
   bool isInEquipmentList = false;
 
-  Future<void> _rentNow() async {
-    if (rentStartDate == null || rentEndDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select both start and end dates'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
+  // Future<void> _rentNow() async {
+  //   if (rentStartDate == null || rentEndDate == null) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('Please select both start and end dates'),
+  //         backgroundColor: Colors.red,
+  //         behavior: SnackBarBehavior.floating,
+  //         duration: Duration(seconds: 3),
+  //       ),
+  //     );
+  //     return;
+  //   }
 
-    // ✅ التحقق من أن End Date بعد Start Date
-    if (rentEndDate!.isBefore(rentStartDate!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('End date must be after start date'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-    String formatDate(DateTime date) {
-      return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
+  //   // ✅ التحقق من أن End Date بعد Start Date
+  //   if (rentEndDate!.isBefore(rentStartDate!)) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('End date must be after start date'),
+  //         backgroundColor: Colors.red,
+  //         behavior: SnackBarBehavior.floating,
+  //         duration: Duration(seconds: 3),
+  //       ),
+  //     );
+  //     return;
+  //   }
+  //   String formatDate(DateTime date) {
+  //     return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
 
-      //return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    }
+  //     //return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  //   }
 
-    print('sending rent validation');
-    print(' productId : ${_product!.id}');
-    print('quantity: $rentQuantity');
-    print("start date : ${formatDate(rentStartDate!)}");
-    print("end date : ${formatDate(rentEndDate!)}");
+  //   print('sending rent validation');
+  //   print(' productId : ${_product!.id}');
+  //   print('quantity: $rentQuantity');
+  //   print("start date : ${formatDate(rentStartDate!)}");
+  //   print("end date : ${formatDate(rentEndDate!)}");
 
-    try {
-      final isValid = await _apiService.validateRent(
-        productId: _product!.id,
-        quantity: rentQuantity,
-        startDate: formatDate(rentStartDate!),
-        endDate: formatDate(rentEndDate!),
-      );
+  //   try {
+  //     final isValid = await _apiService.validateRent(
+  //       productId: _product!.id,
+  //       quantity: rentQuantity,
+  //       startDate: formatDate(rentStartDate!),
+  //       endDate: formatDate(rentEndDate!),
+  //     );
 
-      if (isValid) {
-        final rentalItem = RentalItem(
-          productId: _product!.id,
-          name: _product!.name,
-          price: _product!.dailyRent ?? 0.0,
-          image: _product!.imagePath,
-          quantity: rentQuantity,
-          startDate: formatDate(rentStartDate!),
-          endDate: formatDate(rentEndDate!),
-        );
-        print('Rent validated, navigating to checkout,$rentalItem');
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                CheckoutAddressPage(isRentalMode: true, rentalItem: rentalItem),
-          ),
-        );
-      }
-    } catch (e) {
-      // ✅ عرض رسالة الخطأ من الـ API
-      String errorMessage = e.toString().replaceAll('Exception:', '').trim();
+  //     if (isValid['success'] == true) {
+  //       final rentalItem = RentalItem(
+  //         productId: _product!.id,
+  //         name: _product!.name,
+  //         dailyPrice: _product!.dailyPrice ?? 0.0,
+  //         image: _product!.imagePath,
+  //         quantity: rentQuantity,
+  //         startDate: formatDate(rentStartDate!),
+  //         endDate: formatDate(rentEndDate!),
+  //       );
+  //       print('Rent validated, navigating to checkout,$rentalItem');
+  //       Navigator.push(
+  //         context,
+  //         MaterialPageRoute(
+  //           builder: (_) =>
+  //               CheckoutAddressPage(isRentalMode: true, rentalItem: rentalItem),
+  //         ),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     // ✅ عرض رسالة الخطأ من الـ API
+  //     String errorMessage = e.toString().replaceAll('Exception:', '').trim();
 
-      // لو الخطأ من الـ API نفسه (زي "not rentable" أو "Insufficient stock for rent")
-      if (errorMessage.contains('not rentable')) {
-        errorMessage = 'This product is not available for rent';
-      } else if (errorMessage.contains('Insufficient stock')) {
-        errorMessage = 'Not enough stock available for rent';
-      }
+  //     // لو الخطأ من الـ API نفسه (زي "not rentable" أو "Insufficient stock for rent")
+  //     if (errorMessage.contains('not rentable')) {
+  //       errorMessage = 'This product is not available for rent';
+  //     } else if (errorMessage.contains('Insufficient stock')) {
+  //       errorMessage = 'Not enough stock available for rent';
+  //     }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text(errorMessage),
+  //         backgroundColor: Colors.red,
+  //         behavior: SnackBarBehavior.floating,
+  //         duration: const Duration(seconds: 3),
+  //       ),
+  //     );
+  //   }
+  // }
 
   void _showAddToListDialog(Product product) async {
     try {
@@ -388,62 +354,7 @@ if (mounted) {
             child: const Text("Create"),
           ),
         ],
-Future<void> _rentNow() async {
-  String formatDate(DateTime date) {
-    return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
-  }
-
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const Center(child: CircularProgressIndicator()),
-  );
-
-  try {
-    final validateResult = await _apiService.validateRent(
-      productId: _product!.id,
-      quantity: rentQuantity,
-      startDate: formatDate(rentStartDate!),
-      endDate: formatDate(rentEndDate!),
-    );
-
-    if (!mounted) return;
-    Navigator.pop(context);
-
-    if (validateResult['success'] == true) {
-      final rentalItem = RentalItem(
-        productId: _product!.id,
-        name: _product!.name,
-        dailyPrice: _product!.dailyPrice ?? 0.0,
-        image: _product!.imagePath,
-        quantity: rentQuantity,
-        startDate: formatDate(rentStartDate!),
-        endDate: formatDate(rentEndDate!),
-      );
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => CheckoutAddressPage(
-            isRentalMode: true,
-            rentalItem: rentalItem,
-          ),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(validateResult['message'] ?? 'Validation failed'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  } catch (e) {
-    if (mounted) Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(e.toString().replaceAll('Exception:', '').trim()),
-        backgroundColor: Colors.red,
+            
       ),
     );
     if (confirmed == true && controller.text.isNotEmpty) {
@@ -518,6 +429,66 @@ Future<void> _rentNow() async {
           ),
         );
       }
+    }
+  }
+  Future<void> _rentNow() async {
+    String formatDate(DateTime date) {
+      return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final validateResult = await _apiService.validateRent(
+        productId: _product!.id,
+        quantity: rentQuantity,
+        startDate: formatDate(rentStartDate!),
+        endDate: formatDate(rentEndDate!),
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (validateResult['success'] == true) {
+        final rentalItem = RentalItem(
+          productId: _product!.id,
+          name: _product!.name,
+          dailyPrice: _product!.dailyPrice ?? 0.0,
+          image: _product!.imagePath,
+          quantity: rentQuantity,
+          startDate: formatDate(rentStartDate!),
+          endDate: formatDate(rentEndDate!),
+        );
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CheckoutAddressPage(
+              isRentalMode: true,
+              rentalItem: rentalItem,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(validateResult['message'] ?? 'Validation failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception:', '').trim()),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
   // ---------------- UI ----------------
@@ -709,44 +680,6 @@ Future<void> _rentNow() async {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  // Expanded(
-                  //   child: SizedBox(
-                  //     height: 40,
-                  //     child: ElevatedButton.icon(
-                  //       onPressed: () {
-                  //         wishlistProvider.toggleWishlist(_product!.id);
-                  //         ScaffoldMessenger.of(context).showSnackBar(
-                  //           SnackBar(
-                  //             content: Text(
-                  //               wishlistProvider.isInWishlist(_product!.id)
-                  //                   ? "Added to wishlist"
-                  //                   : "Removed from wishlist",
-                  //             ),
-                  //             duration: const Duration(seconds: 1),
-                  //           ),
-                  //         );
-                  //       },
-                  //       icon: Icon(
-                  //         isInWishlist ? Icons.favorite : Icons.favorite_border,
-                  //         color: isInWishlist ? Colors.red : Colors.black,
-                  //       ),
-                  //       label: Text(
-                  //         "Wishlist",
-                  //         style: TextStyle(
-                  //           color: isInWishlist ? Colors.red : Colors.black,
-                  //         ),
-                  //       ),
-                  //       style: ElevatedButton.styleFrom(
-                  //         backgroundColor: Colors.white,
-                  //         side: BorderSide(color: Colors.grey.shade300),
-                  //         shape: RoundedRectangleBorder(
-                  //           borderRadius: BorderRadius.circular(8),
-                  //         ),
-                  //       ),
-                  //     ),
-                  //   ),
-                  // ),
-                  // const SizedBox(width: 12),
                   Expanded(
                     child: SizedBox(
                       height: 35,
@@ -782,7 +715,6 @@ Future<void> _rentNow() async {
             const SizedBox(height: 15),
             _supplierCard(context),
             _rentBuySwitch(),
-            //   if (_product!.stock != 0) ...[
             if (selectedPurchase == 0) _rentConfig(),
             if (selectedPurchase == 1) _buyConfig(),
 
@@ -799,7 +731,6 @@ Future<void> _rentNow() async {
 
   Widget locationAndSetupTime() {
     return Container(
-      // padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -878,9 +809,6 @@ Future<void> _rentNow() async {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          // _product!.setupDuration == 0
-                          //     ? "Same day"
-                          //     :
                           "${_product!.setupDuration}",
                           style: const TextStyle(
                             color: Colors.grey,
@@ -1092,15 +1020,15 @@ Future<void> _rentNow() async {
         const SizedBox(height: 16),
         locationAndSetupTime(),
         const Divider(),
-       _priceRow(
-  "Daily Rent",
-  "\$${(_product!.dailyPrice ?? 0.0).toStringAsFixed(2)}",
-),
-_priceRow(
-  "Total Rent",
-  "\$${(rentDays * rentQuantity * (_product!.dailyPrice ?? 0.0)).toStringAsFixed(2)}",
-  bold: true,
-),
+        _priceRow(
+          "Daily Rent",
+          "\$${(_product!.dailyPrice ?? 0.0).toStringAsFixed(2)}",
+        ),
+        _priceRow(
+          "Total Rent",
+          "\$${(rentDays * rentQuantity * (_product!.dailyPrice ?? 0.0)).toStringAsFixed(2)}",
+          bold: true,
+        ),
       ],
     ),
   );
@@ -1221,82 +1149,11 @@ _priceRow(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // const Text(
-        //   "Configuration",
-        //   style: TextStyle(fontWeight: FontWeight.bold),
-        // ),
-        // const SizedBox(height: 8),
-        // Container(
-        //   width: double.infinity,
-        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        //   decoration: BoxDecoration(
-        //     color: Colors.grey.shade100,
-        //     borderRadius: BorderRadius.circular(12),
-        //     border: Border.all(color: Colors.grey.shade300),
-        //   ),
-        //   child: Text(
-        //     _product!.configuration == 0
-        //         ? "No configuration"
-        //         : "${_product!.configuration} ",
-
-        //     style: const TextStyle(fontSize: 14),
-        //   ),
-        // ),
-
-        // const SizedBox(height: 16),
-        // const Text("Warranty", style: TextStyle(fontWeight: FontWeight.bold)),
-        // const SizedBox(height: 8),
-        // Container(
-        //   width: double.infinity,
-        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        //   decoration: BoxDecoration(
-        //     color: Colors.grey.shade100,
-        //     borderRadius: BorderRadius.circular(12),
-        //     border: Border.all(color: Colors.grey.shade300),
-        //   ),
-        //   child: Text(
-        //     _product!.warranty == 0 || _product!.warranty.isEmpty
-        //         ? "No warranty"
-        //         : "${_product!.warranty} ",
-        //     style: const TextStyle(fontSize: 14),
-        //   ),
-        // ),
         _buildProductInfo(),
         const SizedBox(height: 20),
         locationAndSetupTime(),
         const SizedBox(height: 20),
         _priceRow("Total Price", "\$${_product!.price}", bold: true),
-
-        // if (_product!.stock > 0) ...[
-        //   _priceRow("Total Stock", "\$${_product!.stock}", bold: true),
-        // ],
-
-        // في مكان عرض السعر أو فوق الزر
-        // if (_product!.stock == 0)
-        //   Padding(
-        //     padding: const EdgeInsets.symmetric(horizontal: 16),
-        //     child: Container(
-        //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        //       decoration: BoxDecoration(
-        //         color: Colors.red.shade100,
-        //         borderRadius: BorderRadius.circular(12),
-        //       ),
-        //       child: const Row(
-        //         mainAxisSize: MainAxisSize.min,
-        //         children: [
-        //           Icon(Icons.warning, color: Colors.red, size: 18),
-        //           SizedBox(width: 8),
-        //           Text(
-        //             "Out of Stock",
-        //             style: TextStyle(
-        //               color: Colors.red,
-        //               fontWeight: FontWeight.bold,
-        //             ),
-        //           ),
-        //         ],
-        //       ),
-        //     ),
-        //   ),
         if (_product!.stock > 0 && _product!.stock < 10)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -1308,29 +1165,6 @@ _priceRow(
       ],
     ),
   );
-
-  // Widget _dropdown(
-  //   String value,
-  //   List<String> items,
-  //   Function(String?) onChanged,
-  // ) {
-  //   return Container(
-  //     padding: const EdgeInsets.symmetric(horizontal: 12),
-  //     decoration: BoxDecoration(
-  //       color: Colors.grey.shade200,
-  //       borderRadius: BorderRadius.circular(12),
-  //     ),
-  //     child: DropdownButton<String>(
-  //       value: value,
-  //       isExpanded: true,
-  //       underline: const SizedBox(),
-  //       items: items
-  //           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-  //           .toList(),
-  //       onChanged: onChanged,
-  //     ),
-  //   );
-  // }
 
   // ---------------- TABS ----------------
   Widget _tabs() => Padding(
@@ -1420,21 +1254,6 @@ _priceRow(
               textAlign: TextAlign.center,
             ),
           ),
-
-        // // باقي البيانات (الضمان، مدة التجهيز، الكمية)
-        // if (_product!.warranty != '0') ...[
-        //   const SizedBox(height: 8),
-        //   _SpecRow("Warranty", "${_product!.warranty} months"),
-        // ],
-
-        // if (_product!.setupDuration > 0) ...[
-        //   _SpecRow("Setup Duration", "${_product!.setupDuration} days"),
-        // ],
-
-        // if (_product!.stock > 0)
-        //   _SpecRow("In Stock", "${_product!.stock} units")
-        // else
-        //   _SpecRow("Stock", "Out of Stock"),
       ],
     ),
   );
@@ -1483,11 +1302,9 @@ _priceRow(
 
         // Reviews List (من API)
         if (reviews.isNotEmpty)
-          ...reviews.map(
-          
-            (r) { 
-              print('Review Url: ${r.profileImageUrl}');
-              return Container(
+          ...reviews.map((r) {
+            print('Review Url: ${r.profileImageUrl}');
+            return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -1505,36 +1322,50 @@ _priceRow(
                 children: [
                   Row(
                     children: [
-                        CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.grey.shade200,
-              child: r.profileImageUrl != null && r.profileImageUrl!.isNotEmpty
-                  ? ClipOval(
-                      child: Image.network(
-                        r.profileImageUrl!,
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.cover,
-                        cacheWidth: 80,
-                        cacheHeight: 80,
-                        errorBuilder: (context, error, stackTrace) {
-                          print('❌ Image load error: $error');
-                          return const Icon(Icons.person, size: 24, color: Colors.grey);
-                        },
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          );
-                        },
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.grey.shade200,
+                        child:
+                            r.profileImageUrl != null &&
+                                r.profileImageUrl!.isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  r.profileImageUrl!,
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 80,
+                                  cacheHeight: 80,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    print('❌ Image load error: $error');
+                                    return const Icon(
+                                      Icons.person,
+                                      size: 24,
+                                      color: Colors.grey,
+                                    );
+                                  },
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return const Center(
+                                          child: SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person,
+                                size: 24,
+                                color: Colors.grey,
+                              ),
                       ),
-                    )
-                  : const Icon(Icons.person, size: 24, color: Colors.grey),
-            ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -1578,8 +1409,7 @@ _priceRow(
                 ],
               ),
             );
-            },
-          ).toList() 
+          }).toList()
         else
           const Padding(
             padding: EdgeInsets.all(16),
@@ -1665,30 +1495,7 @@ _priceRow(
           createdAt: DateTime.now(),
           doctorName: ApiService.doctorName ?? ' ',
           canDelete: true,
-      
-      setState(() {
-        _product = Product(
-          // نسخ كل البيانات مع إضافة التقييم الجديد
-          id: _product!.id,
-          supplierId: _product!.supplierId,
-          name: _product!.name,
-          brand: _product!.brand,
-          price: _product!.price,
-          imagePath: _product!.imagePath,
-          stock: _product!.stock,
-          isRentable: _product!.isRentable,
-          restockDate: _product!.restockDate,
-          status: _product!.status,
-          images: _product!.images,
-          description: _product!.description,
-          specification: _product!.specification,
-          warranty: _product!.warranty,
-          setupDuration: _product!.setupDuration,
-          supplierData: _product!.supplierData,
-          reviews: [newReview, ..._product!.reviews],
-          dailyPrice: _product!.dailyPrice,
         );
-
         setState(() {
           _product = Product(
             // نسخ كل البيانات مع إضافة التقييم الجديد
@@ -1709,6 +1516,7 @@ _priceRow(
             setupDuration: _product!.setupDuration,
             supplierData: _product!.supplierData,
             reviews: [newReview, ..._product!.reviews],
+            dailyPrice: _product!.dailyPrice,
           );
           userRating = 0;
           reviewController.clear();
@@ -1752,36 +1560,8 @@ _priceRow(
 
     setState(() => isLoading = true);
 
-  try {
-    final result = await _apiService.deleteReview(review.id);
-    
-    if (result['success'] == true) {
-      // ✅ إزالة التقييم من القائمة محلياً
-      setState(() {
-        final updatedReviews = List<Review>.from(_product!.reviews);
-        updatedReviews.removeWhere((r) => r.id == review.id);
-        _product = Product(
-          id: _product!.id,
-          supplierId: _product!.supplierId,
-          name: _product!.name,
-          brand: _product!.brand,
-          price: _product!.price,
-          imagePath: _product!.imagePath,
-          stock: _product!.stock,
-          isRentable: _product!.isRentable,
-          restockDate: _product!.restockDate,
-          status: _product!.status,
-          images: _product!.images,
-          description: _product!.description,
-          specification: _product!.specification,
-          warranty: _product!.warranty,
-          setupDuration: _product!.setupDuration,
-          supplierData: _product!.supplierData,
-          reviews: updatedReviews,
-          dailyPrice: _product!.dailyPrice,
-        );
-        isLoading = false;
-      });
+    try {
+      final result = await _apiService.deleteReview(review.id);
 
       if (result['success'] == true) {
         // ✅ إزالة التقييم من القائمة محلياً
@@ -1806,6 +1586,7 @@ _priceRow(
             setupDuration: _product!.setupDuration,
             supplierData: _product!.supplierData,
             reviews: updatedReviews,
+            dailyPrice: _product!.dailyPrice,
           );
           isLoading = false;
         });
@@ -1910,182 +1691,128 @@ _priceRow(
 
   final CartService _cartService = CartService();
   Widget _actionButton() {
-     if (selectedPurchase == 0) {
-    // ✅ Rent Now: يظهر لو isRentable == true و rentalStock > 0
-    final bool canRent = _product!.isRentable && (_product!.rentalStock ?? 0) > 0;
-    
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          backgroundColor: canRent ? Colors.green : Colors.grey,
-        ),
-        onPressed: canRent ? _rentNow : null,
-        child: Text(
-          'Rent Now',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-// ✅ حالة Buy
-  if (selectedPurchase == 1) {
-    // ✅ Out of Stock (stock == 0 و restockDate == null)
-    if (_product!.stock == 0 && _product!.restockDate == null) {
+    if (selectedPurchase == 0) {
+      // ✅ Rent Now: يظهر لو isRentable == true و rentalStock > 0
+      final bool canRent =
+          _product!.isRentable && (_product!.rentalStock ?? 0) > 0;
+
       return Padding(
         padding: const EdgeInsets.all(12),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            backgroundColor: Colors.grey,
+            backgroundColor: canRent ? Colors.green : Colors.grey,
           ),
-          onPressed: null,
-          child: const Text(
-            "Out of Stock",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          onPressed: canRent ? _rentNow : null,
+          child: Text(
+            'Rent Now',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       );
     }
-    if (_product!.stock == 0 && _product!.restockDate != null) {
-      return _buildNotifyButton();
-    }
-    // if (_product!.stock == 0 && _product!.restockDate == null) {
-    //   return Padding(
-    //     padding: const EdgeInsets.all(12),
-    //     child: ElevatedButton(
-    //       style: ElevatedButton.styleFrom(
-    //         padding: const EdgeInsets.symmetric(vertical: 14),
-    //         backgroundColor: Colors.grey,
-    //       ),
-    //       onPressed: null,
-    //       child: const Text(
-    //         "Out of Stock",
-    //         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-    //       ),
-    //     ),
-    //   );
-    // }
-    
-    padding: const EdgeInsets.all(12),
-    child: selectedPurchase == 1 ? ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        backgroundColor: _product!.stock == 0
-            ? Colors.grey
-            :  Colors.blue,
-      ),
-      
-      onPressed: _product!.stock == 0
-          ? null // disabled
-          : () async {  //there is change by mohamed
-              final result = await _cartService.addToCart(
-                productId: _product!.id,
-                quantity: 1,
-                type: "sale",
+    // ✅ حالة Buy
+    if (selectedPurchase == 1) {
+      // ✅ Out of Stock (stock == 0 و restockDate == null)
+      if (_product!.stock == 0 && _product!.restockDate == null) {
+        return Padding(
+          padding: const EdgeInsets.all(12),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: Colors.grey,
+            ),
+            onPressed: null,
+            child: const Text(
+              "Out of Stock",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        );
+      }
+      if (_product!.stock == 0 && _product!.restockDate != null) {
+        return _buildNotifyButton();
+      }
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            backgroundColor: Colors.blue,
+          ),
+
+          onPressed: () async {
+            //there is change by mohamed
+            final result = await _cartService.addToCart(
+              productId: _product!.id,
+              quantity: 1,
+              type: "sale",
+            );
+
+            if (result['success'] != false) {
+              // ✅ ضيفه local برضو لو عايز
+              cartItemsGlobal.add(
+                CartItem(
+                  dailyPrice: _product!.dailyPrice ?? 0,
+                  name: _product!.name,
+                  image: _product!.imagePath,
+                  quantity: 1,
+                  price: _product!.price,
+                  type: 'sale',
+                  dateRange: '',
+                  id: _product!.id,
+                  productId: _product!.id,
+                ),
               );
 
-              if (result['success'] != false) {
-                // ✅ ضيفه local برضو لو عايز
-                cartItemsGlobal.add(
-                  CartItem(
-                    dailyPrice: _product!.dailyPrice ?? 0,
-                    name: _product!.name,
-                    image: _product!.imagePath,
-                    quantity: 1,
-                    price: _product!.price,
-                    type: 'sale',
-                    dateRange: '',
-                    id: _product!.id,
-                    productId: _product!.id,
+              // SnackBar
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Product added to cart 🛒"),
+                  duration: const Duration(seconds: 2),
+                  backgroundColor: Colors.blue,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-
-              onPressed:() async {
-                      //there is change by mohamed
-                      final result = await _cartService.addToCart(
-                        productId: _product!.id,
-                        quantity: 1,
-                        type: "sale",
+                  action: SnackBarAction(
+                    label: "View Cart",
+                    textColor: Colors.white,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => CartPage()),
                       );
-
-                      if (result['success'] != false) {
-                        // ✅ ضيفه local برضو لو عايز
-                        cartItemsGlobal.add(
-                          CartItem(
-                            daily_rent: 0,
-                            name: _product!.name,
-                            image: _product!.imagePath,
-                            quantity: 1,
-                            price: _product!.price,
-                            type: 'sale',
-                            dateRange: '',
-                            id: _product!.id,
-                            productId: _product!.id,
-                          ),
-                        );
-
-                        //   ScaffoldMessenger.of(context).showSnackBar(
-                        //     SnackBar(content: Text("${p.name} added to cart ✅")),
-                        //   );
-                        // } else { //there is change by mohamed
-                        //   ScaffoldMessenger.of(context).showSnackBar(
-                        //     SnackBar(content: Text(result['message'] ?? "Error")),
-                        //   );
-                        // }
-
-                        // SnackBar
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Product added to cart 🛒"),
-                            duration: const Duration(seconds: 2),
-                            backgroundColor: Colors.blue,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            action: SnackBarAction(
-                              label: "View Cart",
-                              textColor: Colors.white,
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => CartPage()),
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(result['message'] ?? "Error")),
-                        );
-                      }
                     },
-              child: Text(
-                "Add To Cart",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            )
-         
-              
-  
-    );
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(result['message'] ?? "Error")),
+              );
+            }
+          },
+          child: Text(
+            "Add To Cart",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
-   return const SizedBox.shrink();
-  }
-  
- 
-  
 
   // ---------------- HELPERS ----------------
   Widget _card({required Widget child}) => Padding(
@@ -2119,24 +1846,3 @@ _priceRow(
   );
 }
 
-// ---------------- SPEC ROW ----------------
-// class _SpecRow extends StatelessWidget {    //////comment by mohamed
-//   final String title;
-//   final String value;
-
-//   const _SpecRow(this.title, this.value);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 6),
-//       child: Row(
-//         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//         children: [
-//           Text(title, style: const TextStyle(color: Colors.grey)),
-//           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-//         ],
-//       ),
-//     );
-//   }
-// }
