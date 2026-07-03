@@ -133,6 +133,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     //print(" product config : ${_product!.configuration}");
     try {
       final freshproduct = await _apiService.fetchProductById(widget.productId);
+      print('🔍 Product rental details: ${freshproduct.dailyPrice}');
+print('🔍 Is rentable: ${freshproduct.isRentable}');
       final reviews = await _apiService.getProductReviews(widget.productId);
 
       reviews.sort(
@@ -153,34 +155,36 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           profileImageUrl: r.profileImageUrl,
         );
       }).toList();
-      if (mounted) {
-        setState(() {
-          //   _product = freshproduct;
+if (mounted) {
+      setState(() {
+        _product = freshproduct;
 
-          _product = Product(
-            id: freshproduct.id,
-            supplierId: freshproduct.supplierId,
-            name: freshproduct.name,
-            brand: freshproduct.brand,
-            price: freshproduct.price,
-            imagePath: freshproduct.imagePath,
-            stock: freshproduct.stock,
-            isRentable: freshproduct.isRentable,
-            restockDate: freshproduct.restockDate,
-            status: freshproduct.status,
-            images: freshproduct.images,
-            description: freshproduct.description,
-            specification: freshproduct.specification,
-            configuration: freshproduct.configuration,
-            warranty: freshproduct.warranty,
-            setupDuration: freshproduct.setupDuration,
-            supplierData: freshproduct.supplierData,
-            dailyRent: freshproduct.dailyRent,
-            reviews: updatedReviews, // ✅ من API منفصل
-          );
-          isLoading = false;
-        });
-      }
+        _product = Product(
+        id: freshproduct.id,
+        supplierId: freshproduct.supplierId,
+        name: freshproduct.name,
+        brand: freshproduct.brand,
+        price: freshproduct.price,
+        imagePath: freshproduct.imagePath,
+        stock: freshproduct.stock,
+        isRentable: freshproduct.isRentable,
+        restockDate: freshproduct.restockDate,
+        status: freshproduct.status,
+        images: freshproduct.images,
+        description: freshproduct.description,
+        specification: freshproduct.specification,
+        warranty: freshproduct.warranty,
+        setupDuration: freshproduct.setupDuration,
+        supplierData: freshproduct.supplierData,
+        reviews: updatedReviews,
+        dailyPrice: freshproduct.dailyPrice ?? 0,
+      );
+                      isLoading = false;
+
+      });
+}
+
+ await _checkNotificationStatus();
 
       // await _checkNotificationStatus();
     } catch (e) {
@@ -384,6 +388,62 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             child: const Text("Create"),
           ),
         ],
+Future<void> _rentNow() async {
+  String formatDate(DateTime date) {
+    return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
+  }
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: CircularProgressIndicator()),
+  );
+
+  try {
+    final validateResult = await _apiService.validateRent(
+      productId: _product!.id,
+      quantity: rentQuantity,
+      startDate: formatDate(rentStartDate!),
+      endDate: formatDate(rentEndDate!),
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    if (validateResult['success'] == true) {
+      final rentalItem = RentalItem(
+        productId: _product!.id,
+        name: _product!.name,
+        dailyPrice: _product!.dailyPrice ?? 0.0,
+        image: _product!.imagePath,
+        quantity: rentQuantity,
+        startDate: formatDate(rentStartDate!),
+        endDate: formatDate(rentEndDate!),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CheckoutAddressPage(
+            isRentalMode: true,
+            rentalItem: rentalItem,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(validateResult['message'] ?? 'Validation failed'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  } catch (e) {
+    if (mounted) Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.toString().replaceAll('Exception:', '').trim()),
+        backgroundColor: Colors.red,
       ),
     );
     if (confirmed == true && controller.text.isNotEmpty) {
@@ -1032,21 +1092,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         const SizedBox(height: 16),
         locationAndSetupTime(),
         const Divider(),
-        _priceRow(
-          "Daily Rent",
-          "\$${_product!.dailyRent?.toStringAsFixed(2) ?? '0.00'}",
-        ),
-
-        // _priceRow("Security Deposit", "\$${(_product!.price * .2).toStringAsFixed(0)}"),
-        // const SizedBox(height: 8),
-        _priceRow(
-          "Total Rent",
-          "\$${(rentDays * rentQuantity * (_product!.dailyRent ?? 0.0)).toStringAsFixed(2)}",
-          // rentDays == 0
-          //     ? "\$0.00"
-          //     : "\$${(rentDays * 50 + 200).toStringAsFixed(2)}",
-          bold: true,
-        ),
+       _priceRow(
+  "Daily Rent",
+  "\$${(_product!.dailyPrice ?? 0.0).toStringAsFixed(2)}",
+),
+_priceRow(
+  "Total Rent",
+  "\$${(rentDays * rentQuantity * (_product!.dailyPrice ?? 0.0)).toStringAsFixed(2)}",
+  bold: true,
+),
       ],
     ),
   );
@@ -1611,6 +1665,28 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           createdAt: DateTime.now(),
           doctorName: ApiService.doctorName ?? ' ',
           canDelete: true,
+      
+      setState(() {
+        _product = Product(
+          // نسخ كل البيانات مع إضافة التقييم الجديد
+          id: _product!.id,
+          supplierId: _product!.supplierId,
+          name: _product!.name,
+          brand: _product!.brand,
+          price: _product!.price,
+          imagePath: _product!.imagePath,
+          stock: _product!.stock,
+          isRentable: _product!.isRentable,
+          restockDate: _product!.restockDate,
+          status: _product!.status,
+          images: _product!.images,
+          description: _product!.description,
+          specification: _product!.specification,
+          warranty: _product!.warranty,
+          setupDuration: _product!.setupDuration,
+          supplierData: _product!.supplierData,
+          reviews: [newReview, ..._product!.reviews],
+          dailyPrice: _product!.dailyPrice,
         );
 
         setState(() {
@@ -1676,8 +1752,36 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     setState(() => isLoading = true);
 
-    try {
-      final result = await _apiService.deleteReview(review.id);
+  try {
+    final result = await _apiService.deleteReview(review.id);
+    
+    if (result['success'] == true) {
+      // ✅ إزالة التقييم من القائمة محلياً
+      setState(() {
+        final updatedReviews = List<Review>.from(_product!.reviews);
+        updatedReviews.removeWhere((r) => r.id == review.id);
+        _product = Product(
+          id: _product!.id,
+          supplierId: _product!.supplierId,
+          name: _product!.name,
+          brand: _product!.brand,
+          price: _product!.price,
+          imagePath: _product!.imagePath,
+          stock: _product!.stock,
+          isRentable: _product!.isRentable,
+          restockDate: _product!.restockDate,
+          status: _product!.status,
+          images: _product!.images,
+          description: _product!.description,
+          specification: _product!.specification,
+          warranty: _product!.warranty,
+          setupDuration: _product!.setupDuration,
+          supplierData: _product!.supplierData,
+          reviews: updatedReviews,
+          dailyPrice: _product!.dailyPrice,
+        );
+        isLoading = false;
+      });
 
       if (result['success'] == true) {
         // ✅ إزالة التقييم من القائمة محلياً
@@ -1868,14 +1972,39 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     //   );
     // }
     
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child:  ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor:
-                     Colors.blue,
-              ),
+    padding: const EdgeInsets.all(12),
+    child: selectedPurchase == 1 ? ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        backgroundColor: _product!.stock == 0
+            ? Colors.grey
+            :  Colors.blue,
+      ),
+      
+      onPressed: _product!.stock == 0
+          ? null // disabled
+          : () async {  //there is change by mohamed
+              final result = await _cartService.addToCart(
+                productId: _product!.id,
+                quantity: 1,
+                type: "sale",
+              );
+
+              if (result['success'] != false) {
+                // ✅ ضيفه local برضو لو عايز
+                cartItemsGlobal.add(
+                  CartItem(
+                    dailyPrice: _product!.dailyPrice ?? 0,
+                    name: _product!.name,
+                    image: _product!.imagePath,
+                    quantity: 1,
+                    price: _product!.price,
+                    type: 'sale',
+                    dateRange: '',
+                    id: _product!.id,
+                    productId: _product!.id,
+                  ),
+                );
 
               onPressed:() async {
                       //there is change by mohamed

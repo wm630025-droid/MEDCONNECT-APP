@@ -17,7 +17,7 @@ class CartItem {
   final double price;
   final String type;
   final int productId;
-  final double daily_rent;
+  final double dailyPrice;
   String? dateRange;
   DateTime? rStartDate;
   DateTime? rEndDate;
@@ -32,7 +32,7 @@ class CartItem {
     required this.quantity,
     required this.price,
     required this.type,
-    required this.daily_rent,
+    required this.dailyPrice,
     this.dateRange,
     required this.productId,
     this.rStartDate,
@@ -169,7 +169,7 @@ class _CartPageState extends State<CartPage> {
             quantity: item['quantity'] ?? 1,
             price: product.price,
             type: item['type'] ?? 'sale',
-            daily_rent: 0,
+            dailyPrice: item['price_daily'] ?? 0.0,
             productId: product.id ?? 0,
           ),
         );

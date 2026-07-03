@@ -21,6 +21,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:medconnect_app/services/register_services.dart';
 
+String _stringifyDynamicValue(dynamic value) {
+  if (value == null) return '';
+  if (value is String) return value;
+  if (value is Map || value is List) return jsonEncode(value);
+  return value.toString();
+}
+
 class ApiService {
   static const String baseUrl = 'https://medconnect-one-pi.vercel.app/api/api';
 
@@ -1217,82 +1224,95 @@ static DateTime? cachedCustomRequestsTime;
     // return jsonDecode(res.body);
   }
 
-  // دالة الـ headers الموحدة
-  Map<String, String> _authHeaders() {
+// دالة الـ headers الموحدة
+Map<String, String> _authHeaders() {
+  return {
+    'Accept': 'application/json',
+    'Authorization': 'Bearer $_token',
+    'Content-type': 'application/json'
+  };
+}
+// في api_service.dart
+Future<Map<String, dynamic>> validateRent({
+  required int productId,
+  required int quantity,
+  required String startDate,
+  required String endDate,
+}) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/v1/validateRent/$productId'),
+      headers: _authHeaders(),
+      body: jsonEncode({
+        'quantity': quantity,
+        'rental_start_date': startDate,
+        'rental_end_date': endDate,
+      }),
+    );
+
+    print('📦 Validate Rent Response (${response.statusCode}): ${response.body}');
+    final data = jsonDecode(response.body);
+
+    final bool success = data['success'] == true ||
+        data['status'] == 'success' ||
+        data['message'] == 'Rent is validated' ||
+        data['sccuess'] == true ||
+        data['sccuess'] == 'Rent is validated';
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (success) {
+        String message = data['message'] ?? data['status'] ?? data['sccuess'] ?? 'Rent validated successfully';
+        return {
+          'success': true,
+          'message': message,
+          'paymentLink': _stringifyDynamicValue(data['payment_data']?['redirectTo']),
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['error'] ?? data['message'] ?? data['status'] ?? 'Rent validation failed',
+      };
+    }
+
     return {
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $_token',
-      'Content-type': 'application/json',
+      'success': false,
+      'message': data['error'] ?? data['message'] ?? 'Validation failed with status ${response.statusCode}',
+    };
+  } catch (e) {
+    print('❌ Validate Rent Error: $e');
+    return {
+      'success': false,
+      'message': 'Failed to validate rent: ${e.toString()}',
     };
   }
+}
 
-  Future<bool> validateRent({
-    required int productId,
-    required int quantity,
-    required String startDate,
-    required String endDate,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/v1/validateRent/$productId'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $_token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'quantity': quantity,
-          'rental_start_date': startDate, // لازم M/D/YYYY
-          'rental_end_date': endDate, // لازم M/D/YYYY
-        }),
-      );
-
-      print(
-        '📦************* Validate Rent Response (${response.statusCode}): ${response.body}',
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['success'] == true ||
-            data['sccuess'] == "Rent is validated";
-      } else {
-        final data = jsonDecode(response.body);
-        throw Exception(
-          data['error'] ?? data['message'] ?? 'Validation failed',
-        );
-      }
-    } catch (e) {
-      print('❌ Validate Rent Error: $e');
-
-      throw Exception('Failed to validate rent: $e');
-    }
-  }
-
-  // Future<bool> validateRent({
-  //   required int productId,
-  //   required int quantity,
-  //   required String startDate,
-  //   required String endDate,
-  // }) async {
-  //   final response = await http.post(
-  //     Uri.parse('$baseUrl/v1/validateRent/$productId'),
-  //     headers: _authHeaders(),
-  //     body: jsonEncode({
-  //       'quantity': quantity,
-  //       'rental_start_date': startDate,
-  //       'rental_end_date': endDate,
-  //     }),
-  //   );
-  // print("rent details : response body : ${response.body}");
-  //   if (response.statusCode == 200) {
-  //     final data = jsonDecode(response.body);
-  //     return data['success'] == true ;
-  //   } else {
-  //     final error = jsonDecode(response.body)['error'];
-  //     throw Exception(error);
-  //   }
-  // }
-  //##################################
+// Future<bool> validateRent({
+//   required int productId,
+//   required int quantity,
+//   required String startDate,
+//   required String endDate,
+// }) async {
+//   final response = await http.post(
+//     Uri.parse('$baseUrl/v1/validateRent/$productId'),
+//     headers: _authHeaders(),
+//     body: jsonEncode({
+//       'quantity': quantity,
+//       'rental_start_date': startDate,
+//       'rental_end_date': endDate,
+//     }),
+//   );
+// print("rent details : response body : ${response.body}");
+//   if (response.statusCode == 200) {
+//     final data = jsonDecode(response.body);
+//     return data['success'] == true ;
+//   } else {
+//     final error = jsonDecode(response.body)['error'];
+//     throw Exception(error);
+//   } 
+// }
+//##################################
   Future<void> _saveToken(String token) async {
     print('💾 _saveToken called with: $token');
 

@@ -64,10 +64,11 @@ class OrderItem {
   final double finalPrice;
   final String description;
   final String name;
+  final double total; // ✅ تأكد من وجوده
   final DateTime? rentalStart;
   final DateTime? rentalEnd;
   final Product? product;
-  final double? dailyRent; // ✅ أضف هذا
+  final double? dailyPrice; // ✅ أضف هذا
   final int? rentalDays; // ✅ أضف هذا
   final String? startDate; // ✅ أضف هذا (اختياري)
   final String? endDate; // ✅ أضف هذا (اختياري)
@@ -81,10 +82,12 @@ class OrderItem {
     required this.finalPrice,
     required this.description,
     required this.name,
+    required this.total,
+
     this.rentalStart,
     this.rentalEnd,
     this.product,
-    this.dailyRent,
+    this.dailyPrice,
     this.rentalDays,
     this.startDate,
     this.endDate,
@@ -96,9 +99,14 @@ class OrderItem {
       orderId: json['order_id'] ?? 0,
 
       productId: json['product_id'] ?? 0,
+      total: double.tryParse(json['total']?.toString() ?? '') ?? 0.0,
+
 
       quantity: int.tryParse(json['quantity']?.toString() ?? '') ?? 0,
       unitPrice: double.tryParse(json['unit_price']?.toString() ?? '') ?? 0.0,
+      dailyPrice: json['daily_price'] != null
+          ? double.tryParse(json['daily_price'].toString()) ?? 0.0
+          : null,
 
       finalPrice: double.tryParse(json['final_price']?.toString() ?? '') ?? 0.0,
 

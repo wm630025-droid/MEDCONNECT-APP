@@ -183,7 +183,7 @@ void _deleteProfileImage() {
               children: [
                 profileImageBytes != null
                     ? Image.memory(profileImageBytes!, fit: BoxFit.contain)
-                    : Image.network(profileImageUrl!, fit: BoxFit.contain),
+                    : Image.network('profile_image_url', fit: BoxFit.contain),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),

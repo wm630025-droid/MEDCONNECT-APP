@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/models/order_model.dart';
 import 'package:medconnect_app/services/order_services.dart';
+import 'package:medconnect_app/shimmerSkeleton.dart';
 
 class OrderDetailsPage extends StatefulWidget {
   final int orderId;
@@ -41,33 +42,21 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     return;
   }
 
-  // ✅ التحقق من اختيار سبب الإلغاء
-  if (selectedIssue == "None" || selectedIssue.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          '⚠️ Please select a cancellation reason from "Assign Issue" before cancelling.',
-        ),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 3),
-      ),
-    );
-    return;
-  }
-
   try {
     setState(() {
       _isCancelling = true;
     });
 
-    // ✅ أولاً: تحديث سبب الإلغاء في الـ API
-    final assignResult = await OrderServices.assignOrderIssue(
-      orderId: order.id,
-      orderIssue: selectedIssue,
-    );
+    // ✅ لو المستخدم اختار سبب إلغاء، نحدّثه في الـ API قبل الإلغاء
+    if (selectedIssue != "None" && selectedIssue.isNotEmpty) {
+      final assignResult = await OrderServices.assignOrderIssue(
+        orderId: order.id,
+        orderIssue: selectedIssue,
+      );
 
-    if (assignResult['success'] != true) {
-      throw Exception(assignResult['message'] ?? 'Failed to assign issue');
+      if (assignResult['success'] != true) {
+        throw Exception(assignResult['message'] ?? 'Failed to assign issue');
+      }
     }
 
     // ✅ ثانياً: إلغاء الطلب
@@ -168,7 +157,7 @@ void initState() {
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-  return const Center(child: CircularProgressIndicator());
+  return _buildSkeletonLoader();
 }
 if (!snapshot.hasData) {
   return const Center(child: Text('No order found'));
@@ -918,6 +907,222 @@ if (!snapshot.hasData) {
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: Color(0xFF333333),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  // ================= Skeleton Loader =================
+  Widget _buildSkeletonLoader() {
+    return SafeArea(
+      child: Column(
+        children: [
+          // App Bar placeholder
+          Container(
+            height: 65,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFEAEAEA))),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.arrow_back, color: Color(0xFF3A7DFF), size: 30),
+                const Spacer(),
+                const Text(
+                  "Secure Access",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                const Spacer(),
+                const SizedBox(width: 24),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title placeholder
+                  const ShimmerSkeleton(width: 160, height: 24),
+                  const SizedBox(height: 8),
+                  const ShimmerSkeleton(width: 220, height: 14),
+
+                  const SizedBox(height: 18),
+
+                  // Status badge placeholder
+                  const ShimmerSkeleton(
+                    width: 120,
+                    height: 34,
+                    borderRadius: BorderRadius.all(Radius.circular(50)),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Invoice card placeholder
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xFFE0E0E0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const ShimmerSkeleton(width: 130, height: 12),
+                        const SizedBox(height: 12),
+                        const ShimmerSkeleton(width: 180, height: 22),
+                        const SizedBox(height: 24),
+                        Divider(color: Colors.grey.shade300),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: const [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ShimmerSkeleton(width: 90, height: 11),
+                                  SizedBox(height: 10),
+                                  ShimmerSkeleton(width: 80, height: 17),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ShimmerSkeleton(width: 90, height: 11),
+                                  SizedBox(height: 10),
+                                  ShimmerSkeleton(width: 80, height: 17),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Financial overview placeholder
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xFFE0E0E0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const ShimmerSkeleton(width: 150, height: 11),
+                        const SizedBox(height: 28),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            ShimmerSkeleton(width: 70, height: 18),
+                            ShimmerSkeleton(width: 60, height: 18),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Divider(color: Colors.grey.shade300),
+                        const SizedBox(height: 18),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            ShimmerSkeleton(width: 90, height: 18),
+                            ShimmerSkeleton(width: 100, height: 32),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 34),
+
+                  // Order items title placeholder
+                  Row(
+                    children: [
+                      Icon(Icons.inventory_2_outlined,
+                          color: Colors.grey.shade400),
+                      const SizedBox(width: 10),
+                      const ShimmerSkeleton(width: 120, height: 14),
+                    ],
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // Item cards placeholder (x2)
+                  ...List.generate(
+                    2,
+                    (index) => Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: const Color(0xFFE0E0E0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const ShimmerSkeleton(width: 180, height: 20),
+                          const SizedBox(height: 8),
+                          const ShimmerSkeleton(width: double.infinity, height: 14),
+                          const SizedBox(height: 4),
+                          const ShimmerSkeleton(width: 140, height: 14),
+                          const SizedBox(height: 18),
+                          Row(
+                            children: const [
+                              ShimmerSkeleton(width: 70, height: 34),
+                              SizedBox(width: 16),
+                              ShimmerSkeleton(width: 80, height: 34),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 50),
+
+                  // Assign issue placeholder
+                  const ShimmerSkeleton(width: 110, height: 14),
+                  const SizedBox(height: 18),
+                  ShimmerSkeleton(
+                    width: double.infinity,
+                    height: 56,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+
+                  const SizedBox(height: 38),
+
+                  // Actions placeholder
+                  const ShimmerSkeleton(width: 90, height: 14),
+                  const SizedBox(height: 18),
+                  ShimmerSkeleton(
+                    width: double.infinity,
+                    height: 64,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              ),
             ),
           ),
         ],

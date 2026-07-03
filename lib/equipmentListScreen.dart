@@ -81,7 +81,7 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
             quantity: 1,
             price: product.price, // مش متوفر
             type: 'sale',
-            daily_rent: 0,
+            dailyPrice: product.dailyPrice ?? 0, // مش متوفر
           );
           cartItemsGlobal.add(cartItem);
           addedCount++;

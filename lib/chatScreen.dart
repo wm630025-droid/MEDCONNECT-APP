@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/services/api_service.dart';
 
@@ -10,7 +9,7 @@ import 'package:medconnect_app/services/api_service.dart';
 class ChatMessage {
   final int id;
   final String? text;
-  final String type; // text | image | file
+  final String type;
   final DateTime time;
   final bool isMe;
 
@@ -26,7 +25,7 @@ class ChatMessage {
 class ChatScreen extends StatefulWidget {
   final String chatName;
   final int? conversationId;
-  final int receiverId; // هتحتاجيها عشان تبعتي رسالة
+  final int receiverId;
 
   const ChatScreen({
     super.key,
@@ -41,6 +40,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController(); // ✅ مضافة
   final ApiService _api = ApiService();
   List<ChatMessage> _messages = [];
   bool _loading = true;
@@ -60,7 +60,6 @@ class _ChatScreenState extends State<ChatScreen> {
       print('✅ conversationId set to: $conversationId');
       conversationId = widget.conversationId;
       _loadMessages();
-      // _subscribeToPusher();
       _startPolling();
     } else {
       print('⚠️ conversationId is null, calling _fetchOrCreateConversation');
@@ -69,35 +68,16 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // void _subscribeToPusher() {
-  //   if (conversationId == null) return;
-
-  //   PusherService().subscribeToConversation(conversationId!, (data) {
-  //     // ✅ رسالة جديدة وصلت فوراً من Pusher
-  //     if (mounted) {
-  //       final isMe = data['sender']['id'] == ApiService.doctorId;
-  //       setState(() {
-  //         _messages.add(
-  //           ChatMessage(
-  //             id: data['id'],
-  //             text: data['body'],
-  //             type: 'text',
-  //             time: DateTime.parse(data['sent_at']),
-  //             isMe: isMe,
-  //           ),
-  //         );
-  //       });
-
-  //       // تحديث read_at تلقائياً
-  //       if (!isMe) {
-  //         _api.markConversationAsRead(conversationId!);
-  //       }
-  //     }
-  //   });
-  // }
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _scrollController.dispose(); // ✅ مضافة
+    _controller.dispose();       // ✅ مضافة
+    super.dispose();
+  }
 
   void _startPolling() {
-    _pollTimer = Timer.periodic(Duration(seconds: 5), (Timer) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted && conversationId != null) {
         _checkNewMessages();
       }
@@ -106,25 +86,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _checkNewMessages() async {
     if (conversationId == null) return;
-
     try {
       final messages = await _api.getMessages(conversationId!);
-      final lastMessage = messages.isNotEmpty ? messages.last['body'] : '';
-
-      // ✅ هنا تقارني بين آخر رسالة موجودة عندك والجديدة
-      if (_messages.isNotEmpty && messages.isNotEmpty) {
-        final currentLastId = _messages.last.id;
+      if (!mounted) return;
+      if (messages.isNotEmpty) {
         final newLastId = messages.last['id'];
-
+        final currentLastId = _messages.isNotEmpty ? _messages.last.id : null;
         if (newLastId != currentLastId) {
-          // فيه رسائل جديدة
           await _loadMessages();
         }
-      } else if (messages.isNotEmpty && _messages.isEmpty) {
-        await _loadMessages();
       }
     } catch (e) {
-      print('Error checking new messages: $e');
+      debugPrint('Error checking new messages: $e');
     }
   }
 
@@ -151,87 +124,52 @@ class _ChatScreenState extends State<ChatScreen> {
         print('✅ Found conversation: $conversationId');
         await _loadMessages();
         _startPolling();
-      } else {
-        print('⚠️ No conversation found, waiting for first message');
-        setState(() {
-          _loading = false;
-        });
-        // في حالة لسه مفيش محادثة، هتعملي create أول رسالة
-        // مش موجود الصراحة في الـ APIs، ممكن أول رسالة تعملها
       }
     } catch (e) {
-      setState(() {
-        _loading = false;
-        _error = e.toString();
-      });
-      print(e);
+      debugPrint('Error fetching conversation: $e');
     }
   }
 
   Future<void> _loadMessages() async {
     if (conversationId == null) return;
-
     try {
       final messages = await _api.getMessages(conversationId!);
-      if (mounted) {
-        setState(() {
-          _messages = messages.map((m) {
-            return ChatMessage(
-              id: m['id'],
-              text: m['body'],
-              type: 'text',
-              time: DateTime.parse(m['created_at']),
-              isMe: m['sender']['role'] == 'doctor',
-            );
-          }).toList();
-          _loading = false;
-        });
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        });
-      }
-      // ✅ بعد تحميل الرسائل نحددها كمقروءة
+      if (!mounted) return;
+      setState(() {
+        _messages = messages.map((m) {
+          return ChatMessage(
+            id: m['id'],
+            text: m['body'],
+            type: 'text',
+            time: DateTime.parse(m['created_at']),
+            isMe: m['sender']['role'] == 'doctor',
+          );
+        }).toList();
+        _loading = false;
+      });
       await _api.markConversationAsRead(conversationId!);
+      _scrollToBottom(); // ✅ مضافة
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = e.toString();
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
     }
   }
-  //  Future<void> _loadMessages() async {
-  //     if (conversationId == null) return;
-  //     final List<dynamic> msgs = await _api.getMessages(conversationId!);
-  //     setState(() {
-  //       _messages = msgs.map((m) {
-  //         return ChatMessage(
-  //           text: m['body'],
-  //           type: 'text',
-  //           time: DateTime.parse(m['created_at']),
-  //           isMe: m['sender']['role'] == 'doctor',
-  //         );
-  //       }).toList();
-  //       _loading = false;
-  //     });
 
-  //   }
-
+  // ✅ دالة _sendMessage منفصلة تماماً ومُصلَحة
   Future<void> _sendMessage(String text) async {
     print("-------------------------------");
     print('Reciver ID : ${widget.receiverId}');
     print('Messsege ${text}');
     print("-------------------------------");
     if (text.trim().isEmpty) return;
+
     final tempId = DateTime.now().millisecondsSinceEpoch;
+    _controller.clear();
+
+    // أضف الرسالة مؤقتاً للـ UI
     setState(() {
       _messages.add(
         ChatMessage(
@@ -313,24 +251,20 @@ class _ChatScreenState extends State<ChatScreen> {
       ).showSnackBar(SnackBar(content: Text('Failed to send message: $e')));
     }
   }
-  // void sendTextMessage() {
-  //   if (_controller.text.trim().isEmpty) return;
 
-  //   setState(() {
-  //     _messages.add(
-  //       ChatMessage(
-  //         text: _controller.text.trim(),
-  //         type: "text",
-  //         time: DateTime.now(),
-  //         isMe: true,
-  //       ),
-  //     );
-  //   });
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
-  //   _controller.clear();
-  // }
-
-  // زرار الإرفاق (دلوقتي تجريبي)
+  // ✅ sendAttachment مُصلَحة
   void sendAttachment(String type) {
     if (mounted) {
       setState(() {
@@ -359,22 +293,24 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Text(widget.chatName),
         backgroundColor: Colors.white,
       ),
-
       body: Column(
         children: [
-          /// الرسائل
+          if (_loading)
+            const LinearProgressIndicator(), // ✅ مضافة
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            ),
           Expanded(
             child: ListView.builder(
-              controller: _scrollController,
+              controller: _scrollController, // ✅ مضافة
               padding: const EdgeInsets.all(12),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
-
                 return Align(
-                  alignment: msg.isMe
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
+                  alignment: msg.isMe ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 5),
                     padding: const EdgeInsets.all(12),
@@ -388,42 +324,33 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        /// محتوى الرسالة
                         if (msg.type == "text")
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(msg.text ?? ""),
                           ),
-
                         if (msg.type == "image")
-                          Column(
+                          const Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Icon(Icons.image, size: 40),
                               SizedBox(height: 4),
                               Text("Image attachment"),
                             ],
                           ),
-
                         if (msg.type == "file")
-                          Column(
+                          const Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Icon(Icons.insert_drive_file, size: 40),
                               SizedBox(height: 4),
                               Text("File attachment"),
                             ],
                           ),
-
                         const SizedBox(height: 5),
-
-                        /// الوقت
                         Text(
                           formatTime(msg.time),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.black54,
-                          ),
+                          style: const TextStyle(fontSize: 10, color: Colors.black54),
                         ),
                       ],
                     ),
@@ -432,8 +359,6 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-
-          /// شريط الإدخال
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
@@ -478,10 +403,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       hintText: "Type a message",
                       border: InputBorder.none,
                     ),
+                    onSubmitted: _sendMessage, // ✅ إرسال بـ Enter
                   ),
                 ),
-
-                /// زرار الإرسال
                 IconButton(
                   icon: const Icon(Icons.send, color: Colors.blue),
                   onPressed: () => _sendMessage(_controller.text),

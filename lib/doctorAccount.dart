@@ -15,19 +15,20 @@ import 'package:medconnect_app/services/order_services.dart';
 import 'package:medconnect_app/services/Get_doctor_profile.dart';
 //import 'package:medconnect_app/Screens/homeScreen.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:medconnect_app/checkoutPayment.dart';
 
-@override
-Widget build(BuildContext context) {
-  return MaterialApp(
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      fontFamily: 'Inter',
-      scaffoldBackgroundColor: AppColors.background,
-      useMaterial3: true,
-    ),
-    home: doctorAccountPage(),
-  );
-}
+ 
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        fontFamily: 'Inter',
+        scaffoldBackgroundColor: AppColors.background,
+        useMaterial3: true,
+      ),
+      home:  doctorAccountPage(),
+    );
+  }
 
 // ================= COLORS =================
 
@@ -69,7 +70,7 @@ class DashboardHeader extends StatefulWidget {
 }
 
 class _DashboardHeaderState extends State<DashboardHeader> {
-  String doctorFullName = 'Doctor';
+  String doctorFullName = '';
 
   @override
   void initState() {
@@ -506,7 +507,7 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
   int _lastPage = 1;
   bool _isLoading = false;
   bool _hasLoadedOnce = false;
-  String? _errorMessage; // متغير لتخزين رسالة الخطأ
+  String? _errorMessage; 
 
   @override
   void initState() {
@@ -594,21 +595,32 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
     return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: const Text(
-          'All Orders',
-          style: TextStyle(color: Colors.black,),
-        ),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text(
+        'All Orders',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
-      body: RefreshIndicator(onRefresh: _refreshOrders, child: _buildBody()),
-    );
-  }
+      backgroundColor: AppColors.primary,
+      iconTheme: const IconThemeData(color: Colors.white),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => doctorAccountPage()),
+          (route) => false,
+        ),
+      ),
+    ),
+    body: RefreshIndicator(
+      onRefresh: _refreshOrders,
+      child: _buildBody(),
+    ),
+  );
+}
 
   Widget _buildBody() {
     if (!_hasLoadedOnce) {
@@ -721,9 +733,12 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Total: ${order.total.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 14),
-                ),
+  order.orderType == 'rental'?
+     
+       'Total: \$${order.total.toStringAsFixed(2)}': 'Total: \$${order.subtotal.toStringAsFixed(2)}',
+  style: const TextStyle(fontSize: 14),
+  
+),
                 const SizedBox(height: 4),
                 Text(
                   'Type: ${order.orderType}',
@@ -733,7 +748,7 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                 Text(
                   'Name: $productNames',
                   style: const TextStyle(fontSize: 14),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
