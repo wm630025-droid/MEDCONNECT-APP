@@ -242,6 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
           isMe: true,
         ),
       );
+      
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
