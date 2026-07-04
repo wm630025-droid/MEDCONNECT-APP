@@ -95,10 +95,14 @@ class _HomeScreenState extends State<HomeScreen> {
     _startCategoriesPolling();
     _loadProducts();
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels ==
-              _scrollController.position.maxScrollExtent &&
+      print('Scroll position : ${_scrollController.position.pixels}/ ${_scrollController.position.maxScrollExtent}');
+      print('_hasMore: ${_hasMore},_isloadingmore ${_isLoadingMore}');
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent *.8 &&
           _hasMore &&
           !_isLoadingMore) {
+            print('Reashed botton , load more...');
+           
         _loadProducts(loadMore: true);
       }
     });
@@ -118,7 +122,8 @@ void _startPolling() {
 
   Future<void> _loadProducts({bool loadMore = false, bool forceRefresh = false}) async {
      if (!mounted) return;
-     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh ) {
+     if(loadMore&& _isLoadingMore) return;
+     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh && !loadMore ) {
     setState(() {
       _allProducts = ApiService.cachedProducts!;
       displayedProducts = List.from(_allProducts);
@@ -144,6 +149,7 @@ void _startPolling() {
         _productsError = null;
         _currentPage = 1;
         _allProducts = [];
+        _isFirstLoad = true;
       });
     } else if(loadMore){
       setState(() {
@@ -181,7 +187,7 @@ if (!mounted) return;
         _isLoadingMore = false;
         _isFirstLoad=false;
       });
-
+print('loaded page ${_currentPage -1}, hasmore ${_hasMore}');
       for (var product in _allProducts) {
         if (product.stock == 0 && product.restockDate != null) {
           final isNotified = await _apiService.isNotified(product.id);
@@ -357,11 +363,11 @@ if (!mounted) return;
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: Text('Cancel'),
+                      child: Text('Cancel', style: TextStyle(color: Colors.black)),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: Text('Log out'),
+                      child: Text('Log out', style: TextStyle(color: Colors.blue)),
                     ),
                   ],
                 ),
@@ -404,6 +410,7 @@ if (!mounted) return;
       ),
    // drawer: _buildDrawer(), // افتح الدروير
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -908,11 +915,15 @@ void _showCategoriesTopSheet() {
           children: [
             Text(
               _categoriesError!,
-              style: const TextStyle(color: Colors.red),
+              style: const TextStyle(color: Colors.black),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.blueAccent,
+              ),
               onPressed: _loadCategories,
               child: const Text('Retry'),
             ),
@@ -1001,7 +1012,7 @@ void _showCategoriesTopSheet() {
     return Column(
       children: [
         GridView.builder(
-          controller: _scrollController,
+          //controller: _scrollController,
           itemCount: displayedProducts.length,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -1103,7 +1114,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          ProductDetailsPage(        productId: p.id ,
+                          ProductDetailsPage(        productId: p.id ,product: p,
 ),
                     ),
                   );
@@ -1329,11 +1340,11 @@ final isNotified = notificationProvider.isNotified(p.id);
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Cancel"),
+            child: const Text("Cancel", style: TextStyle(color: Colors.black)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Create"),
+            child: const Text("Create", style: TextStyle(color: Colors.blue)),
           ),
         ],
       ),
@@ -1381,11 +1392,11 @@ final isNotified = notificationProvider.isNotified(p.id);
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Cancel"),
+            child: const Text("Cancel", style: TextStyle(color: Colors.black)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Create"),
+            child: const Text("Create", style: TextStyle(color: Colors.blue)),
           ),
         ],
       ),

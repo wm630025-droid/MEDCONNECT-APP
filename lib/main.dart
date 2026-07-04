@@ -3,15 +3,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/providers/notification_provider.dart';
 import 'package:medconnect_app/services/api_service.dart';
-//import 'package:medconnect_app/services/pusher_service.dart';
+import 'package:medconnect_app/services/pusher_service.dart';
 import 'package:medconnect_app/splashScreen.dart';
 import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/cartScreen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 Future<void> main() async {
-  
-  // ✅ للـ Web بس
+   WidgetsFlutterBinding.ensureInitialized();
+  await ApiService.loadToken();
  
   final prefs = await SharedPreferences.getInstance();
   final userDataString = prefs.getString('user_data');
@@ -21,7 +21,7 @@ Future<void> main() async {
 
   final token = prefs.getString('auth_token');
     if (token != null) {
-      //await PusherService().init(token);
+      await PusherService().init();
     }
 
   }

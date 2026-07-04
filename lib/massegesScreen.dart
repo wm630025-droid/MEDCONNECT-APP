@@ -110,7 +110,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
         loaded.add(
           ChatModel(
-            name: other['fullname'],
+            name: other['supplier']['company_name'],
             lastMessage: lastMessage,
             time: lastTime,
             isOnline: false,

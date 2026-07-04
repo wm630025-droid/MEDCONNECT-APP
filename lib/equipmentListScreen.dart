@@ -213,7 +213,7 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text("Cancel", style: TextStyle(color: Colors.black)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -222,7 +222,7 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
                 _createNewList(controller.text.trim());
               }
             },
-            child: const Text("Create"),
+            child: const Text("Create", style: TextStyle(color: Colors.blue)),
           ),
         ],
       ),
@@ -246,11 +246,11 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
+          child: const Text("Cancel", style: TextStyle(color: Colors.black)),
         ),
         ElevatedButton(
           onPressed: () => Navigator.pop(context, controller.text.trim()),
-          child: const Text("Save"),
+          child: const Text("Save", style: TextStyle(color: Colors.blue)),
         ),
       ],
     ),
@@ -296,12 +296,12 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text("Cancel"),
+          child: const Text("Cancel", style: TextStyle(color: Colors.black)),
         ),
-        ElevatedButton(
+        TextButton(
           onPressed: () => Navigator.pop(context, true),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          child: const Text("Remove", style: TextStyle(color: Colors.white)),
+          //style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text("Remove", style: TextStyle(color: Colors.red)),
         ),
       ],
     ),
@@ -354,11 +354,11 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
+            child: const Text("Cancel", style: TextStyle(color: Colors.black)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 246, 246, 246)),
+           // style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 246, 246, 246)),
             child: const Text("Delete", style: TextStyle(color: Color.fromARGB(255, 246, 94, 94))),
           ),
         ],

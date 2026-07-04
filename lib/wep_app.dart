@@ -119,7 +119,7 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
           Expanded(
             child: InAppWebView(
               initialUrlRequest: URLRequest(
-                url: _initialUrl,
+                url:WebUri.uri(_initialUrl!) ,
               ),
               initialOptions: InAppWebViewGroupOptions(
                 crossPlatform: InAppWebViewOptions(

@@ -16,6 +16,7 @@ import 'package:medconnect_app/models/offer_request.dart';
 import 'package:medconnect_app/models/order_model.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/models/review.dart';
+import 'package:medconnect_app/services/pusher_service.dart';
 //import 'package:medconnect_app/services/pusher_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
@@ -52,7 +53,7 @@ class ApiService {
 static DateTime? cachedCustomRequestsTime;
   // static List<CustomRequest>? _cachedCustomRequests;
   // static DateTime? _cachedCustomRequestsTime;
-
+static String? doctorImageUrl;
   static void clearCache() {
     cachedProducts = null;
   }
@@ -121,6 +122,7 @@ static DateTime? cachedCustomRequestsTime;
 
       if (response.statusCode == 200) {
         if (data is Map<String, dynamic> && data['success'] == false) {
+          doctorImageUrl = data['data']?['profile_image_url'] ?? null;
           print('❌ Login returned success=false');
           return {
             'success': false,
@@ -134,7 +136,7 @@ static DateTime? cachedCustomRequestsTime;
         print('✅ Login success - status 200');
         print('📦 Data: ${data['data']}');
 
-        //await PusherService().init(data['token']);
+        await PusherService().init();
         // تخزين التوكن
         if (data['data'] != null && data['token'] != null) {
           print('💾 Found token: ${data['token']}');
@@ -279,16 +281,16 @@ static DateTime? cachedCustomRequestsTime;
           print('✅ Loaded ${categories.length} categories');
           return categories;
         } else {
-          throw Exception(data['message'] ?? 'Failed to fetch categories');
+          throw data['message'] ?? 'Failed to fetch categories';
         }
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired. Please login again.');
+        throw 'Session expired. Please login again.';
       } else {
-        throw Exception('HTTP Error: ${response.statusCode}');
+        throw 'HTTP Error: ${response.statusCode}';
       }
     } catch (e) {
       print('❌ Error fetching categories: $e');
-      throw Exception('Error loading categories: $e');
+      throw '$e';
     }
   }
 
@@ -362,11 +364,11 @@ static DateTime? cachedCustomRequestsTime;
       } else {
         print('❌ HTTP Error: ${response.statusCode}');
         print('📦 Response body: ${response.body}');
-        throw Exception('HTTP Error: ${response.statusCode}');
+        throw 'HTTP Error: ${response.statusCode}';
       }
     } catch (e) {
       print('❌ Error fetching products: $e');
-      throw Exception('Error loading products: $e');
+      throw '$e';
     }
   }
 
@@ -388,7 +390,7 @@ static DateTime? cachedCustomRequestsTime;
           'Authorization': 'Bearer $_token',
         },
       );
-
+      print('-------------------------------------------------');
       print('📦 Product Details Response status: ${response.statusCode}');
       print('📦 Product Details Response body: ${response.body}');
 
@@ -1041,11 +1043,12 @@ static DateTime? cachedCustomRequestsTime;
         body: jsonEncode({'rating': rating, 'comment': comment}),
       );
 
-      print(
-        '📦 Add Review Response (${response.statusCode}): ${response.body}',
-      );
+   
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+           print(
+        '📦 Add Review Response (${response.statusCode}): ${response.body}',
+      );
         return jsonDecode(response.body);
       } else {
         final data = jsonDecode(response.body);

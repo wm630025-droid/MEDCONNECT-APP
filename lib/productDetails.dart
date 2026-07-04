@@ -65,6 +65,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       final reviews = await _apiService.getProductReviews(_product!.id);
       reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final updatedReviews = reviews.map((r) {
+          print('-------------------------------------');
+        print('@@Review Url: ${r.profileImageUrl}');
         return Review(
           id: r.id,
           doctorId: r.doctorId,
@@ -165,6 +167,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             images: freshproduct.images,
             description: freshproduct.description,
             specification: freshproduct.specification,
+            configuration: freshproduct.configuration,
             warranty: freshproduct.warranty,
             setupDuration: freshproduct.setupDuration,
             supplierData: freshproduct.supplierData,
@@ -863,11 +866,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   // ---------------- SUPPLIER ----------------
   Widget _supplierCard(BuildContext context) {
     // ✅ جلب اسم المورد من supplierData
+    print('🔍 _product!.supplierData: ${_product!.supplierData}');
     String supplierName = ' '; // اسم افتراضي
 
     if (_product!.supplierData != null) {
       supplierName = _product!.supplierData!['company_name'] ?? ' ';
       print('🏢 Supplier from API: $supplierName');
+       print('🖼️ Image URL: ${_product!.supplierData!['company_image_url']}');
     } else {
       print('⚠️ No supplier data available, using brand: $supplierName');
     }
@@ -1475,7 +1480,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       return;
     }
 
-    setState(() => isLoading = true);
+   // setState(() => isLoading = true);
 
     try {
       final result = await _apiService.addReview(
@@ -1485,6 +1490,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       );
 
       if (result['success'] == true) {
+        String? imageUrl;
+        if(result['data'] != null && result['data']['doctor'] != null){
+          imageUrl = result['data']['doctor']['profile_image_url']?.toString();
+        }
         // ✅ إضافة التقييم محلياً (أو إعادة تحميل المنتج)
         final newReview = Review(
           id: result['data']['id'], // Assuming the API returns the new review ID
@@ -1495,6 +1504,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           createdAt: DateTime.now(),
           doctorName: ApiService.doctorName ?? ' ',
           canDelete: true,
+          profileImageUrl: imageUrl ?? ApiService.doctorImageUrl  , // Assuming you have this in ApiService
         );
         setState(() {
           _product = Product(
@@ -1520,7 +1530,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           );
           userRating = 0;
           reviewController.clear();
-          isLoading = false;
+        //  isLoading = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1546,7 +1556,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text('Cancel',),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -1558,7 +1568,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     if (shouldDelete != true) return;
 
-    setState(() => isLoading = true);
+   // setState(() => isLoading = true);
 
     try {
       final result = await _apiService.deleteReview(review.id);
@@ -1588,7 +1598,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             reviews: updatedReviews,
             dailyPrice: _product!.dailyPrice,
           );
-          isLoading = false;
+         // isLoading = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1624,7 +1634,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             if (isNotified) {
               final confirm = await showDialog<bool>(
                 context: context,
+                barrierDismissible: true,
                 builder: (ctx) => AlertDialog(
+
                   title: const Text('Cancel Notification'),
                   content: const Text(
                     'Are you sure you want to cancel this notification?',
@@ -1632,13 +1644,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('No'),
+                      child: const Text('No',style: TextStyle(color: Colors.black),),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text(
                         'Yes',
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(color: Colors.blue),
                       ),
                     ),
                   ],
@@ -1701,7 +1713,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            backgroundColor: canRent ? Colors.green : Colors.grey,
+            backgroundColor: canRent ? Colors.blue : Colors.grey,
           ),
           onPressed: canRent ? _rentNow : null,
           child: Text(
