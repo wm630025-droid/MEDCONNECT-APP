@@ -39,11 +39,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
   bool _loading = true;
   String? _error;
   List<int> _conversationIds = [];
-  List<int> receiverIds = [];
+   List<int> receiverIds = [];
   //Timer? _refreshTimer;
 
   @override
-  void initState() {
+  Future<void> initState() async {
     super.initState();
     _fetchConversations();
 

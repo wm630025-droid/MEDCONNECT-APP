@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/services/api_service.dart';
 
-import 'package:medconnect_app/services/pusher_service.dart';
+//import 'package:medconnect_app/services/pusher_service.dart';
 //ClientException with SocketException: Failed host lookup: 'pub.dev' (OS Error: No such host is known, errno = 11001), uri=https://pub.dev/api/packages/dio/advisories
 // Failed to update packages.
 // exit code 69
@@ -60,8 +60,8 @@ class _ChatScreenState extends State<ChatScreen> {
       print('✅ conversationId set to: $conversationId');
       conversationId = widget.conversationId;
       _loadMessages();
-       _subscribeToPusher();
-      //_startPolling();
+      // _subscribeToPusher();
+      _startPolling();
     } else {
       print('⚠️ conversationId is null, calling _fetchOrCreateConversation');
       // _loading = false;
@@ -69,35 +69,35 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _subscribeToPusher() {
-    if (conversationId == null) return;
+  // void _subscribeToPusher() {
+  //   if (conversationId == null) return;
 
-    PusherService().subscribe(conversationId!, (data) {
-      // ✅ رسالة جديدة وصلت فوراً من Pusher
-      if (mounted) {
-        final isMe = data['sender']['id'] == ApiService.doctorId;
-        setState(() {
-          _messages.add(
-            ChatMessage(
-              id: data['id'],
-              text: data['body'],
-              type: 'text',
-              time: DateTime.parse(data['sent_at']),
-              isMe: isMe,
-            ),
-          );
-        });
+  //   PusherService().subscribeToConversation(conversationId!, (data) {
+  //     // ✅ رسالة جديدة وصلت فوراً من Pusher
+  //     if (mounted) {
+  //       final isMe = data['sender']['id'] == ApiService.doctorId;
+  //       setState(() {
+  //         _messages.add(
+  //           ChatMessage(
+  //             id: data['id'],
+  //             text: data['body'],
+  //             type: 'text',
+  //             time: DateTime.parse(data['sent_at']),
+  //             isMe: isMe,
+  //           ),
+  //         );
+  //       });
 
-        // تحديث read_at تلقائياً
-        if (!isMe) {
-          _api.markConversationAsRead(conversationId!);
-        }
-      }
-    });
-  }
+  //       // تحديث read_at تلقائياً
+  //       if (!isMe) {
+  //         _api.markConversationAsRead(conversationId!);
+  //       }
+  //     }
+  //   });
+  // }
 
   void _startPolling() {
-    _pollTimer = Timer.periodic(Duration(seconds: 5), (Timer) {
+    _pollTimer = Timer.periodic(Duration(seconds: 1), (Timer) {
       if (mounted && conversationId != null) {
         _checkNewMessages();
       }
@@ -131,9 +131,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _pollTimer?.cancel();
-    if (conversationId != null) {
-      PusherService().unsubscribe(conversationId!);
-    }
+    // if (conversationId != null) {
+    //   PusherService().unsubscribeFromConversation(conversationId!);
+    // }
     super.dispose();
   }
 
@@ -150,7 +150,7 @@ class _ChatScreenState extends State<ChatScreen> {
         conversationId = found['id'];
         print('✅ Found conversation: $conversationId');
         await _loadMessages();
-        //_startPolling();
+        _startPolling();
       } else {
         print('⚠️ No conversation found, waiting for first message');
         setState(() {
@@ -273,7 +273,7 @@ class _ChatScreenState extends State<ChatScreen> {
         setState(() {
           conversationId = conv['id'];
         });
-       // _startPolling(); // ✅ نبدأ نسمع رسائل جديدة
+        _startPolling(); // ✅ نبدأ نسمع رسائل جديدة
       }
       if (newMsg != null && newMsg['id'] != null) {
         setState(() {

@@ -16,7 +16,7 @@ import 'package:medconnect_app/models/offer_request.dart';
 import 'package:medconnect_app/models/order_model.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/models/review.dart';
-import 'package:medconnect_app/services/pusher_service.dart';
+//import 'package:medconnect_app/services/pusher_service.dart';
 //import 'package:medconnect_app/services/pusher_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
@@ -64,45 +64,7 @@ static String? doctorImageUrl;
     required String password,
     required String role,
   }) async {
-    // try {
-    //   final response = await http.post(
-    //     Uri.parse('$baseUrl/v1/$role/login'),
-    //     headers: {
-    //       'Accept': 'application/json',
-    //       'Content-Type': 'application/json',
-    //     },
-    //     body: jsonEncode({
-    //       'email': email,
-    //       'password': password,
-    //       'role': role,
-    //     }),
-    //   );
-
-    //   var data = jsonDecode(response.body);
-
-    //   if (response.statusCode == 200) {
-    //     // تخزين التوكن
-    //     if (data['data'] != null && data['token'] != null) {
-    //       await _saveToken(data['token']);
-    //       await _saveUserData(data['data']);
-    //     }
-
-    //     return {
-    //       'success': true,
-    //       'data': data['data'],
-    //     };
-    //   } else {
-    //     return {
-    //       'success': false,
-    //       'error': data['error'] ?? 'Sign in is failed',
-    //     };
-    //   }
-    // } catch (e) {
-    //   return {
-    //     'success': false,
-    //     'error': 'خطأ في الاتصال: تأكد من اتصالك بالإنترنت',
-    //   };
-    // }
+ 
     try {
       print('🟢 Login attempt started');
 
@@ -136,12 +98,15 @@ static String? doctorImageUrl;
         print('✅ Login success - status 200');
         print('📦 Data: ${data['data']}');
 
-        await PusherService().init();
+       
         // تخزين التوكن
         if (data['data'] != null && data['token'] != null) {
           print('💾 Found token: ${data['token']}');
           await _saveToken(data['token']);
+           
           await _saveUserData(data['data']);
+         // PusherService().reset();
+          //await PusherService().init();
           final prefs = await SharedPreferences.getInstance();
           final pendingImagePath = prefs.getString('pending_profile_image');
           if (pendingImagePath != null) {

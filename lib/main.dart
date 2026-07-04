@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/providers/notification_provider.dart';
 import 'package:medconnect_app/services/api_service.dart';
-import 'package:medconnect_app/services/pusher_service.dart';
+//import 'package:medconnect_app/services/pusher_service.dart';
 import 'package:medconnect_app/splashScreen.dart';
 import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/cartScreen.dart';
@@ -19,10 +19,10 @@ Future<void> main() async {
     final userData = jsonDecode(userDataString);
     ApiService.setDoctorData(userData);
 
-  final token = prefs.getString('auth_token');
-    if (token != null) {
-      await PusherService().init();
-    }
+  // final token = prefs.getString('auth_token');
+  //   if (token != null) {
+  //    // await PusherService().init();
+  //   }
 
   }
 
