@@ -22,7 +22,7 @@ class OrderServices {
     return {
       'success': true,
       'orders': ApiService.cachedRecentOrders!,
-      'lastPage': 1,
+      'lastPage': 5,
       'perPage': perPage,
       'total': ApiService.cachedRecentOrders!.length,
     };

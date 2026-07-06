@@ -124,6 +124,10 @@ void _deleteProfileImage() {
             backgroundColor: Colors.green,
           ),
         );
+        // Mark that this device now has an account (so onboarding won't show again)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('has_account', true);
+        await prefs.setBool('seen_onboarding', true);
        
       } else if (result['statusCode'] == 422) {
         print('⚠️ [signUpScreen] validation errors: ${result['errors']}');

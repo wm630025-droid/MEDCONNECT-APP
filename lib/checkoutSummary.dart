@@ -72,14 +72,14 @@ void initState() {
 
   double getTotalRentalPrice() {
   if (widget.rentalItem == null) return 0;
-  final dailyRate = getDailyRate();
+  final dailyPrice = getDailyRate();
   final days = getRentalDays();
   final quantity = widget.rentalItem!.quantity;
-  return dailyRate * days * quantity;
+  return dailyPrice * days * quantity;
 }
   List<CartItem> getDisplayItems() {
     if (widget.isRentalMode && currentRentalItem != null) {
-      final dailyRate = getDailyRate();
+      final dailyPrice = getDailyRate();
     final days = getRentalDays();
     final totalRentalPrice = getTotalRentalPrice();
 
@@ -92,7 +92,7 @@ void initState() {
           quantity: currentRentalItem!.quantity,
           price: totalRentalPrice,
           type: 'rental',
-          dailyPrice: dailyRate,
+          dailyPrice: dailyPrice,
           rentalDays: days,
           startDate: currentRentalItem!.startDate,
           endDate: currentRentalItem!.endDate,
@@ -259,7 +259,7 @@ void initState() {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4)),
-                              child: Text('Rental • Daily: \$${item.dailyPrice}',
+                              child: Text('Rental • Daily: \EGP ${item.dailyPrice}',
                                   style: const TextStyle(color: Colors.blue, fontSize: 10, fontWeight: FontWeight.w500)),
                             ),
                             if (item.rentalDays != null && item.rentalDays! > 0) ...[
@@ -277,11 +277,11 @@ void initState() {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('\$${(item.price * item.quantity).toStringAsFixed(2)}',
+                        Text('\EGP ${(item.price * item.quantity).toStringAsFixed(2)}',
                             style: const TextStyle(color: Color(0xFF0D6EFD), fontWeight: FontWeight.bold, fontSize: 16)),
                         if (item.type == 'rental' && item.rentalDays != null) ...[
                           const SizedBox(height: 2),
-                          Text('(\$${item.dailyPrice.toStringAsFixed(2)} × ${item.rentalDays} days × ${item.quantity})',
+                          Text('\EGP ${item.dailyPrice.toStringAsFixed(2)} × ${item.rentalDays} days × ${item.quantity}',
                               style: const TextStyle(color: Colors.grey, fontSize: 9)),
                         ],
                       ],
@@ -294,9 +294,9 @@ void initState() {
               ],
             );
           }),
-          _priceRow('Subtotal', '\$${calculatedSubtotal.toStringAsFixed(2)}'),
+          _priceRow('Subtotal', '\EGP ${calculatedSubtotal.toStringAsFixed(2)}'),
           const SizedBox(height: 8),
-          _priceRow('Total', '\$${calculatedSubtotal.toStringAsFixed(2)}', isTotal: true),
+          _priceRow('Total', '\EGP ${calculatedSubtotal.toStringAsFixed(2)}', isTotal: true),
         ],
       ),
     );

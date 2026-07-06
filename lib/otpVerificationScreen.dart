@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/services/password_service.dart';
 import 'package:medconnect_app/resetPasswordScreen.dart';
@@ -5,7 +6,12 @@ import 'package:medconnect_app/resetPasswordScreen.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
-  const OtpVerificationScreen({super.key, required this.email});
+  final String? successMessage; // ✅ رسالة النجاح القادمة من الـ API
+  const OtpVerificationScreen({
+    super.key,
+    required this.email,
+    this.successMessage, // ✅ اختيارية عشان مانكسرش أي استخدام قديم للشاشة
+  });
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
@@ -18,10 +24,15 @@ final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
   bool _isVerifying = false;
   bool _showSuccessMessage = true;
   bool _isResending = false;
+  late String _successMessage; // ✅ الرسالة اللي هتُعرض فعليًا فوق
+  Timer? _successMessageTimer; // ✅ عشان نخفي الرسالة بعد 4 ثواني
 
   @override
   void initState() {
     super.initState();
+    // ✅ استخدم رسالة الـ API لو موجودة، وإلا رجّع للرسالة الافتراضية
+    _successMessage = widget.successMessage ?? 'OTP Sent Successfully!';
+    _startSuccessMessageTimer(); // ✅ يبدأ العد التنازلي لإخفاء الرسالة
     // Add listeners for auto-focus
    for (int i = 0; i < 4; i++) { // ✅
   _otpControllers[i].addListener(() {
@@ -32,8 +43,19 @@ final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
 }
   }
 
+  // ✅ يبدأ (أو يعيد تشغيل) مؤقّت لإخفاء رسالة النجاح بعد 4 ثواني
+  void _startSuccessMessageTimer() {
+    _successMessageTimer?.cancel();
+    _successMessageTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() => _showSuccessMessage = false);
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _successMessageTimer?.cancel();
     for (var controller in _otpControllers) {
       controller.dispose();
     }
@@ -134,11 +156,20 @@ final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
       if (result['success'] == true) {
         // Clear existing OTP fields
         _clearAllOtpFields();
-        
+
+        final message = result['message'] ?? 'OTP resent successfully to your email';
+
+        // ✅ حدّث رسالة النجاح المعروضة فوق بنفس رسالة الـ API الجديدة
+        setState(() {
+          _successMessage = message;
+          _showSuccessMessage = true;
+        });
+        _startSuccessMessageTimer(); // ✅ إعادة تشغيل عد الـ 4 ثواني
+
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'OTP resent successfully to your email'),
+            content: Text(message),
             backgroundColor: const Color(0xFF0066FF),
             duration: const Duration(seconds: 3),
           ),
@@ -252,12 +283,15 @@ final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
                             size: 20,
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            'OTP Sent Successfully!',
-                            style: TextStyle(
-                              color: Color(0xFF2E7D32),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                          Expanded(
+                            child: Text(
+                              _successMessage, // ✅ رسالة الـ API بدل النص الثابت
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFF2E7D32),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],

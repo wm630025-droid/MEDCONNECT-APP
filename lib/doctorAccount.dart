@@ -15,7 +15,8 @@ import 'package:medconnect_app/services/order_services.dart';
 import 'package:medconnect_app/services/Get_doctor_profile.dart';
 //import 'package:medconnect_app/Screens/homeScreen.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:medconnect_app/checkoutPayment.dart';
+import 'dart:ui'; // ✅ ضيفها فوق مع باقي الـ imports (لـ ImageFilter.blur)
+
 
  
   Widget build(BuildContext context) {
@@ -33,34 +34,186 @@ import 'package:medconnect_app/checkoutPayment.dart';
 // ================= COLORS =================
 
 // ================= SCREEN =================
+
 class doctorAccountPage extends StatefulWidget {
-  doctorAccountPage({super.key});
+  final bool fromSearch; // ✅ الكونديشن الجديد
+
+  doctorAccountPage({super.key, this.fromSearch = false});
 
   @override
   State<doctorAccountPage> createState() => _doctorAccountPageState();
 }
 
 class _doctorAccountPageState extends State<doctorAccountPage> {
+  final GlobalKey _customRequestKey = GlobalKey(); // ✅ يلف حوالين الـ section
+  final ScrollController _scrollController = ScrollController();
+  bool _showSpotlight = false;
+  Rect? _highlightRect;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.fromSearch) {
+      _showSpotlight = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToAndHighlight();
+      });
+    }
+  }
+
+  Future<void> _scrollToAndHighlight() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    final ctx = _customRequestKey.currentContext;
+    if (ctx == null || !mounted) return;
+
+    await Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 400),
+      alignment: 0.3,
+    );
+
+    await Future.delayed(const Duration(milliseconds: 350));
+    _updateHighlightRect();
+  }
+
+  void _updateHighlightRect() {
+    final renderBox = _customRequestKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null || !mounted) return;
+
+    final position = renderBox.localToGlobal(Offset.zero);
+    setState(() {
+      _highlightRect = Rect.fromLTWH(
+        position.dx - 6,
+        position.dy - 6,
+        renderBox.size.width + 12,
+        renderBox.size.height + 12,
+      );
+    });
+  }
+
+  void _dismissSpotlight() {
+    setState(() {
+      _showSpotlight = false;
+      _highlightRect = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      // bottomNavigationBar: const BottomNavBar(),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 120),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const DashboardHeader(),
+                  const RecentOrdersSection(),
+                  const OldChatsSection(),
+                  KeyedSubtree( // ✅ بلفها من الخارج بس، من غير أي تعديل جوه الكلاس
+                    key: _customRequestKey,
+                    child: const CustomRequestsSection(
+                      requestType: '',
+                      selectedType: '',
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+
+          if (_showSpotlight && _highlightRect != null)
+            _buildSpotlightOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpotlightOverlay() {
+    return Positioned.fill(
+      child: GestureDetector(
+        onTap: _dismissSpotlight,
+        child: Stack(
           children: [
-            DashboardHeader(),
-            const RecentOrdersSection(),
-            const OldChatsSection(),
-            const CustomRequestsSection(requestType: "", selectedType: ""),
+            ClipPath(
+              clipper: _SpotlightClipper(_highlightRect!),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                child: Container(color: Colors.black.withOpacity(0.55)),
+              ),
+            ),
+            Positioned(
+              left: _highlightRect!.left,
+              top: _highlightRect!.top,
+              child: Container(
+                width: _highlightRect!.width,
+                height: _highlightRect!.height,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF3A7DFF), width: 2.5),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 24,
+              right: 24,
+              top: _highlightRect!.top - 60 > 40
+                  ? _highlightRect!.top - 60
+                  : _highlightRect!.bottom + 16,
+              child: Column(
+                children: const [
+                  Icon(Icons.arrow_downward, color: Colors.white, size: 28),
+                  SizedBox(height: 4),
+                  Text(
+                    'Tap here to create a custom request',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 }
 
+/// يقص شكل مستطيل مدور (الفتحة) من الطبقة المعتمة/المبلورة
+class _SpotlightClipper extends CustomClipper<Path> {
+  final Rect highlightRect;
+  _SpotlightClipper(this.highlightRect);
+
+  @override
+  Path getClip(Size size) {
+    final fullScreen = Path()
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final hole = Path()
+      ..addRRect(RRect.fromRectAndRadius(highlightRect, const Radius.circular(16)));
+
+    return Path.combine(PathOperation.difference, fullScreen, hole);
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) {
+    return oldClipper is _SpotlightClipper && oldClipper.highlightRect != highlightRect;
+  }
+}
 // ================= HEADER =================
 class DashboardHeader extends StatefulWidget {
   const DashboardHeader({super.key});
@@ -91,7 +244,6 @@ class _DashboardHeaderState extends State<DashboardHeader> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,16 +263,13 @@ class _DashboardHeaderState extends State<DashboardHeader> {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: Colors.grey[300],
-                // backgroundImage: const NetworkImage(
-                //   'https://cdn-icons-png.flaticon.com/512/149/149071.png',
-                // ),
                 child: IconButton(
                   icon: const Icon(Icons.person, color: Colors.black),
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const DoctorProfilePage(),
+                        builder: (context) =>  DoctorProfilePage(),
                       ),
                     );
                   },
@@ -142,7 +291,6 @@ class _DashboardHeaderState extends State<DashboardHeader> {
     );
   }
 }
-
 class ReorderCard extends StatelessWidget {
   final String title, price, imageUrl;
 
@@ -248,12 +396,15 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
     });
 
     try {
+
       final result = await OrderServices.fetchDoctorOrders(
+
         page: 1,
         perPage: 3, 
         // ✅ 3 orders بس
         forceRefresh: forceRefresh,
       );
+  if (!mounted) return;              // ✅
 
       setState(() {
         _orders = result['orders'] as List<Order>;
@@ -261,6 +412,8 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
         _isFirstLoad = false; // ✅ تم التحميل الأول
       });
     } catch (e) {
+        if (!mounted) return;              // ✅
+
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -338,7 +491,7 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
-            '\$${order.total.toStringAsFixed(2)}',
+            '\EGP ${order.total.toStringAsFixed(2)}',
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           Text(
@@ -879,7 +1032,7 @@ class OldChatsSection extends StatelessWidget {
                 leading: const Icon(Icons.forum),
                 title: const Text(
                   "Tab To View All Chats",
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.blue),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blue),
                 ),
                 //subtitle: const Text("Re: Anesthesia Machine"),
                 trailing: const Icon(Icons.arrow_right),
@@ -1041,7 +1194,7 @@ class CustomRequestsSection extends StatelessWidget {
             leading: const Icon(Icons.edit_note),
             title: const Text(
               "Tab To View All Custom Requests",
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,color: Colors.blue),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,color: Colors.blue),
             ),
             // subtitle: const Text("3 quotes received"),
             onTap: () {

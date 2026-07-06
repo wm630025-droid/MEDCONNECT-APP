@@ -641,7 +641,7 @@ if (!mounted) return;
           ),
           const SizedBox(height: 8),
           Text(
-            "لو مش لاقي المنتج اللي بتدور عليه، تقدر تعمل طلب مخصص دلوقتي وهنوفره لك",
+  "If you couldn't find the product you're looking for, you can create a custom request now and we'll get it for you.",
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade600,
@@ -654,7 +654,8 @@ if (!mounted) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>  doctorAccountPage(),
+                  builder: (context) =>  doctorAccountPage(fromSearch: true),
+
                 ),
               );
             },
@@ -1375,7 +1376,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                   vertical: 4,
                 ),
                 child: Text(
-                  "\$${p.price}",
+                  "\EGP${p.price}",
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
