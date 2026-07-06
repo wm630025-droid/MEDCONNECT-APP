@@ -25,6 +25,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   ];
   late Future<Order> orderFuture;
   bool _isCancelling = false;
+  Order? _currentOrder;
 
  Future<void> _cancelOrder(Order order) async {
   final status = order.status.toLowerCase();
@@ -48,24 +49,39 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     });
 
     // ✅ لو المستخدم اختار سبب إلغاء، نحدّثه في الـ API قبل الإلغاء
-    if (selectedIssue != "None" && selectedIssue.isNotEmpty) {
-      final assignResult = await OrderServices.assignOrderIssue(
-        orderId: order.id,
-        orderIssue: selectedIssue,
-      );
+   if (selectedIssue != "None" && selectedIssue.isNotEmpty) {
+    print("=== CALLING assignOrderIssue ===");
+    final assignResult = await OrderServices.assignOrderIssue(
+      orderId: order.id,
+      orderIssue: selectedIssue,
+    );
+    print("=== assignOrderIssue RESULT: $assignResult ===");
 
-      if (assignResult['success'] != true) {
-        throw Exception(assignResult['message'] ?? 'Failed to assign issue');
-      }
+    if (assignResult['success'] != true) {
+      throw Exception(assignResult['message'] ?? 'Failed to assign issue');
     }
+  }
 
-    // ✅ ثانياً: إلغاء الطلب
-    final result = await OrderServices.cancelDoctorOrder(widget.orderId);
-    print(result);
+  print("=== CALLING cancelDoctorOrder for orderId: ${widget.orderId} ===");
+  final result = await OrderServices.cancelDoctorOrder(widget.orderId);
+  print("=== cancelDoctorOrder RESULT: $result ===");
 
-    // اعمل refresh للبيانات
+    // حدّث الحالة محلياً فوراً بدون إعادة تحميل الصفحة
     setState(() {
-      orderFuture = OrderServices.fetchDoctorOrder(widget.orderId);
+      _currentOrder = Order(
+        id: order.id,
+        doctorId: order.doctorId,
+        orderType: order.orderType,
+        orderIssue: order.orderIssue,
+        subtotal: order.subtotal,
+        total: order.total,
+        invoiceKey: order.invoiceKey,
+        invoiceNumber: order.invoiceNumber,
+        status: 'cancelled',
+        createdAt: order.createdAt,
+        updatedAt: DateTime.now(),
+        items: order.items,
+      );
     });
 
     // اعرض رسالة النجاح
@@ -114,38 +130,7 @@ void initState() {
       backgroundColor: const Color(0xFFF5F5F5),
 
       // ================= Bottom Navigation =================
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.only(top: 10, bottom: 20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFF1F1F1))),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _bottomItem(
-              icon: Icons.medical_services_outlined,
-              title: "Shop",
-              selected: false,
-            ),
-            _bottomItem(
-              icon: Icons.inventory_2,
-              title: "Orders",
-              selected: true,
-            ),
-            _bottomItem(
-              icon: Icons.monitor_heart_outlined,
-              title: "Health",
-              selected: false,
-            ),
-            _bottomItem(
-              icon: Icons.person_outline,
-              title: "Profile",
-              selected: false,
-            ),
-          ],
-        ),
-      ),
+      
 
       body: FutureBuilder<Order>(
         future: orderFuture,
@@ -156,17 +141,20 @@ void initState() {
             return Center(child: Text(snapshot.error.toString()));
           }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting && _currentOrder == null) {
   return _buildSkeletonLoader();
 }
-if (!snapshot.hasData) {
+if (!snapshot.hasData && _currentOrder == null) {
   return const Center(child: Text('No order found'));
 }
-          final order = snapshot.data!;
-          final isOrderCancelled =
-              order.status.toLowerCase() == 'cancelled'; // ✅ هنا
 
-          selectedIssue = order.orderIssue;
+          final order = _currentOrder ?? snapshot.data!;
+          final isOrderCancelled = order.status.toLowerCase() == 'cancelled';
+
+          if (_currentOrder == null) {
+            selectedIssue = order.orderIssue;
+            _currentOrder = order;
+          }
           print("ORDER ID: ${order.id}");
           for (var item in order.items) {
             print("ITEM ORDER ID: ${item.orderId}");
@@ -643,11 +631,23 @@ if (!snapshot.hasData) {
 
                                         setState(() {
                                           selectedIssue = value;
-                                          Duration(seconds: 1);
-                                          orderFuture =
-                                              OrderServices.fetchDoctorOrder(
-                                                widget.orderId,
-                                              );
+                                          // تحديث محلي للحقل دون إعادة تحميل الصفحة
+                                          if (_currentOrder != null) {
+                                            _currentOrder = Order(
+                                              id: _currentOrder!.id,
+                                              doctorId: _currentOrder!.doctorId,
+                                              orderType: _currentOrder!.orderType,
+                                              orderIssue: value,
+                                              subtotal: _currentOrder!.subtotal,
+                                              total: _currentOrder!.total,
+                                              invoiceKey: _currentOrder!.invoiceKey,
+                                              invoiceNumber: _currentOrder!.invoiceNumber,
+                                              status: _currentOrder!.status,
+                                              createdAt: _currentOrder!.createdAt,
+                                              updatedAt: DateTime.now(),
+                                              items: _currentOrder!.items,
+                                            );
+                                          }
                                         });
 
                                         ScaffoldMessenger.of(
@@ -809,41 +809,7 @@ if (!snapshot.hasData) {
     );
   }
 
-  // ================= Bottom Item =================
-  Widget _bottomItem({
-    required IconData icon,
-    required String title,
-    required bool selected,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: selected ? const Color(0xFFEAF1FF) : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: selected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: selected
-                  ? const Color(0xFF2563EB)
-                  : const Color(0xFF94A3B8),
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+ 
   // ================= Info Item =================
   Widget _infoItem({
     required IconData icon,

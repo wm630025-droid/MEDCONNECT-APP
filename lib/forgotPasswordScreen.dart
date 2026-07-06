@@ -54,13 +54,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                OtpVerificationScreen(email: _emailController.text.trim()),
-          ),
-        );
+       Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => OtpVerificationScreen(
+      email: _emailController.text.trim(),
+      successMessage: result['message'], // ✅ رسالة النجاح من الـ API
+    ),
+  ),
+);
       } else {
         setState(() {
           _errorMessage =

@@ -307,6 +307,7 @@ class _ChatScreenState extends State<ChatScreen> {
           productData: isProduct ? productData : null, // ✅ بيانات المنتج
         ),
       );
+      
     });
     _controller.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -519,6 +520,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               ],
                             ),
                           ),
+
                         const SizedBox(height: 5),
 
                         /// الوقت

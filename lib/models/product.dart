@@ -22,6 +22,7 @@ class Product {
   final String? configuration;
   final int setupDuration;
   final List<Review> reviews;
+  final int? rentalDays;
 
   Product({
     required this.id,
@@ -43,8 +44,9 @@ class Product {
     required this.warranty,
     required this.setupDuration,
     required this.reviews,
-    this.dailyPrice, 
-    this.rentalStock// ✅ optional
+    this.dailyPrice,
+    this.rentalStock,
+    this.rentalDays // ✅ optional
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -116,8 +118,7 @@ if (json['rental_details'] != null ) {
       configuration: configurationValue,
       dailyPrice: dailyPrice, // ✅
       reviews: reviewsList,
-      rentalStock: rentalStock,
-      
+      rentalStock: rentalStock, // ✅
     );
   }
 }

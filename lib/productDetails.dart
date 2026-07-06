@@ -126,7 +126,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     }
 
     try {
-      final freshproduct = 
+      final freshproduct =
           await _apiService.fetchProductById(widget.productId);
       print('🔍 Product rental details: ${freshproduct.dailyPrice}');
       print('🔍 Is rentable: ${freshproduct.isRentable}');
@@ -136,8 +136,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         (a, b) => b.createdAt.compareTo(a.createdAt),
       ); // الأحدث أولاً
       final updatedReviews = reviews.map((r) {
-        print('-------------------------------------');
-        print('@@Review Url: ${r.profileImageUrl}');
         return Review(
           id: r.id,
           doctorId: r.doctorId,
@@ -150,10 +148,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           profileImageUrl: r.profileImageUrl,
         );
       }).toList();
+
       if (mounted) {
         setState(() {
-          _product = freshproduct;
-
           _product = Product(
             id: freshproduct.id,
             supplierId: freshproduct.supplierId,
@@ -188,10 +185,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       }
     }
   }
+
   // -------- Rent --------
   DateTime? rentStartDate;
   DateTime? rentEndDate;
   int rentQuantity = 1;
+
   // -------- Reviews --------
   double get averageRating {
     if (reviews.isEmpty) return 0;
@@ -208,92 +207,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   bool isInWishlist = false;
   bool isInEquipmentList = false;
-
-  // Future<void> _rentNow() async {
-  //   if (rentStartDate == null || rentEndDate == null) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('Please select both start and end dates'),
-  //         backgroundColor: Colors.red,
-  //         behavior: SnackBarBehavior.floating,
-  //         duration: Duration(seconds: 3),
-  //       ),
-  //     );
-  //     return;
-  //   }
-
-  //   // ✅ التحقق من أن End Date بعد Start Date
-  //   if (rentEndDate!.isBefore(rentStartDate!)) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('End date must be after start date'),
-  //         backgroundColor: Colors.red,
-  //         behavior: SnackBarBehavior.floating,
-  //         duration: Duration(seconds: 3),
-  //       ),
-  //     );
-  //     return;
-  //   }
-  //   String formatDate(DateTime date) {
-  //     return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
-
-  //     //return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-  //   }
-
-  //   print('sending rent validation');
-  //   print(' productId : ${_product!.id}');
-  //   print('quantity: $rentQuantity');
-  //   print("start date : ${formatDate(rentStartDate!)}");
-  //   print("end date : ${formatDate(rentEndDate!)}");
-
-  //   try {
-  //     final isValid = await _apiService.validateRent(
-  //       productId: _product!.id,
-  //       quantity: rentQuantity,
-  //       startDate: formatDate(rentStartDate!),
-  //       endDate: formatDate(rentEndDate!),
-  //     );
-
-  //     if (isValid['success'] == true) {
-  //       final rentalItem = RentalItem(
-  //         productId: _product!.id,
-  //         name: _product!.name,
-  //         dailyPrice: _product!.dailyPrice ?? 0.0,
-  //         image: _product!.imagePath,
-  //         quantity: rentQuantity,
-  //         startDate: formatDate(rentStartDate!),
-  //         endDate: formatDate(rentEndDate!),
-  //       );
-  //       print('Rent validated, navigating to checkout,$rentalItem');
-  //       Navigator.push(
-  //         context,
-  //         MaterialPageRoute(
-  //           builder: (_) =>
-  //               CheckoutAddressPage(isRentalMode: true, rentalItem: rentalItem),
-  //         ),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     // ✅ عرض رسالة الخطأ من الـ API
-  //     String errorMessage = e.toString().replaceAll('Exception:', '').trim();
-
-  //     // لو الخطأ من الـ API نفسه (زي "not rentable" أو "Insufficient stock for rent")
-  //     if (errorMessage.contains('not rentable')) {
-  //       errorMessage = 'This product is not available for rent';
-  //     } else if (errorMessage.contains('Insufficient stock')) {
-  //       errorMessage = 'Not enough stock available for rent';
-  //     }
-
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text(errorMessage),
-  //         backgroundColor: Colors.red,
-  //         behavior: SnackBarBehavior.floating,
-  //         duration: const Duration(seconds: 3),
-  //       ),
-  //     );
-  //   }
-  // }
 
   void _showAddToListDialog(Product product) async {
     try {
@@ -358,9 +271,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             child: const Text("Create"),
           ),
         ],
-            
       ),
     );
+
     if (confirmed == true && controller.text.isNotEmpty) {
       try {
         await EquipmentApiService.createEquipmentList(controller.text);
@@ -435,7 +348,30 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       }
     }
   }
+
   Future<void> _rentNow() async {
+    // ✅ التحقق من التواريخ
+    if (rentStartDate == null || rentEndDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select start and end dates'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // ✅ التحقق من أن تاريخ النهاية بعد البداية
+    if (rentEndDate!.isBefore(rentStartDate!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('End date must be after start date'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     String formatDate(DateTime date) {
       return "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
     }
@@ -495,6 +431,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       );
     }
   }
+
   // ---------------- UI ----------------
 
   @override
@@ -554,7 +491,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ),
               const SizedBox(height: 16),
 
-              // زرار Wishlist و Equipment
+              // زرار Equipment
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -622,11 +559,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         body: const Center(child: Text('Product not found')),
       );
     }
-    // final wishlistProvider = Provider.of<WishlistProvider>(
-    //   context,
-    //   listen: true,
-    // );
-    // final isInWishlist = wishlistProvider.isInWishlist(_product!.id);
+
     return Scaffold(
       backgroundColor: const Color(0xffF5F5F5),
       appBar: AppBar(
@@ -645,7 +578,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             _imageSlider(),
             _imageDots(),
 
-            //###########
             const SizedBox(height: 15),
             Container(
               child: Padding(
@@ -678,7 +610,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ),
             ),
 
-            //##########3333
             const SizedBox(height: 15),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -689,10 +620,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       height: 35,
                       child: ElevatedButton.icon(
                         onPressed: () => _showAddToListDialog(_product!),
-
                         icon: Icon(
                           Icons.playlist_add,
-                          color: isInEquipmentList ? Colors.blue : Colors.black,
+                          color:
+                              isInEquipmentList ? Colors.blue : Colors.black,
                         ),
                         label: Text(
                           "Equipment List",
@@ -823,7 +754,6 @@ Future<void> _showAskSupplierDialog() async {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.grey),
                   ),
-
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Row(
@@ -835,7 +765,7 @@ Future<void> _showAskSupplierDialog() async {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          "Cairo", // Replace with actual location if available
+                          "Cairo",
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.grey,
@@ -868,7 +798,6 @@ Future<void> _showAskSupplierDialog() async {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.grey),
                   ),
-
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Row(
@@ -901,35 +830,35 @@ Future<void> _showAskSupplierDialog() async {
 
   // ---------------- IMAGE SLIDER ----------------
   Widget _imageSlider() => SizedBox(
-    height: 260,
-    child: PageView.builder(
-      itemCount: _product!.images.length,
-      onPageChanged: (i) => setState(() => currentImage = i),
-      itemBuilder: (_, i) => Image.network(
-        _product!.images[i].image, //there is change by mohamed
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, StackTrace) {
-          return const Icon(Icons.broken_image, size: 50);
-        },
-      ),
-    ),
-  );
+        height: 260,
+        child: PageView.builder(
+          itemCount: _product!.images.length,
+          onPageChanged: (i) => setState(() => currentImage = i),
+          itemBuilder: (_, i) => Image.network(
+            _product!.images[i].image,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, StackTrace) {
+              return const Icon(Icons.broken_image, size: 50);
+            },
+          ),
+        ),
+      );
 
   Widget _imageDots() => Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: List.generate(
-      _product!.images.length,
-      (i) => Container(
-        margin: const EdgeInsets.all(4),
-        width: currentImage == i ? 10 : 6,
-        height: 6,
-        decoration: BoxDecoration(
-          color: currentImage == i ? Colors.blue : Colors.grey,
-          borderRadius: BorderRadius.circular(8),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          _product!.images.length,
+          (i) => Container(
+            margin: const EdgeInsets.all(4),
+            width: currentImage == i ? 10 : 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: currentImage == i ? Colors.blue : Colors.grey,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         ),
-      ),
-    ),
-  );
+      );
 
   // ---------------- SUPPLIER ----------------
   Widget _supplierCard(BuildContext context) {
@@ -972,9 +901,9 @@ Future<void> _showAskSupplierDialog() async {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: Colors.grey.shade200,
-                child:
-                    _product!.supplierData != null &&
-                        _product!.supplierData!['company_image_url'] != null &&
+                child: _product!.supplierData != null &&
+                        _product!.supplierData!['company_image_url'] !=
+                            null &&
                         _product!.supplierData!['company_image_url']
                             .toString()
                             .isNotEmpty
@@ -1048,63 +977,67 @@ Future<void> _showAskSupplierDialog() async {
   }
 
   Widget _switchItem(String title, int index) => Expanded(
-    child: GestureDetector(
-      onTap: () => setState(() => selectedPurchase = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: selectedPurchase == index ? Colors.blue : Colors.transparent,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Center(
-          child: Text(
-            title,
-            style: TextStyle(
-              color: selectedPurchase == index ? Colors.white : Colors.black,
-              fontWeight: FontWeight.bold,
+        child: GestureDetector(
+          onTap: () => setState(() => selectedPurchase = index),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: selectedPurchase == index
+                  ? Colors.blue
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Center(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color:
+                      selectedPurchase == index ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ),
-      ),
-    ),
-  );
+      );
 
   // ---------------- RENT ----------------
   Widget _rentConfig() => _card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildProductInfo(),
-        const SizedBox(height: 16),
-        const Text(
-          "Rental Period",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _dateBox("Start Date", true)),
-            const SizedBox(width: 12),
-            Expanded(child: _dateBox("End Date", false)),
+            _buildProductInfo(),
+            const SizedBox(height: 16),
+            const Text(
+              "Rental Period",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _dateBox("Start Date", true)),
+                const SizedBox(width: 12),
+                Expanded(child: _dateBox("End Date", false)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildQuantitySelector(),
+            const SizedBox(height: 16),
+            locationAndSetupTime(),
+            const Divider(),
+            _priceRow(
+              "Daily Rent",
+              "\EGP ${(_product!.dailyPrice ?? 0.0).toStringAsFixed(2)}",
+            ),
+            _priceRow(
+              "Total Rent",
+              "\EGP ${(rentDays * rentQuantity * (_product!.dailyPrice ?? 0.0)).toStringAsFixed(2)}",
+              bold: true,
+            ),
           ],
         ),
-        const SizedBox(height: 12),
-        _buildQuantitySelector(),
-        const SizedBox(height: 16),
-        locationAndSetupTime(),
-        const Divider(),
-        _priceRow(
-          "Daily Rent",
-          "\$${(_product!.dailyPrice ?? 0.0).toStringAsFixed(2)}",
-        ),
-        _priceRow(
-          "Total Rent",
-          "\$${(rentDays * rentQuantity * (_product!.dailyPrice ?? 0.0)).toStringAsFixed(2)}",
-          bold: true,
-        ),
-      ],
-    ),
-  );
+      );
+
   Widget _buildQuantitySelector() {
     return Row(
       children: [
@@ -1126,47 +1059,48 @@ Future<void> _showAskSupplierDialog() async {
   }
 
   Widget _dateBox(String title, bool isStart) => GestureDetector(
-    onTap: () async {
-      final picked = await showDatePicker(
-        context: context,
-        firstDate: DateTime.now(),
-        lastDate: DateTime(2030),
-        initialDate: DateTime.now(),
-      );
-      if (picked != null) {
-        setState(() {
-          if (isStart) {
-            rentStartDate = picked;
-          } else {
-            rentEndDate = picked;
+        onTap: () async {
+          final picked = await showDatePicker(
+            context: context,
+            firstDate: DateTime.now(),
+            lastDate: DateTime(2030),
+            initialDate: DateTime.now(),
+          );
+          if (picked != null) {
+            setState(() {
+              if (isStart) {
+                rentStartDate = picked;
+              } else {
+                rentEndDate = picked;
+              }
+            });
           }
-        });
-      }
-    },
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.calendar_month, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            isStart
-                ? (rentStartDate == null
-                      ? title
-                      : rentStartDate!.toString().split(" ")[0])
-                : (rentEndDate == null
-                      ? title
-                      : rentEndDate!.toString().split(" ")[0]),
+        },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      ),
-    ),
-  );
+          child: Row(
+            children: [
+              const Icon(Icons.calendar_month, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                isStart
+                    ? (rentStartDate == null
+                        ? title
+                        : rentStartDate!.toString().split(" ")[0])
+                    : (rentEndDate == null
+                        ? title
+                        : rentEndDate!.toString().split(" ")[0]),
+              ),
+            ],
+          ),
+        ),
+      );
+
   Widget _buildProductInfo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1189,7 +1123,6 @@ Future<void> _showAskSupplierDialog() async {
             _product!.configuration == 0
                 ? "No configuration"
                 : "${_product!.configuration} ",
-
             style: const TextStyle(fontSize: 14),
           ),
         ),
@@ -1219,77 +1152,56 @@ Future<void> _showAskSupplierDialog() async {
 
   // ---------------- BUY ----------------
   Widget _buyConfig() => _card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildProductInfo(),
-        const SizedBox(height: 20),
-        locationAndSetupTime(),
-        const SizedBox(height: 20),
-        _priceRow("Total Price", "\$${_product!.price}", bold: true),
-        if (_product!.stock > 0 && _product!.stock < 10)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              "⚠️ Only ${_product!.stock} left in stock!",
-              style: const TextStyle(color: Colors.orange, fontSize: 12),
-            ),
-          ),
-      ],
-    ),
-  );
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProductInfo(),
+            const SizedBox(height: 20),
+            locationAndSetupTime(),
+            const SizedBox(height: 20),
+            _priceRow("Total Price", "\EGP ${_product!.price}", bold: true),
+            if (_product!.stock > 0 && _product!.stock < 10)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  "⚠️ Only ${_product!.stock} left in stock!",
+                  style: const TextStyle(color: Colors.orange, fontSize: 12),
+                ),
+              ),
+          ],
+        ),
+      );
 
   // ---------------- TABS ----------------
   Widget _tabs() => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Row(
-      children: [_tabItem("Specifications", 0), _tabItem("Reviews", 1)],
-    ),
-  );
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [_tabItem("Specifications", 0), _tabItem("Reviews", 1)],
+        ),
+      );
 
   Widget _tabItem(String text, int index) => Expanded(
-    child: GestureDetector(
-      onTap: () => setState(() => selectedTab = index),
-      child: Column(
-        children: [
-          Text(
-            text,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: selectedTab == index ? Colors.blue : Colors.grey,
-            ),
+        child: GestureDetector(
+          onTap: () => setState(() => selectedTab = index),
+          child: Column(
+            children: [
+              Text(
+                text,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: selectedTab == index ? Colors.blue : Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                height: 2,
+                color:
+                    selectedTab == index ? Colors.blue : Colors.transparent,
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Container(
-            height: 2,
-            color: selectedTab == index ? Colors.blue : Colors.transparent,
-          ),
-        ],
-      ),
-    ),
-  );
-// Widget _askSupplierButton() {
-//   return Padding(
-//     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-//     child: ElevatedButton.icon(
-//       style: ElevatedButton.styleFrom(
-//         backgroundColor: Colors.green,
-//         padding: const EdgeInsets.symmetric(vertical: 14),
-//         shape: RoundedRectangleBorder(
-//           borderRadius: BorderRadius.circular(12),
-//         ),
-//       ),
-//       onPressed: () {
-// _askSupplier("");
-//       }, 
-//       icon: const Icon(Icons.chat, color: Colors.white),
-//       label: const Text(
-//         "Ask Supplier",
-//         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-//       ),
-//     ),
-//   );
-// }
+        ),
+      );
 
 Future<void> _askSupplier(String text) async {
   if (_product == null) return;
@@ -1339,44 +1251,87 @@ Future<void> _askSupplier(String text) async {
   }
 
   Widget _specifications() => _card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_product!.specification.isNotEmpty)
+              ..._parseSpecifications().map((spec) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "${spec['name']}:",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        spec['value']!,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList()
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 70.0),
+                child: const Text(
+                  "No specifications available",
+                  style: TextStyle(color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+          ],
+        ),
+      );
 
-      children: [
-        // المواصفات
-        if (_product!.specification.isNotEmpty)
-          ..._parseSpecifications().map((spec) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-
-              child: Row(
-                //crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  // ---------------- REVIEWS ----------------
+  Widget _reviewsSection() => _card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Average Rating
+            Center(
+              child: Column(
                 children: [
+                  const Text(
+                    "Average Rating",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 6),
                   Text(
-                    "${spec['name']}:",
+                    averageRating.toStringAsFixed(1),
                     style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      5,
+                      (i) => Icon(
+                        i < averageRating.round()
+                            ? Icons.star
+                            : Icons.star_border,
+                        color: Colors.amber,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   Text(
-                    spec['value']!,
-                    style: const TextStyle(color: Colors.grey),
+                    "based on ${reviews.length} reviews",
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
               ),
-            );
-          }).toList()
-        else
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 70.0),
-            child: const Text(
-              "No specifications available",
-              style: TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
             ),
           ),
       ],
@@ -1440,12 +1395,8 @@ Future<void> _askSupplier(String text) async {
                     color: Colors.grey.withOpacity(0.15),
                     blurRadius: 6,
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CircleAvatar(
                         radius: 20,
@@ -1505,93 +1456,84 @@ Future<void> _askSupplier(String text) async {
                           color: Colors.grey,
                         ),
                       ),
-
-                      if (r.doctorId ==
-                          ApiService.doctorId) // تقييم المستخدم الحالي
-                        IconButton(
-                          onPressed: () => _deleteReview(r),
-                          icon: const Icon(
-                            Icons.delete,
-                            size: 18,
-                            color: Colors.red,
+                      const SizedBox(height: 6),
+                      Row(
+                        children: List.generate(
+                          5,
+                          (i) => Icon(
+                            i < r.rating ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 16,
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(r.comment),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: List.generate(
-                      5,
-                      (i) => Icon(
-                        i < r.rating ? Icons.star : Icons.star_border,
-                        color: Colors.amber,
-                        size: 16,
-                      ),
-                    ),
+                );
+              }).toList()
+            else
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child:
+                    Text("No reviews yet", style: TextStyle(color: Colors.grey)),
+              ),
+
+            const SizedBox(height: 20),
+
+            // Leave Review
+            const Text(
+              "Leave A Review",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: List.generate(
+                5,
+                (i) => GestureDetector(
+                  onTap: () => setState(() => userRating = i + 1),
+                  child: Icon(
+                    i < userRating ? Icons.star : Icons.star_border,
+                    color: Colors.amber,
+                    size: 28,
                   ),
-                  const SizedBox(height: 8),
-                  Text(r.comment),
-                ],
+                ),
               ),
-            );
-          }).toList()
-        else
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text("No reviews yet", style: TextStyle(color: Colors.grey)),
-          ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reviewController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: "Share Your Experience With This Product...",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF005EA6),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: _submitReview,
+                child: const Text(
+                  "Submit Review",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 
-        const SizedBox(height: 20),
-
-        // Leave Review
-        const Text(
-          "Leave A Review",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: List.generate(
-            5,
-            (i) => GestureDetector(
-              onTap: () => setState(() => userRating = i + 1),
-              child: Icon(
-                i < userRating ? Icons.star : Icons.star_border,
-                color: Colors.amber,
-                size: 28,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: reviewController,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: "Share Your Experience With This Product...",
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF005EA6),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onPressed: _submitReview,
-            child: const Text(
-              "Submit Review",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
   Future<void> _submitReview() async {
     if (reviewController.text.isEmpty || userRating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1616,7 +1558,7 @@ Future<void> _askSupplier(String text) async {
         }
         // ✅ إضافة التقييم محلياً (أو إعادة تحميل المنتج)
         final newReview = Review(
-          id: result['data']['id'], // Assuming the API returns the new review ID
+          id: result['data']['id'],
           productId: _product!.id,
           doctorId: ApiService.doctorId ?? 0,
           rating: userRating,
@@ -1628,7 +1570,6 @@ Future<void> _askSupplier(String text) async {
         );
         setState(() {
           _product = Product(
-            // نسخ كل البيانات مع إضافة التقييم الجديد
             id: _product!.id,
             supplierId: _product!.supplierId,
             name: _product!.name,
@@ -1694,7 +1635,6 @@ Future<void> _askSupplier(String text) async {
       final result = await _apiService.deleteReview(review.id);
 
       if (result['success'] == true) {
-        // ✅ إزالة التقييم من القائمة محلياً
         setState(() {
           final updatedReviews = List<Review>.from(_product!.reviews);
           updatedReviews.removeWhere((r) => r.id == review.id);
@@ -1822,23 +1762,22 @@ Future<void> _askSupplier(String text) async {
   }
 
   final CartService _cartService = CartService();
+
   Widget _actionButton() {
     if (selectedPurchase == 0) {
-      // ✅ Rent Now: يظهر لو isRentable == true و rentalStock > 0
-      final bool canRent =
-          _product!.isRentable && (_product!.rentalStock ?? 0) > 0;
-
+      // ✅ تعطيل الزر إذا لم تكن التواريخ محددة
+      final isRentable = rentStartDate != null && rentEndDate != null;
       return Padding(
         padding: const EdgeInsets.all(12),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            backgroundColor: canRent ? Colors.blue : Colors.grey,
+            backgroundColor: isRentable ? Colors.blue : Colors.grey,
           ),
-          onPressed: canRent ? _rentNow : null,
+          onPressed: isRentable ? _rentNow : null,
           child: Text(
             'Rent Now',
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -1847,6 +1786,7 @@ Future<void> _askSupplier(String text) async {
         ),
       );
     }
+
     // ✅ حالة Buy
     if (selectedPurchase == 1) {
       // ✅ Out of Stock (stock == 0 و restockDate == null)
@@ -1861,80 +1801,78 @@ Future<void> _askSupplier(String text) async {
             onPressed: null,
             child: const Text(
               "Out of Stock",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         );
       }
+
       if (_product!.stock == 0 && _product!.restockDate != null) {
         return _buildNotifyButton();
       }
+
       return Padding(
         padding: const EdgeInsets.all(12),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            backgroundColor: Colors.blue,
+            backgroundColor: _product!.stock == 0 ? Colors.grey : Colors.blue,
           ),
+          onPressed: _product!.stock == 0
+              ? null // disabled
+              : () async {
+                  final result = await _cartService.addToCart(
+                    productId: _product!.id,
+                    quantity: 1,
+                    type: "sale",
+                  );
 
-          onPressed: () async {
-            //there is change by mohamed
-            final result = await _cartService.addToCart(
-              productId: _product!.id,
-              quantity: 1,
-              type: "sale",
-            );
+                  if (result['success'] != false) {
+                    cartItemsGlobal.add(
+                      CartItem(
+                        dailyPrice: _product!.dailyPrice ?? 0,
+                        name: _product!.name,
+                        image: _product!.imagePath,
+                        quantity: 1,
+                        price: _product!.price,
+                        type: 'sale',
+                        dateRange: '',
+                        id: _product!.id,
+                        productId: _product!.id,
+                      ),
+                    );
 
-            if (result['success'] != false) {
-              // ✅ ضيفه local برضو لو عايز
-              cartItemsGlobal.add(
-                CartItem(
-                  dailyPrice: _product!.dailyPrice ?? 0,
-                  name: _product!.name,
-                  image: _product!.imagePath,
-                  quantity: 1,
-                  price: _product!.price,
-                  type: 'sale',
-                  dateRange: '',
-                  id: _product!.id,
-                  productId: _product!.id,
-                ),
-              );
-
-              // SnackBar
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Product added to cart 🛒"),
-                  duration: const Duration(seconds: 2),
-                  backgroundColor: Colors.blue,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  action: SnackBarAction(
-                    label: "View Cart",
-                    textColor: Colors.white,
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => CartPage()),
-                      );
-                    },
-                  ),
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(result['message'] ?? "Error")),
-              );
-            }
-          },
-          child: Text(
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text("Product added to cart 🛒"),
+                        duration: const Duration(seconds: 2),
+                        backgroundColor: Colors.blue,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        action: SnackBarAction(
+                          label: "View Cart",
+                          textColor: Colors.white,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => CartPage()),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(result['message'] ?? "Error")),
+                    );
+                  }
+                },
+          child: const Text(
             "Add To Cart",
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -1943,38 +1881,38 @@ Future<void> _askSupplier(String text) async {
         ),
       );
     }
+
     return const SizedBox.shrink();
   }
 
   // ---------------- HELPERS ----------------
   Widget _card({required Widget child}) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: child,
-    ),
-  );
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: child,
+        ),
+      );
 
   Widget _priceRow(String title, String value, {bool bold = false}) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(
-        title,
-        style: TextStyle(
-          fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-      Text(
-        value,
-        style: TextStyle(
-          fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-    ],
-  );
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      );
 }
-

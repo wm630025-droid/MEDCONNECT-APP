@@ -54,6 +54,9 @@ flutter:
           weight: 700
 
   assets:
+    - assets/images/first_image.png
+    - assets/images/second_image.png
+    - assets/images/third_image.png
     - assets/images/intro_BackGround.png
     - assets/images/logoPNG.png
     - assets/images/Defibrillator.png

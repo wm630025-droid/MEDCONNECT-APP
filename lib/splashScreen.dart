@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:medconnect_app/introScreen.dart';
 import 'package:medconnect_app/mainScreen.dart';
 import 'package:medconnect_app/services/api_service.dart';
+import 'package:medconnect_app/find_item_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 class MedConnectSplash extends StatefulWidget {
   const MedConnectSplash({super.key});
 
@@ -24,22 +26,30 @@ class _MedConnectSplashState extends State<MedConnectSplash>
     )..forward();
 
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) =>  _getInitialScreen()),
-        );
-      }
-
-     
+      _navigateAfterSplash();
     });
   }
-  Widget _getInitialScreen() {
+  Future<void> _navigateAfterSplash() async {
+    await ApiService.loadToken();
+    final prefs = await SharedPreferences.getInstance();
+    final bool hasAccount = prefs.getBool('has_account') ?? false;
+    final bool seenOnboarding = prefs.getBool('seen_onboarding') ?? false;
+
+    Widget target;
     if (ApiService.isLoggedIn) {
-      // لو فيه توكن، يروح للـ Home مباشرة
-      return const MainScreen();
+      target = const MainScreen();
+    } else if (!hasAccount && !seenOnboarding) {
+      // First-time user without account -> show first onboarding page
+      target = const OnboardingFindItemScreen();
     } else {
-      // لو مفيش توكن، يروح لشاشة Login
-      return const IntroScreen();
+      // Has account before or already saw onboarding -> go to intro/login
+      target = const IntroScreen();
+    }
+
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => target),
+      );
     }
   }
   @override

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/models/rental_item.dart';
@@ -360,7 +359,7 @@ List<CartItem> getDisplayItems() {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  'Rental • Daily: \$${item.dailyPrice.toStringAsFixed(2)}',
+                                  'Rental • Daily: \EGP ${item.dailyPrice.toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     color: Colors.blue,
                                     fontSize: 10,
@@ -390,7 +389,7 @@ List<CartItem> getDisplayItems() {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '\$${(item.price * item.quantity).toStringAsFixed(2)}',
+                            '\EGP ${(item.price * item.quantity).toStringAsFixed(2)}',
                             style: const TextStyle(
                               color: Color(0xFF0D6EFD),
                               fontWeight: FontWeight.bold,
@@ -400,7 +399,7 @@ List<CartItem> getDisplayItems() {
                           if (item.type == 'rental' && item.rentalDays != null) ...[
                             const SizedBox(height: 2),
                             Text(
-                              '(\$${item.dailyPrice.toStringAsFixed(2) } × ${item.rentalDays} days × ${item.quantity})',
+                              '( ${item.dailyPrice.toStringAsFixed(2) } × ${item.rentalDays} days × ${item.quantity})',
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontSize: 9,
@@ -417,10 +416,10 @@ List<CartItem> getDisplayItems() {
             }),
 
           const Divider(height: 32),
-          _priceRow('Subtotal', '\$${subtotal.toStringAsFixed(2)}'),
+          _priceRow('Subtotal', '\EGP ${subtotal.toStringAsFixed(2)}'),
          
           const SizedBox(height: 8),
-          _priceRow('Total', '\$${total.toStringAsFixed(2)}', isTotal: true),
+          _priceRow('Total', '\EGP ${total.toStringAsFixed(2)}', isTotal: true),
 
           const SizedBox(height: 16),
           const Divider(),
@@ -511,99 +510,78 @@ List<CartItem> getDisplayItems() {
   setState(() => isLoading = true);
 
   try {
-    final bool isCashPayment = selectedPayment.toLowerCase() == 'cod' || selectedPayment.toLowerCase() == 'cash';
-    final bool isOnlinePayment = !isCashPayment;
+    final bool isCashPayment =
+        selectedPayment.toLowerCase() == 'cod' || selectedPayment.toLowerCase() == 'cash';
 
-    // ================== حالة الإيجار ==================
+    Map<String, dynamic> response;
+
     if (widget.isRentalMode && widget.rentalItem != null) {
-      final result = await PaymentService.placeRentalOrder(
-        productId: widget.rentalItem!.productId,
-        quantity: widget.rentalItem!.quantity,
-        startDate: widget.rentalItem!.startDate,
-        endDate: widget.rentalItem!.endDate,
-        paymentType: isCashPayment ? 'cash' : 'online',
-      );
-
-      if (!mounted) return;
-
-      if (result['success'] == true) {
-        if (isCashPayment) {
-          _showSuccessDialog(
-            message: 'Order placed successfully',
-            invoiceNumber: result['invoiceNumber']?.toString() ?? '',
-          );
-        } else if (isOnlinePayment) {
-          // الدفع الأونلاين - انتقل مباشرة إلى رابط الدفع بدون عرض dialog
-          final paymentLink = result['redirectTo']?.toString() ?? '';
-          if (paymentLink.isNotEmpty) {
-            await _launchURL(paymentLink);
-          } else {
-            _showErrorDialog('Payment link not available');
-          }
+      // ================== حالة الإيجار ==================
+      response = isCashPayment
+          ? await PaymentService.placeCashOrder(
+              orderType: 'rental',
+              productId: widget.rentalItem!.productId,
+              quantity: widget.rentalItem!.quantity,
+              rentalStartDate: widget.rentalItem!.startDate,
+              rentalEndDate: widget.rentalItem!.endDate,
+            )
+          : await PaymentService.placeOnlineOrder(
+              orderType: 'rental',
+              productId: widget.rentalItem!.productId,
+              quantity: widget.rentalItem!.quantity,
+              rentalStartDate: widget.rentalItem!.startDate,
+              rentalEndDate: widget.rentalItem!.endDate,
+            );
+    } else {
+      // ================== حالة البيع (sale) ==================
+      final double cartTotal = items.fold(0.0, (sum, i) {
+        if (i.type == 'rental') {
+          final int rentalDays = i.rentalDays ?? 0;
+          return sum + (i.dailyPrice * rentalDays * i.quantity);
         }
-      } else {
-_showErrorDialog(result['message']?.toString() ?? result['error']?.toString() ?? 'Failed to place order');      }
-      return;
+        return sum + (i.price * i.quantity);
+      });
+
+      final List<Map<String, dynamic>> payloadItems = items.map((item) {
+        return {
+          'product_id': item.productId,
+          'quantity': item.quantity,
+          'price': item.price,
+          'type': item.type,
+          'price_daily': item.dailyPrice.toString(),
+          'rental_days': item.rentalDays,
+          'start_date': item.startDate,
+          'end_date': item.endDate,
+        };
+      }).toList();
+
+      response = isCashPayment
+          ? await PaymentService.placeCashOrder(
+              orderType: 'sale',
+              cartItems: payloadItems,
+              cartTotal: cartTotal,
+            )
+          : await PaymentService.placeOnlineOrder(
+              orderType: 'sale',
+              cartItems: payloadItems,
+              cartTotal: cartTotal,
+            );
     }
-
-    // ================== حالة البيع (sale) ==================
-    // Send a single request with the full cart to avoid cart total mismatches
-    final double cartTotal = items.fold(
-      0.0,
-      (sum, i) => sum + (i.price * i.quantity),
-    );
-
-    final List<Map<String, dynamic>> payloadItems = items.map((item) {
-      return {
-        'product_id': item.productId,
-        'quantity': item.quantity,
-        'price': item.price,
-        'type': item.type,
-        'price_daily': item.dailyPrice.toString(),
-        'rental_days': item.rentalDays,
-        'start_date': item.startDate,
-        'end_date': item.endDate,
-      };
-    }).toList();
-
-    final response = isCashPayment
-        ? await PaymentService.placeCashOrder(
-            orderType: 'sale',
-            cartItems: payloadItems,
-            cartTotal: cartTotal,
-            rentalStartDate: null,
-            rentalEndDate: null,
-          )
-        : await PaymentService.placeOnlineOrder(
-            orderType: 'sale',
-            cartItems: payloadItems,
-            cartTotal: cartTotal,
-            rentalStartDate: null,
-            rentalEndDate: null,
-          );
 
     if (!mounted) return;
 
+    // ================== معالجة الرد - واحدة موحدة للجميع ==================
     if (response['success'] == true) {
-      String paymentLink = '';
-      final redirectValue = response['redirectTo'];
-      if (redirectValue is String) {
-        paymentLink = redirectValue;
-      } else if (redirectValue is Map || redirectValue is List) {
-        paymentLink = jsonEncode(redirectValue);
-      } else if (redirectValue != null) {
-        paymentLink = redirectValue.toString();
-      }
-
       final invoiceNumber = response['invoiceNumber']?.toString() ?? '';
-      final message = response['message'] ?? 'Order placed successfully';
+      final message = response['message']?.toString() ?? 'Order placed successfully';
+      final paymentLink = response['redirectTo']?.toString() ?? '';
 
       if (isCashPayment) {
         _showSuccessDialog(
           message: message,
           invoiceNumber: invoiceNumber,
         );
-      } else if (isOnlinePayment) {
+      } else {
         if (paymentLink.isNotEmpty) {
           await _launchURL(paymentLink);
         } else {
@@ -611,10 +589,7 @@ _showErrorDialog(result['message']?.toString() ?? result['error']?.toString() ??
         }
       }
     } else {
-      _showErrorDialog(
-        response['message'] ?? response['error'] ?? 'Failed to place order',
-      );
-      return;
+      _showErrorDialog(response['message']?.toString() ?? 'Failed to place order');
     }
   } catch (e) {
     print('❌ Exception: $e');
@@ -627,7 +602,6 @@ _showErrorDialog(result['message']?.toString() ?? result['error']?.toString() ??
     }
   }
 }
-
 Future<void> _launchURL(String url) async {
   print('Opening WebView with URL: $url');
   if (url.isEmpty) {
