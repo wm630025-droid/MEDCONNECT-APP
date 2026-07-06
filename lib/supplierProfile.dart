@@ -46,7 +46,8 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
   int _totalPages = 1;
   bool _isLoadingMore = false;
   final ScrollController _scrollController = ScrollController();
-
+  int? _conversationId;
+  int? _receiverId;
   // Map<int, bool> _notifyStatus = {}; // productId -> isNotified
 
   final ApiService _apiService = ApiService();
@@ -208,6 +209,8 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         // ✅ استخراج بيانات المورد من الـ Response (جاية بره الـ data)
         if (result['supplier'] != null) {
           _supplierData = result['supplier'];
+              _conversationId = _supplierData?['conversation_id'] ;
+     _receiverId = _supplierData?['allUser_id'] ;
           print('✅ Supplier data loaded: ${_supplierData?['company_name']}');
         }
       });
@@ -478,6 +481,7 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
         ? _supplierData!['company_image_url'] ?? ''
         : '';
     final companyName = widget.supplierName;
+ 
 
     print('🔍 Supplier Header - Image URL: $imageUrl');
     print('🔍 Supplier Header - Company: $companyName');
@@ -517,7 +521,8 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
           const SizedBox(height: 4),
 
           const SizedBox(height: 16),
-          _buildChatButton(),
+          
+          _buildChatButton(_conversationId, _receiverId),
           // SizedBox(
           //   width: double.infinity,
           //   child: ElevatedButton(
@@ -546,8 +551,11 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
     );
   }
 
-  Widget _buildChatButton() {
-    final conversationId = _supplierData?['conversation_id'];
+  Widget _buildChatButton(int? convId, int? receiverId) {
+    print('🔍 Supplier Data for Chat: $_supplierData');
+    print('supplierconversation_id: ${_supplierData?['conversation_id']}');
+    print('supplierallUser_id: ${_supplierData?['allUser_id']}');
+    
 
     return SizedBox(
       width: double.infinity,
@@ -560,16 +568,22 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
           ),
         ),
         onPressed: () {
+          print('🔍 Navigating to ChatScreen with:');
+          print('   chatName: ${widget.supplierName}');
+         // print('   conversationId: $conversationId');
+          print('   receiverId: ${_supplierData?['allUser_id']}');
+          
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => ChatScreen(
                 chatName: widget.supplierName,
-                conversationId: conversationId, // ✅ لو null، ChatScreen هيتعامل
-                receiverId: _supplierData?['allUser_id'],
+                conversationId: convId, // ✅ لو null، ChatScreen هيتعامل
+                receiverId: receiverId?? _supplierData?['allUser_id'], // ✅ لو null، ChatScreen هيتعامل
               ),
             ),
           );
+          
         },
         child: const Text(
           "Chat with Vendor",

@@ -5,6 +5,7 @@ import 'package:medconnect_app/core/app_colorAccepted.dart';
 import 'package:medconnect_app/homeScreen.dart';
 //import 'package:medconnect_app/homeScreen.dart';
 import 'package:medconnect_app/mainScreen.dart';
+import 'package:medconnect_app/productDetails.dart';
 import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/services/equipment_service.dart'
     as EquipmentApiService;
@@ -57,106 +58,111 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
   void retryFetch() {
     fetchEquipmentLists();
   }
+
   void _addAllToCart(EquipmentList list) async {
-  int addedCount = 0;
+    int addedCount = 0;
 
-  
-  for (var item in list.items) {
-    if (item.isAva) {
-      try {
-        final product = await ApiService().fetchProductById(item.productId);
-        final result = await ApiService().addToCart(
-          productId: item.productId,
-          quantity: 1,
-          type: 'sale',
-        );
-        
-        if (result['success'] == true) {
-          // ✅ إضافة محلية لـ cartItemsGlobal
-          final cartItem = CartItem(
-            id: product.id,
-            productId: product.id,
-            name: product.name,
-            image: product.imagePath, // مش متوفر في equipment list
+    for (var item in list.items) {
+      if (item.isAva) {
+        try {
+          final product = await ApiService().fetchProductById(item.productId);
+          final result = await ApiService().addToCart(
+            productId: item.productId,
             quantity: 1,
-            price: product.price, // مش متوفر
             type: 'sale',
-            dailyPrice: product.dailyPrice ?? 0, // مش متوفر
           );
-          cartItemsGlobal.add(cartItem);
-          addedCount++;
-          print('✅ Added to cart: ${item.productName}');
-        }
-      } catch (e) {
-        print('❌ Error adding ${item.productId}: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text("${item.productName} $e", style: const TextStyle(color: Colors.white,fontSize: 12)),
-      backgroundColor: Colors.red,
-    ),
-  );
 
+          if (result['success'] == true) {
+            // ✅ إضافة محلية لـ cartItemsGlobal
+            final cartItem = CartItem(
+              id: product.id,
+              productId: product.id,
+              name: product.name,
+              image: product.imagePath, // مش متوفر في equipment list
+              quantity: 1,
+              price: product.price, // مش متوفر
+              type: 'sale',
+              dailyPrice: product.dailyPrice ?? 0, // مش متوفر
+            );
+            cartItemsGlobal.add(cartItem);
+            addedCount++;
+            print('✅ Added to cart: ${item.productName}');
+          }
+        } catch (e) {
+          print('❌ Error adding ${item.productId}: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "${item.productName} $e",
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
+    }
+
+    if (addedCount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "🛒 Added $addedCount items to cart",
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
-  if (addedCount > 0) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text("🛒 Added $addedCount items to cart", style: const TextStyle(color: Colors.white, fontSize: 12)),
-      backgroundColor: Colors.green,
-    ),
-  );
-  }
-}
+  // void _addAllToCart(EquipmentList list) async {
+  //   //   showDialog(
+  //   //   context: context,
+  //   //   barrierDismissible: false,
+  //   //   builder: (_) => const Center(child: CircularProgressIndicator()),
+  //   // );
+  //   int addedCount = 0;
 
-// void _addAllToCart(EquipmentList list) async {
-//   //   showDialog(
-//   //   context: context,
-//   //   barrierDismissible: false,
-//   //   builder: (_) => const Center(child: CircularProgressIndicator()),
-//   // );
-//   int addedCount = 0;
-  
-//   for (var item in list.items) {
-//     if (item.isAva) {
-//       try {
-       
-//         // ✅ جلب بيانات المنتج من API عشان السعر والصورة
-        
-//         final product = await ApiService().fetchProductById(item.productId);
-        
-//         final cartItem = CartItem(
-//           id: product.id,
-//           productId: product.id,
-//           name: product.name,
-//           image: product.imagePath,
-//           quantity: 1,
-//           price: product.price,
-//           type: 'sale',
-//           daily_rent: 0,
-//         );
-        
-//         cartItemsGlobal.add(cartItem);
-//         addedCount++;
-//       } catch (e) {
-//         print('❌ Failed to fetch product ${item.productId}: $e');
-//       }
-//     }
-//   }
-  
-//   ScaffoldMessenger.of(context).showSnackBar(
-//     SnackBar(
-//       content: Text("🛒 Added $addedCount items to cart"),
-//       backgroundColor: Colors.green,
-//     ),
-//   );
-//   // بعد الإضافة
-// Navigator.pushReplacement(
-//   context,
-//   MaterialPageRoute(builder: (_) => const CartPage()),
-// );
-// }
+  //   for (var item in list.items) {
+  //     if (item.isAva) {
+  //       try {
+
+  //         // ✅ جلب بيانات المنتج من API عشان السعر والصورة
+
+  //         final product = await ApiService().fetchProductById(item.productId);
+
+  //         final cartItem = CartItem(
+  //           id: product.id,
+  //           productId: product.id,
+  //           name: product.name,
+  //           image: product.imagePath,
+  //           quantity: 1,
+  //           price: product.price,
+  //           type: 'sale',
+  //           daily_rent: 0,
+  //         );
+
+  //         cartItemsGlobal.add(cartItem);
+  //         addedCount++;
+  //       } catch (e) {
+  //         print('❌ Failed to fetch product ${item.productId}: $e');
+  //       }
+  //     }
+  //   }
+
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     SnackBar(
+  //       content: Text("🛒 Added $addedCount items to cart"),
+  //       backgroundColor: Colors.green,
+  //     ),
+  //   );
+  //   // بعد الإضافة
+  // Navigator.pushReplacement(
+  //   context,
+  //   MaterialPageRoute(builder: (_) => const CartPage()),
+  // );
+  // }
 
   // void addAllToCart(EquipmentList list) {
   //   int addedCount = 0;
@@ -229,119 +235,135 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
     );
   }
 
- void _editListName(EquipmentList list, int index) async {
-  final controller = TextEditingController(text: list.listName);
-  final newName = await showDialog<String>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text("Edit List Name"),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        decoration: const InputDecoration(
-          hintText: "Enter new list name",
-          border: OutlineInputBorder(),
+  void _editListName(EquipmentList list, int index) async {
+    final controller = TextEditingController(text: list.listName);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Edit List Name"),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: "Enter new list name",
+            border: OutlineInputBorder(),
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.black)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text("Save", style: TextStyle(color: Colors.blue)),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel", style: TextStyle(color: Colors.black)),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, controller.text.trim()),
-          child: const Text("Save", style: TextStyle(color: Colors.blue)),
-        ),
-      ],
-    ),
-  );
+    );
 
-  if (newName != null && newName.isNotEmpty && newName != list.listName) {
+    if (newName != null && newName.isNotEmpty && newName != list.listName) {
+      try {
+        await EquipmentApiService.updateEquipmentListName(list.id, newName);
+
+        final updatedList = EquipmentList(
+          id: list.id,
+          listName: newName,
+          isDefault: list.isDefault,
+          createdAt: list.createdAt,
+          items: list.items,
+          isExpanded: list.isExpanded,
+        );
+
+        setState(() {
+          lists[index] = updatedList;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("✏️ List name updated")));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "❌ Error: ${e.toString().replaceAll('Exception:', '')}",
+              ),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _removeItemFromList(
+    EquipmentList list,
+    int listIndex,
+    EquipmentItem item,
+    int itemIndex,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Remove Item"),
+        content: Text(
+          "Are you sure you want to remove '${item.productName}' from this list?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel", style: TextStyle(color: Colors.black)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            //style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Remove", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     try {
-      await EquipmentApiService.updateEquipmentListName(list.id, newName);
-      
+      // ✅ استخدام product_id مش item_id
+      await EquipmentApiService.removeItemFromList(list.id, item.productId);
+
+      final updatedItems = List<EquipmentItem>.from(list.items);
+      updatedItems.removeAt(itemIndex);
+
       final updatedList = EquipmentList(
         id: list.id,
-        listName: newName,
+        listName: list.listName,
         isDefault: list.isDefault,
         createdAt: list.createdAt,
-        items: list.items,
+        items: updatedItems,
         isExpanded: list.isExpanded,
       );
-      
+
       setState(() {
-        lists[index] = updatedList;
+        lists[listIndex] = updatedList;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✏️ List name updated")),
+          const SnackBar(content: Text("🗑️ Item removed from list")),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Error: ${e.toString().replaceAll('Exception:', '')}")),
+          SnackBar(
+            content: Text(
+              "❌ Error: ${e.toString().replaceAll('Exception:', '')}",
+            ),
+          ),
         );
       }
     }
   }
-}
-  void _removeItemFromList(EquipmentList list, int listIndex, EquipmentItem item, int itemIndex) async {
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text("Remove Item"),
-      content: Text("Are you sure you want to remove '${item.productName}' from this list?"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text("Cancel", style: TextStyle(color: Colors.black)),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          //style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          child: const Text("Remove", style: TextStyle(color: Colors.red)),
-        ),
-      ],
-    ),
-  );
-
-  if (confirm != true) return;
-
-  try {
-    // ✅ استخدام product_id مش item_id
-    await EquipmentApiService.removeItemFromList(list.id, item.productId);
-    
-    final updatedItems = List<EquipmentItem>.from(list.items);
-    updatedItems.removeAt(itemIndex);
-    
-    final updatedList = EquipmentList(
-      id: list.id,
-      listName: list.listName,
-      isDefault: list.isDefault,
-      createdAt: list.createdAt,
-      items: updatedItems,
-      isExpanded: list.isExpanded,
-    );
-    
-    setState(() {
-      lists[listIndex] = updatedList;
-    });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("🗑️ Item removed from list")),
-      );
-    }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Error: ${e.toString().replaceAll('Exception:', '')}")),
-      );
-    }
-  }
-}
 
   void _deleteList(int listId, int index) async {
     final confirm = await showDialog<bool>(
@@ -358,8 +380,11 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-           // style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 246, 246, 246)),
-            child: const Text("Delete", style: TextStyle(color: Color.fromARGB(255, 246, 94, 94))),
+            // style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 246, 246, 246)),
+            child: const Text(
+              "Delete",
+              style: TextStyle(color: Color.fromARGB(255, 246, 94, 94)),
+            ),
           ),
         ],
       ),
@@ -450,15 +475,14 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
         ),
         backgroundColor: Colors.white,
         leading: IconButton(
-    icon: const Icon(Icons.arrow_back_ios_new),
-    onPressed: () {  //new modification 
-       Navigator.push(
-        context,
-        MaterialPageRoute(
-         builder: (context) => const MainScreen(),
-        ),
-      );
-    },
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () {
+            //new modification
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MainScreen()),
+            );
+          },
         ),
 
         actions: [
@@ -582,7 +606,10 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
                       onPressed: () => _editListName(list, index),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Color.fromARGB(255, 75, 87, 129)),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Color.fromARGB(255, 75, 87, 129),
+                      ),
                       onPressed: () => _deleteList(list.id, index),
 
                       // showDialog(
@@ -682,132 +709,147 @@ class _EquipmentListsScreenState extends State<EquipmentListsScreen> {
                         final itemIndex = entry.key;
                         final item = entry.value;
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(10),
-                            border: !item.isAva
-                                ? Border.all(
-                                    color: Colors.red.shade200,
-                                    width: 1,
-                                  )
-                                : null,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            item.productName,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 14,
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProductDetailsPage(
+                                  productId: item.productId, // ✅ معرف المنتج
+                                  // مش بنمرره عشان نجيبه من API
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(10),
+                              border: !item.isAva
+                                  ? Border.all(
+                                      color: Colors.red.shade200,
+                                      width: 1,
+                                    )
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              item.productName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 14,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                        ),
-                                        // ✅ علامة Out of Stock جنب المنتج
-                                        if (!item.isAva)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.red.shade100,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: const Text(
-                                              'OUT OF STOCK',
-                                              style: TextStyle(
-                                                color: Colors.red,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
+                                          // ✅ علامة Out of Stock جنب المنتج
+                                          if (!item.isAva)
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.shade100,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: const Text(
+                                                'OUT OF STOCK',
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                      ],
-                                    ),
-                                    // const SizedBox(height: 4),
-                                    // Text(
-                                    //   "Product ID: ${item.productId}",
-                                    //   style: const TextStyle(
-                                    //     fontSize: 12,
-                                    //     color: Colors.grey,
-                                    //   ),
-                                    // ),
-                                    // ✅ جملة out of stock تحت المنتج
-                                    if (!item.isAva)
-                                      const Padding(
-                                        padding: EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          "This product is out of stock",
-                                          style: TextStyle(
-                                            color: Colors.red,
-                                            fontSize: 11,
+                                        ],
+                                      ),
+                                      // const SizedBox(height: 4),
+                                      // Text(
+                                      //   "Product ID: ${item.productId}",
+                                      //   style: const TextStyle(
+                                      //     fontSize: 12,
+                                      //     color: Colors.grey,
+                                      //   ),
+                                      // ),
+                                      // ✅ جملة out of stock تحت المنتج
+                                      if (!item.isAva)
+                                        const Padding(
+                                          padding: EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            "This product is out of stock",
+                                            style: TextStyle(
+                                              color: Colors.red,
+                                              fontSize: 11,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
 
-                              // ✅ زر Search Again - يودي لـ MainScreen
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Color.fromARGB(255, 54, 86, 158),
+                                // ✅ زر Search Again - يودي لـ MainScreen
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Color.fromARGB(255, 54, 86, 158),
+                                  ),
+                                  onPressed: () => _removeItemFromList(
+                                    list,
+                                    index,
+                                    item,
+                                    itemIndex,
+                                  ),
                                 ),
-                                onPressed: () => _removeItemFromList(
-                                  list,
-                                  index,
-                                  item,
-                                  itemIndex,
-                                ),
-                              ),
 
-                              // if (!item.isAva)
-                              //   GestureDetector(
-                              //     onTap: () {
-                              //       Navigator.pushAndRemoveUntil(
-                              //         context,
-                              //         MaterialPageRoute(
-                              //           builder: (context) =>
-                              //               const MainScreen(),
-                              //         ),
-                              //         (route) => false,
-                              //       );
-                              //     },
-                              //     child: Container(
-                              //       padding: const EdgeInsets.symmetric(
-                              //         horizontal: 12,
-                              //         vertical: 6,
-                              //       ),
-                              //       decoration: BoxDecoration(
-                              //         color: AppColors.primary.withOpacity(0.1),
-                              //         borderRadius: BorderRadius.circular(20),
-                              //       ),
-                              //       child: const Text(
-                              //         "Search Again",
-                              //         style: TextStyle(
-                              //           fontWeight: FontWeight.bold,
-                              //           color: AppColors.primary,
-                              //           fontSize: 12,
-                              //         ),
-                              //       ),
-                              //     ),
-                              //   ),
-                            ],
+                                // if (!item.isAva)
+                                //   GestureDetector(
+                                //     onTap: () {
+                                //       Navigator.pushAndRemoveUntil(
+                                //         context,
+                                //         MaterialPageRoute(
+                                //           builder: (context) =>
+                                //               const MainScreen(),
+                                //         ),
+                                //         (route) => false,
+                                //       );
+                                //     },
+                                //     child: Container(
+                                //       padding: const EdgeInsets.symmetric(
+                                //         horizontal: 12,
+                                //         vertical: 6,
+                                //       ),
+                                //       decoration: BoxDecoration(
+                                //         color: AppColors.primary.withOpacity(0.1),
+                                //         borderRadius: BorderRadius.circular(20),
+                                //       ),
+                                //       child: const Text(
+                                //         "Search Again",
+                                //         style: TextStyle(
+                                //           fontWeight: FontWeight.bold,
+                                //           color: AppColors.primary,
+                                //           fontSize: 12,
+                                //         ),
+                                //       ),
+                                //     ),
+                                //   ),
+                              ],
+                            ),
                           ),
                         );
                       }).toList(),

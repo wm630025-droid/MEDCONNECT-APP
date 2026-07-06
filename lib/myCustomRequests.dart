@@ -91,20 +91,25 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
         _currentPage = 1;
         _requests = [];
         _hasMore = true;
+        _lastPage = 1;
       });
     } else {
       setState(() {
         _isLoadingMore = true;
+        _currentPage++;
       });
     }
 
     try {
+      print('Filter: ${_currentFilter == 'All' ? 'all' : _currentFilter.toLowerCase()}');
+print('Page: $_currentPage');
       final result = await _apiService.getCustomRequestsWithPagination(
         page: _currentPage,
         perPage: _perPage,
         status: _currentFilter == 'All' ? 'all' : _currentFilter.toLowerCase(),
       );
-
+print('Result length: ${result['requests'].length}');
+print('LastPage: ${result['lastPage']}');
       setState(() {
         if (loadMore) {
           _requests.addAll(result['requests']);
@@ -113,7 +118,7 @@ class _MyCustomRequestsPageState extends State<MyCustomRequestsPage> {
         }
         _lastPage = result['lastPage'];
         _hasMore = _currentPage < _lastPage;
-        _currentPage++;
+       // _currentPage++;
         _isLoading = false;
         _isLoadingMore = false;
       });

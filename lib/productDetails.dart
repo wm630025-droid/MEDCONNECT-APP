@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
+import 'package:medconnect_app/chatScreen.dart';
 import 'package:medconnect_app/checkoutAddress.dart';
 import 'package:medconnect_app/models/equipment_model.dart';
 import 'package:medconnect_app/models/product.dart';
@@ -711,6 +712,37 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 12),
+    
+    // ✅ Ask Supplier Button
+    Expanded(
+      child: SizedBox(
+        height: 35,
+        child: ElevatedButton.icon(
+          onPressed: () => _showAskSupplierDialog(),
+          icon: const Icon(
+            Icons.chat,
+            color: Colors.white,
+            size: 18,
+          ),
+          label: const Text(
+            "Ask Supplier",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ),
+    ),
+  
                 ],
               ),
             ),
@@ -731,7 +763,43 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       bottomNavigationBar: _actionButton(),
     );
   }
+Future<void> _showAskSupplierDialog() async {
+  final controller = TextEditingController();
 
+  final message = await showDialog<String>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("Send Message"),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: "Type your message...",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, controller.text.trim());
+            },
+            child: const Text("Send"),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (message != null && message.isNotEmpty) {
+    _askSupplier(message);
+  }
+}
   Widget locationAndSetupTime() {
     return Container(
       child: Row(
@@ -1200,7 +1268,59 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       ),
     ),
   );
+// Widget _askSupplierButton() {
+//   return Padding(
+//     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+//     child: ElevatedButton.icon(
+//       style: ElevatedButton.styleFrom(
+//         backgroundColor: Colors.green,
+//         padding: const EdgeInsets.symmetric(vertical: 14),
+//         shape: RoundedRectangleBorder(
+//           borderRadius: BorderRadius.circular(12),
+//         ),
+//       ),
+//       onPressed: () {
+// _askSupplier("");
+//       }, 
+//       icon: const Icon(Icons.chat, color: Colors.white),
+//       label: const Text(
+//         "Ask Supplier",
+//         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+//       ),
+//     ),
+//   );
+// }
 
+Future<void> _askSupplier(String text) async {
+  if (_product == null) return;
+  
+  // ✅ اسم المورد من supplierData
+  String supplierName = _product!.supplierData?['company_name'] ?? 'Supplier';
+  int supplierId = _product!.supplierData?['allUserId']?? 0;
+   int? existingConversationId = _product!.supplierData?['conversationId'];
+ 
+  // ✅ بناء رسالة Share Product
+  final shareMessage = {
+    'type': 'product',
+    'productId': _product!.id,
+    'productName': _product!.name,
+    'productImage': _product!.imagePath,
+  };
+  
+  // ✅ فتح ChatScreen مع رسالة مسبقة
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ChatScreen(
+        chatName: supplierName,
+        conversationId: existingConversationId,
+        receiverId: supplierId,
+        initialMessage: shareMessage,
+        text: text,
+      ),
+    ),
+  );
+}
   // ---------------- SPECIFICATIONS ----------------
   List<Map<String, String>> _parseSpecifications() {
     List<Map<String, String>> result = [];

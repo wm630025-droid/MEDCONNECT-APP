@@ -13,6 +13,7 @@ class ChatMessage {
   final String type; // text | image | file
   final DateTime time;
   final bool isMe;
+  final Map<String, dynamic>? productData; // ✅ جديد
 
   ChatMessage({
     required this.id,
@@ -20,6 +21,7 @@ class ChatMessage {
     required this.type,
     required this.time,
     required this.isMe,
+    this.productData, // ✅ جديد
   });
 }
 
@@ -27,12 +29,15 @@ class ChatScreen extends StatefulWidget {
   final String chatName;
   final int? conversationId;
   final int receiverId; // هتحتاجيها عشان تبعتي رسالة
-
+  final Map<String, dynamic>? initialMessage; // ✅ جديد
+  final String? text; // ✅ جديد
   const ChatScreen({
     super.key,
     required this.chatName,
     required this.conversationId,
     required this.receiverId,
+    this.initialMessage,
+    this.text,
   });
 
   @override
@@ -52,21 +57,58 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    print('🟢 ChatScreen initState');
-    print('📦 widget.conversationId: ${widget.conversationId}');
-    print('📦 widget.receiverId: ${widget.receiverId}');
+    // print('🟢 ChatScreen initState');
+    // print('📦 widget.conversationId: ${widget.conversationId}');
+    // print('📦 widget.receiverId: ${widget.receiverId}');
 
-    if (widget.conversationId != null) {
-      print('✅ conversationId set to: $conversationId');
-      conversationId = widget.conversationId;
-      _loadMessages();
-      // _subscribeToPusher();
-      _startPolling();
-    } else {
-      print('⚠️ conversationId is null, calling _fetchOrCreateConversation');
-      // _loading = false;
-      _fetchOrCreateConversation();
+    //print('✅ conversationId set to: $conversationId');
+    conversationId = widget.conversationId;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (widget.conversationId != null) {
+        _loadMessages();
+        _startPolling();
+
+        // _subscribeToPusher();
+      } else {
+        print('⚠️ conversationId is null, calling _fetchOrCreateConversation');
+        // _loading = false;
+        await _fetchOrCreateConversation();
+      }
+      print("initialMessage: ${widget.initialMessage}");
+      if (widget.initialMessage != null) {
+        //  WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadMessages();
+        _sendSharedProduct(widget.initialMessage!, widget.text ?? '');
+        //  });
+      }
+    });
+
+    // ✅ لو في رسالة مسبقة (Share Product)
+  }
+
+  Future<void> _sendSharedProduct(
+    Map<String, dynamic> productData,
+    String text,
+  ) async {
+    print('📦 دخلت shared product');
+    if (conversationId == null) {
+      // نحاول نبحث عن محادثة أو ننشئ واحدة
+      await _fetchOrCreateConversation();
+      if (conversationId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Cannot start conversation with this supplier'),
+          ),
+        );
+        return;
+      }
     }
+    // ✅ بناء الرسالة
+    //  final message = "🛒 Shared Product: ${productData['productName']}";
+
+    // ✅ إرسال الرسالة
+    await _sendMessage(text, isProduct: true, productData: productData);
+    print("after send shared product");
   }
 
   // void _subscribeToPusher() {
@@ -109,7 +151,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final messages = await _api.getMessages(conversationId!);
-      final lastMessage = messages.isNotEmpty ? messages.last['body'] : '';
+      final lastMessage = messages.isNotEmpty ? messages.last['message'] : '';
 
       // ✅ هنا تقارني بين آخر رسالة موجودة عندك والجديدة
       if (_messages.isNotEmpty && messages.isNotEmpty) {
@@ -148,6 +190,9 @@ class _ChatScreenState extends State<ChatScreen> {
       );
       if (found != null) {
         conversationId = found['id'];
+        setState(() {
+          conversationId = found['id'];
+        });
         print('✅ Found conversation: $conversationId');
         await _loadMessages();
         _startPolling();
@@ -173,15 +218,29 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final messages = await _api.getMessages(conversationId!);
+
+      print("messages length: ${messages.length}");
+      if (messages.isNotEmpty) {
+        print('📦 Last message: ${messages.last}');
+      }
       if (mounted) {
         setState(() {
           _messages = messages.map((m) {
+            final hasProduct =
+                m['product_name'] != null && m['product_image'] != null;
             return ChatMessage(
               id: m['id'],
-              text: m['body'],
+              text: m['message'],
               type: 'text',
               time: DateTime.parse(m['created_at']),
               isMe: m['sender']['role'] == 'doctor',
+              productData:
+                  (m['product_name'] != null && m['product_image'] != null)
+                  ? {
+                      'productName': m['product_name'],
+                      'productImage': m['product_image'],
+                    }
+                  : null,
             );
           }).toList();
           _loading = false;
@@ -225,12 +284,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
   //   }
 
-  Future<void> _sendMessage(String text) async {
+  Future<void> _sendMessage(
+    String text, {
+    bool isProduct = false,
+    Map<String, dynamic>? productData,
+  }) async {
     print("-------------------------------");
     print('Reciver ID : ${widget.receiverId}');
     print('Messsege ${text}');
     print("-------------------------------");
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty && !isProduct) return;
+
     final tempId = DateTime.now().millisecondsSinceEpoch;
     setState(() {
       _messages.add(
@@ -240,10 +304,11 @@ class _ChatScreenState extends State<ChatScreen> {
           type: 'text',
           time: DateTime.now(),
           isMe: true,
+          productData: isProduct ? productData : null, // ✅ بيانات المنتج
         ),
       );
-      
     });
+    _controller.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -260,6 +325,8 @@ class _ChatScreenState extends State<ChatScreen> {
         receiverId: widget.receiverId, // ✅ من الـ widget
         message: text,
       );
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _loadMessages(); // ✅ بعد الإرسال نحدث الرسائل
       print('📦 Full sendMessage Response: $response'); // ✅ برينت
 
       // ✅ تحقق من وجود البيانات قبل استخدامها
@@ -281,10 +348,13 @@ class _ChatScreenState extends State<ChatScreen> {
           if (index != -1) {
             _messages[index] = ChatMessage(
               id: newMsg['id'],
-              text: text,
+              text: newMsg['body'] ?? text,
               type: 'text',
-              time: DateTime.now(),
+              time: newMsg['created_at'] != null
+                  ? DateTime.parse(newMsg['created_at'])
+                  : DateTime.now(),
               isMe: true,
+              productData: isProduct ? productData : null, // ✅ بيانات المنتج
             );
           }
         });
@@ -389,32 +459,66 @@ class _ChatScreenState extends State<ChatScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         /// محتوى الرسالة
-                        if (msg.type == "text")
+                        if (msg.text != null && msg.text!.isNotEmpty)
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(msg.text ?? ""),
                           ),
 
-                        if (msg.type == "image")
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Icon(Icons.image, size: 40),
-                              SizedBox(height: 4),
-                              Text("Image attachment"),
-                            ],
+                        if (msg.productData != null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    msg.productData!['productImage'],
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 50,
+                                        height: 50,
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(
+                                          Icons.image,
+                                          size: 30,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        msg.productData!['productName'],
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      // Text(
+                                      //   '\$${msg.productData!['productPrice']}',
+                                      //   style: const TextStyle(
+                                      //     color: Colors.green,
+                                      //   ),
+                                      // ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-
-                        if (msg.type == "file")
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Icon(Icons.insert_drive_file, size: 40),
-                              SizedBox(height: 4),
-                              Text("File attachment"),
-                            ],
-                          ),
-
                         const SizedBox(height: 5),
 
                         /// الوقت
