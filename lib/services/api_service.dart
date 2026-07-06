@@ -10,12 +10,14 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:medconnect_app/massegesScreen.dart';
 import 'package:medconnect_app/models/category.dart';
 import 'package:medconnect_app/models/custom_request_model.dart';
 import 'package:medconnect_app/models/offer_request.dart';
 import 'package:medconnect_app/models/order_model.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/models/review.dart';
+//import 'package:medconnect_app/services/pusher_service.dart';
 //import 'package:medconnect_app/services/pusher_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
@@ -48,11 +50,14 @@ class ApiService {
   static List<Order>? cachedRecentOrders;
   static DateTime? cachedRecentOrdersTime;
   // في lib/services/api_service.dart
-  static List<CustomRequest>? cachedCustomRequests;
-static DateTime? cachedCustomRequestsTime;
+//   static List<CustomRequest>? cachedCustomRequests;
+// static DateTime? cachedCustomRequestsTime;
   // static List<CustomRequest>? _cachedCustomRequests;
   // static DateTime? _cachedCustomRequestsTime;
-
+  // في api_service.dart
+static List<ChatModel>? cachedConversations;
+static DateTime? cachedConversationsTime;
+static String? doctorImageUrl;
   static void clearCache() {
     cachedProducts = null;
   }
@@ -63,45 +68,7 @@ static DateTime? cachedCustomRequestsTime;
     required String password,
     required String role,
   }) async {
-    // try {
-    //   final response = await http.post(
-    //     Uri.parse('$baseUrl/v1/$role/login'),
-    //     headers: {
-    //       'Accept': 'application/json',
-    //       'Content-Type': 'application/json',
-    //     },
-    //     body: jsonEncode({
-    //       'email': email,
-    //       'password': password,
-    //       'role': role,
-    //     }),
-    //   );
-
-    //   var data = jsonDecode(response.body);
-
-    //   if (response.statusCode == 200) {
-    //     // تخزين التوكن
-    //     if (data['data'] != null && data['token'] != null) {
-    //       await _saveToken(data['token']);
-    //       await _saveUserData(data['data']);
-    //     }
-
-    //     return {
-    //       'success': true,
-    //       'data': data['data'],
-    //     };
-    //   } else {
-    //     return {
-    //       'success': false,
-    //       'error': data['error'] ?? 'Sign in is failed',
-    //     };
-    //   }
-    // } catch (e) {
-    //   return {
-    //     'success': false,
-    //     'error': 'خطأ في الاتصال: تأكد من اتصالك بالإنترنت',
-    //   };
-    // }
+ 
     try {
       print('🟢 Login attempt started');
 
@@ -121,6 +88,7 @@ static DateTime? cachedCustomRequestsTime;
 
       if (response.statusCode == 200) {
         if (data is Map<String, dynamic> && data['success'] == false) {
+          doctorImageUrl = data['data']?['profile_image_url'] ?? null;
           print('❌ Login returned success=false');
           return {
             'success': false,
@@ -134,12 +102,15 @@ static DateTime? cachedCustomRequestsTime;
         print('✅ Login success - status 200');
         print('📦 Data: ${data['data']}');
 
-        //await PusherService().init(data['token']);
+       
         // تخزين التوكن
         if (data['data'] != null && data['token'] != null) {
           print('💾 Found token: ${data['token']}');
           await _saveToken(data['token']);
+           
           await _saveUserData(data['data']);
+         // PusherService().reset();
+          //await PusherService().init();
           final prefs = await SharedPreferences.getInstance();
           final pendingImagePath = prefs.getString('pending_profile_image');
           if (pendingImagePath != null) {
@@ -215,8 +186,8 @@ static DateTime? cachedCustomRequestsTime;
         cachedRecentOrders = null;
         cachedRecentOrdersTime = null;
         // في logout
-        cachedCustomRequests = null;
-        cachedCustomRequestsTime = null;
+        // cachedCustomRequests = null;
+        // cachedCustomRequestsTime = null;
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('auth_token');
         await prefs.remove('user_data');
@@ -279,16 +250,16 @@ static DateTime? cachedCustomRequestsTime;
           print('✅ Loaded ${categories.length} categories');
           return categories;
         } else {
-          throw Exception(data['message'] ?? 'Failed to fetch categories');
+          throw data['message'] ?? 'Failed to fetch categories';
         }
       } else if (response.statusCode == 401) {
-        throw Exception('Session expired. Please login again.');
+        throw 'Session expired. Please login again.';
       } else {
-        throw Exception('HTTP Error: ${response.statusCode}');
+        throw 'HTTP Error: ${response.statusCode}';
       }
     } catch (e) {
       print('❌ Error fetching categories: $e');
-      throw Exception('Error loading categories: $e');
+      throw '$e';
     }
   }
 
@@ -331,11 +302,11 @@ static DateTime? cachedCustomRequestsTime;
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
-        print('resonse body ${response.body}');
+      //  print('resonse body ${response.body}');
         print('✅ Success flag: ${data['success']}');
         print('📊 Total products in DB: ${data['total']}');
         print('📄 Last page: ${data['last_page']}');
-        print('📦 Products in this page: ${data['data']?.length ?? 0}');
+       // print('📦 Products in this page: ${data['data']?.length ?? 0}');
 
         if (data['success'] == true) {
           List<Product> products = (data['data'] as List)
@@ -362,11 +333,11 @@ static DateTime? cachedCustomRequestsTime;
       } else {
         print('❌ HTTP Error: ${response.statusCode}');
         print('📦 Response body: ${response.body}');
-        throw Exception('HTTP Error: ${response.statusCode}');
+        throw 'HTTP Error: ${response.statusCode}';
       }
     } catch (e) {
       print('❌ Error fetching products: $e');
-      throw Exception('Error loading products: $e');
+      throw '$e';
     }
   }
 
@@ -388,7 +359,7 @@ static DateTime? cachedCustomRequestsTime;
           'Authorization': 'Bearer $_token',
         },
       );
-
+      print('-------------------------------------------------');
       print('📦 Product Details Response status: ${response.statusCode}');
       print('📦 Product Details Response body: ${response.body}');
 
@@ -687,20 +658,6 @@ static DateTime? cachedCustomRequestsTime;
     bool forceRefresh = false,
   }) async {
     try {
-      if (!forceRefresh &&
-          page == 1 &&
-          cachedCustomRequests != null &&
-          cachedCustomRequestsTime != null &&
-          DateTime.now().difference(cachedCustomRequestsTime!).inMinutes < 5) {
-        print(
-          '📦 Returning cached custom requests (${cachedCustomRequests!.length})',
-        );
-        return {
-          'requests': cachedCustomRequests!,
-          'lastPage': 1,
-          'total': cachedCustomRequests!.length,
-        };
-      }
       if (_token == null) throw Exception('Please login first');
 
       final uri = Uri.parse('$baseUrl/v1/customRequest/doctor/show').replace(
@@ -725,16 +682,6 @@ static DateTime? cachedCustomRequestsTime;
    final List<CustomRequest> requests = (data['data'] as List)
           .map((json) => CustomRequest.fromJson(json))
           .toList();
-
-      // ✅ تخزين الكاش (لو أول صفحة)
-      if (page == 1) {
-        cachedCustomRequests = requests;
-        cachedCustomRequestsTime = DateTime.now();
-        print('✅ Cached ${requests.length} custom requests');
-      }
-
-
-
         return {
           'requests': requests,
           'lastPage': data['last_page'] ?? 1,
@@ -1041,11 +988,12 @@ static DateTime? cachedCustomRequestsTime;
         body: jsonEncode({'rating': rating, 'comment': comment}),
       );
 
-      print(
-        '📦 Add Review Response (${response.statusCode}): ${response.body}',
-      );
+   
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+           print(
+        '📦 Add Review Response (${response.statusCode}): ${response.body}',
+      );
         return jsonDecode(response.body);
       } else {
         final data = jsonDecode(response.body);
@@ -1156,15 +1104,31 @@ static DateTime? cachedCustomRequestsTime;
   }
 
   Future<List<dynamic>> getMessages(int convId) async {
-    print('📤 getMessages called with convId: $convId');
+    //print('📤 getMessages called with convId: $convId');
     final res = await http.get(
       Uri.parse('$baseUrl/v1/conversations/$convId/messages'),
       headers: _authHeaders(),
     );
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body)['data'];
+      if (res.statusCode == 200) {
+    final data = jsonDecode(res.body);
+  //  print('📦 getMessages Response: $data');
+   // print('📦 getMessages Response: ${data['data']}');
+    // ✅ إذا كانت الـ data هي List مباشرة
+    if (data['data'] is List) {
+      return data['data'];
     }
+    // ✅ إذا كانت الـ data في حقل تاني
+    else if (data['data'] is Map && data['data']['messages'] is List) {
+      return data['data']['messages'];
+    }
+    // ✅ لو الـ data كانت Map فاضية أو فيها حاجة تانية
+    else {
+      // print('⚠️ Unexpected response format: $data');
+      return [];
+    }
+  } else {
     throw Exception('Failed to load messages');
+  }
   }
 
   // جلب جهات الاتصال (للمورد)
@@ -1210,9 +1174,9 @@ static DateTime? cachedCustomRequestsTime;
       final data = jsonDecode(res.body);
       print('📦 sendMessage Response: $data');
       print('response status: ${res.statusCode}');
-      print("response body ${res.body}");
+     // print("response body ${res.body}");
       if (res.statusCode == 200 || res.statusCode == 201) {
-        print('@@ send masseges response : $res');
+       // print('@@ send masseges response : $res');
         return data;
       } else {
         throw Exception(data['error'] ?? 'Failed to send message');

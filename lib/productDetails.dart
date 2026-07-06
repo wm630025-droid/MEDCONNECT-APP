@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medconnect_app/cartScreen.dart';
+import 'package:medconnect_app/chatScreen.dart';
 import 'package:medconnect_app/checkoutAddress.dart';
 import 'package:medconnect_app/models/equipment_model.dart';
 import 'package:medconnect_app/models/product.dart';
@@ -65,6 +66,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       final reviews = await _apiService.getProductReviews(_product!.id);
       reviews.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final updatedReviews = reviews.map((r) {
+          print('-------------------------------------');
+        print('@@Review Url: ${r.profileImageUrl}');
         return Review(
           id: r.id,
           doctorId: r.doctorId,
@@ -162,6 +165,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             images: freshproduct.images,
             description: freshproduct.description,
             specification: freshproduct.specification,
+            configuration: freshproduct.configuration,
             warranty: freshproduct.warranty,
             setupDuration: freshproduct.setupDuration,
             supplierData: freshproduct.supplierData,
@@ -639,6 +643,37 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 12),
+    
+    // ✅ Ask Supplier Button
+    Expanded(
+      child: SizedBox(
+        height: 35,
+        child: ElevatedButton.icon(
+          onPressed: () => _showAskSupplierDialog(),
+          icon: const Icon(
+            Icons.chat,
+            color: Colors.white,
+            size: 18,
+          ),
+          label: const Text(
+            "Ask Supplier",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ),
+    ),
+  
                 ],
               ),
             ),
@@ -659,7 +694,43 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       bottomNavigationBar: _actionButton(),
     );
   }
+Future<void> _showAskSupplierDialog() async {
+  final controller = TextEditingController();
 
+  final message = await showDialog<String>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("Send Message"),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: "Type your message...",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, controller.text.trim());
+            },
+            child: const Text("Send"),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (message != null && message.isNotEmpty) {
+    _askSupplier(message);
+  }
+}
   Widget locationAndSetupTime() {
     return Container(
       child: Row(
@@ -792,11 +863,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   // ---------------- SUPPLIER ----------------
   Widget _supplierCard(BuildContext context) {
     // ✅ جلب اسم المورد من supplierData
+    print('🔍 _product!.supplierData: ${_product!.supplierData}');
     String supplierName = ' '; // اسم افتراضي
 
     if (_product!.supplierData != null) {
       supplierName = _product!.supplierData!['company_name'] ?? ' ';
       print('🏢 Supplier from API: $supplierName');
+       print('🖼️ Image URL: ${_product!.supplierData!['company_image_url']}');
     } else {
       print('⚠️ No supplier data available, using brand: $supplierName');
     }
@@ -1130,6 +1203,36 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         ),
       );
 
+Future<void> _askSupplier(String text) async {
+  if (_product == null) return;
+  
+  // ✅ اسم المورد من supplierData
+  String supplierName = _product!.supplierData?['company_name'] ?? 'Supplier';
+  int supplierId = _product!.supplierData?['allUserId']?? 0;
+   int? existingConversationId = _product!.supplierData?['conversationId'];
+ 
+  // ✅ بناء رسالة Share Product
+  final shareMessage = {
+    'type': 'product',
+    'productId': _product!.id,
+    'productName': _product!.name,
+    'productImage': _product!.imagePath,
+  };
+  
+  // ✅ فتح ChatScreen مع رسالة مسبقة
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ChatScreen(
+        chatName: supplierName,
+        conversationId: existingConversationId,
+        receiverId: supplierId,
+        initialMessage: shareMessage,
+        text: text,
+      ),
+    ),
+  );
+}
   // ---------------- SPECIFICATIONS ----------------
   List<Map<String, String>> _parseSpecifications() {
     List<Map<String, String>> result = [];
@@ -1230,52 +1333,97 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+          ),
+      ],
+    ),
+  );
+  // ---------------- REVIEWS ----------------
+  Widget _reviewsSection() => _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Average Rating
+        Center(
+          child: Column(
+            children: [
+              const Text(
+                "Average Rating",
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                averageRating.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  5,
+                  (i) => Icon(
+                    i < averageRating.round() ? Icons.star : Icons.star_border,
+                    color: Colors.amber,
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "based on ${reviews.length} reviews",
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
 
-            // Reviews List (من API)
-            if (reviews.isNotEmpty)
-              ...reviews.map((r) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.15),
-                        blurRadius: 6,
-                      ),
-                    ],
+        // Reviews List (من API)
+        if (reviews.isNotEmpty)
+          ...reviews.map((r) {
+            print('Review Url: ${r.profileImageUrl}');
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.15),
+                    blurRadius: 6,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.grey.shade200,
-                            child: r.profileImageUrl != null &&
-                                    r.profileImageUrl!.isNotEmpty
-                                ? ClipOval(
-                                    child: Image.network(
-                                      r.profileImageUrl!,
-                                      width: 40,
-                                      height: 40,
-                                      fit: BoxFit.cover,
-                                      cacheWidth: 80,
-                                      cacheHeight: 80,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        return const Icon(Icons.person,
-                                            size: 24, color: Colors.grey);
-                                      },
-                                      loadingBuilder:
-                                          (context, child, loadingProgress) {
-                                        if (loadingProgress == null) {
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.grey.shade200,
+                        child:
+                            r.profileImageUrl != null &&
+                                r.profileImageUrl!.isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  r.profileImageUrl!,
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 80,
+                                  cacheHeight: 80,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    print('❌ Image load error: $error');
+                                    return const Icon(
+                                      Icons.person,
+                                      size: 24,
+                                      color: Colors.grey,
+                                    );
+                                  },
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
                                           return child;
-                                        }
                                         return const Center(
                                           child: SizedBox(
                                             width: 20,
@@ -1286,36 +1434,27 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                           ),
                                         );
                                       },
-                                    ),
-                                  )
-                                : const Icon(Icons.person,
-                                    size: 24, color: Colors.grey),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              r.doctorName ?? " ",
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Text(
-                            "${r.createdAt.day}/${r.createdAt.month}/${r.createdAt.year}",
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          if (r.doctorId == ApiService.doctorId)
-                            IconButton(
-                              onPressed: () => _deleteReview(r),
-                              icon: const Icon(
-                                Icons.delete,
-                                size: 18,
-                                color: Colors.red,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person,
+                                size: 24,
+                                color: Colors.grey,
                               ),
-                            ),
-                        ],
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          r.doctorName ?? " ",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Text(
+                        "${r.createdAt.day}/${r.createdAt.month}/${r.createdAt.year}",
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Row(
@@ -1403,7 +1542,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       return;
     }
 
-    setState(() => isLoading = true);
+   // setState(() => isLoading = true);
 
     try {
       final result = await _apiService.addReview(
@@ -1413,7 +1552,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       );
 
       if (result['success'] == true) {
-        // ✅ إضافة التقييم محلياً
+        String? imageUrl;
+        if(result['data'] != null && result['data']['doctor'] != null){
+          imageUrl = result['data']['doctor']['profile_image_url']?.toString();
+        }
+        // ✅ إضافة التقييم محلياً (أو إعادة تحميل المنتج)
         final newReview = Review(
           id: result['data']['id'],
           productId: _product!.id,
@@ -1423,8 +1566,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           createdAt: DateTime.now(),
           doctorName: ApiService.doctorName ?? ' ',
           canDelete: true,
+          profileImageUrl: imageUrl ?? ApiService.doctorImageUrl  , // Assuming you have this in ApiService
         );
-
         setState(() {
           _product = Product(
             id: _product!.id,
@@ -1448,7 +1591,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           );
           userRating = 0;
           reviewController.clear();
-          isLoading = false;
+        //  isLoading = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1474,7 +1617,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text('Cancel',),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -1486,7 +1629,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     if (shouldDelete != true) return;
 
-    setState(() => isLoading = true);
+   // setState(() => isLoading = true);
 
     try {
       final result = await _apiService.deleteReview(review.id);
@@ -1515,7 +1658,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             reviews: updatedReviews,
             dailyPrice: _product!.dailyPrice,
           );
-          isLoading = false;
+         // isLoading = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1551,7 +1694,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             if (isNotified) {
               final confirm = await showDialog<bool>(
                 context: context,
+                barrierDismissible: true,
                 builder: (ctx) => AlertDialog(
+
                   title: const Text('Cancel Notification'),
                   content: const Text(
                     'Are you sure you want to cancel this notification?',
@@ -1559,13 +1704,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('No'),
+                      child: const Text('No',style: TextStyle(color: Colors.black),),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text(
                         'Yes',
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(color: Colors.blue),
                       ),
                     ),
                   ],

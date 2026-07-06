@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:medconnect_app/services/api_service.dart';
 
 import 'chatScreen.dart';
+import 'shimmerSkeleton.dart';
 
 class ChatModel {
   final String name;
@@ -39,14 +40,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
   bool _loading = true;
   String? _error;
   List<int> _conversationIds = [];
-  List<int> receiverIds = [];
+   List<int> receiverIds = [];
   //Timer? _refreshTimer;
-
+bool _isFirstLoad = true;
+Timer? _pollTimer;
+bool _isLoading = true;
   @override
-  void initState() {
+  void initState()  {
     super.initState();
     _fetchConversations();
-
+_startPolling();
     filteredChats = _chats;
 
     // _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -56,11 +59,29 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     //_refreshTimer?.cancel();
     super.dispose();
   }
+  void _startPolling() {
+  _pollTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    if (mounted) {
+      _fetchConversations(forceRefresh: true);
+    }
+  });
+}
 
-  Future<void> _fetchConversations() async {
+  Future<void> _fetchConversations({bool forceRefresh = false}) async {
+     if (ApiService.cachedConversations != null &&
+      !forceRefresh &&
+      !_isFirstLoad) {
+    setState(() {
+      _chats = ApiService.cachedConversations!;
+      filteredChats = _chats;
+      _loading = false;
+    });
+    return;
+  }
     if (mounted) {
       setState(() {
         _loading = true;
@@ -103,14 +124,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
 
           if (msg == messages.last) {
-            lastMessage = msg['body'];
+            lastMessage = msg['message']??'';
             lastTime = _formatTime(msg['created_at']);
           }
         }
 
         loaded.add(
           ChatModel(
-            name: other['fullname'],
+            name: other['supplier']['company_name'],
             lastMessage: lastMessage,
             time: lastTime,
             isOnline: false,
@@ -121,6 +142,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
         ids.add(convId);
         receiverIds.add(other['id']);
       }
+        ApiService.cachedConversations = loaded;
+    ApiService.cachedConversationsTime = DateTime.now();
       if (mounted) {
         setState(() {
           _chats = loaded;
@@ -128,11 +151,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
           _conversationIds = ids;
           receiverIds = receiverIds;
           _loading = false;
+          _isFirstLoad = false;
         });
+    //      print('📦 _chats length: ${_chats.length}');
+    // print('📦 filteredChats length: ${filteredChats.length}');
+    //   print('📦 conversationIds: $_conversationIds');
+    //   print('📦 receiverIds: $receiverIds');
+    //   print('loaded ${loaded.length} chats');
       }
-      print('📦 conversationIds: $_conversationIds');
-      print('📦 receiverIds: $receiverIds');
-      print('loaded ${loaded.length} chats');
+     
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -215,6 +242,33 @@ class _MessagesScreenState extends State<MessagesScreen> {
   //       });
   //     }
   //   }
+  Widget _buildShimmer() {
+  return ListView.builder(
+    itemCount: 5,
+    itemBuilder: (context, index) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+             ShimmerSkeleton(width: 50, height: 50, borderRadius: BorderRadius.circular(25)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerSkeleton(width: 120, height: 16, borderRadius: BorderRadius.circular(4)),
+                  const SizedBox(height: 4),
+                  ShimmerSkeleton(width: 200, height: 14, borderRadius: BorderRadius.circular(4)),
+                ],
+              ),
+            ),
+            ShimmerSkeleton(width: 40, height: 14, borderRadius: BorderRadius.circular(4)),
+          ],
+        ),
+      );
+    },
+  );
+}
   String _formatTime(String? timeStr) {
     // حولي التاريخ لـ "10:42 AM" أو "Yesterday"
     if (timeStr == null) return '';
@@ -245,6 +299,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('🔍 build: filteredChats length = ${filteredChats.length}');
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
@@ -277,7 +332,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
           // 📋 Chat List
           Expanded(
-            child: ListView.builder(
+            child: _loading && _chats.isEmpty
+              ? _buildShimmer() // ✅ Skeleton
+              :  ListView.builder(
               itemCount: filteredChats.length,
               itemBuilder: (context, index) {
                 final chat = filteredChats[index];

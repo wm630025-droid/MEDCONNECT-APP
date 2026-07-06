@@ -26,6 +26,14 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
 
   final ApiService _apiService = ApiService();
   bool _validateForm() {
+  if( detailsController.text.trim().isEmpty ) {
+    _showError("Please add additional details");
+    return false;
+  }
+  if (budgetController.text.trim().isEmpty) {
+    _showError("Please add budget");
+    return false;
+  }
   if (products.isEmpty) {
     _showError("Please add at least one product");
     return false;
