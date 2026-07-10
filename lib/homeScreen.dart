@@ -970,9 +970,9 @@ void _showCategoriesTopSheet() {
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate:  SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.45,
+          childAspectRatio: MediaQuery.of(context).size.height / (MediaQuery.of(context).size.height * 0.9),
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -1017,9 +1017,9 @@ void _showCategoriesTopSheet() {
           itemCount: displayedProducts.length,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.45,
+            childAspectRatio: .45,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),

@@ -219,9 +219,9 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final messages = await _api.getMessages(conversationId!);
 
-      print("messages length: ${messages.length}");
+    //  print("messages length: ${messages.length}");
       if (messages.isNotEmpty) {
-        print('📦 Last message: ${messages.last}');
+    //    print('📦 Last message: ${messages.last}');
       }
       if (mounted) {
         setState(() {
@@ -322,9 +322,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _controller.clear();
     try {
+      print("isProduct = $isProduct");
+print("productData = $productData");
+print("productId = ${productData?['productId']}");
       final response = await _api.sendMessage(
         receiverId: widget.receiverId, // ✅ من الـ widget
         message: text,
+        productId: productData?['productId'], // ✅ لو فيه منتج
       );
       await Future.delayed(const Duration(milliseconds: 500));
       await _loadMessages(); // ✅ بعد الإرسال نحدث الرسائل
@@ -460,11 +464,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         /// محتوى الرسالة
-                        if (msg.text != null && msg.text!.isNotEmpty)
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(msg.text ?? ""),
-                          ),
+                        
 
                         if (msg.productData != null)
                           Container(
@@ -518,6 +518,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                 ),
                               ],
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          if (msg.text != null && msg.text!.isNotEmpty)
+                          Container(
+                            decoration: BoxDecoration(
+                            //  color: Colors.grey[300],
+                              //borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(msg.text ?? ""),
                             ),
                           ),
 

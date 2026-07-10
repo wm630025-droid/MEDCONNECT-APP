@@ -302,7 +302,7 @@ static String? doctorImageUrl;
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
-      //  print('resonse body ${response.body}');
+       print('resonse body ${response.body}');
         print('✅ Success flag: ${data['success']}');
         print('📊 Total products in DB: ${data['total']}');
         print('📄 Last page: ${data['last_page']}');
@@ -1111,7 +1111,7 @@ static String? doctorImageUrl;
     );
       if (res.statusCode == 200) {
     final data = jsonDecode(res.body);
-  //  print('📦 getMessages Response: $data');
+  // print('📦 getMessages Response: $data');
    // print('📦 getMessages Response: ${data['data']}');
     // ✅ إذا كانت الـ data هي List مباشرة
     if (data['data'] is List) {
@@ -1160,6 +1160,7 @@ static String? doctorImageUrl;
   Future<Map<String, dynamic>> sendMessage({
     required int receiverId,
     required String message,
+    int? productId,
   }) async {
     print('Reciver ID : ${receiverId}');
     print('Messsege ${message}');
@@ -1169,7 +1170,11 @@ static String? doctorImageUrl;
       final res = await http.post(
         Uri.parse('$baseUrl/v1/conversations/messages'),
         headers: {..._authHeaders(), 'Content-Type': 'application/json'},
-        body: jsonEncode({'receiver_id': receiverId, 'message': message}),
+        body: jsonEncode({
+          'receiver_id': receiverId,
+          'message': message,
+          'product_id': productId
+        }),
       );
       final data = jsonDecode(res.body);
       print('📦 sendMessage Response: $data');
@@ -1196,6 +1201,7 @@ Map<String, String> _authHeaders() {
     'Content-type': 'application/json'
   };
 }
+
 // في api_service.dart
 Future<Map<String, dynamic>> validateRent({
   required int productId,

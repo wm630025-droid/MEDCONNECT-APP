@@ -232,7 +232,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxHeight: 320),
                         child: Image.asset(
-                          'assets/images/first_image.png',
+                          'assets/images/third_image.png',
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) =>
                               const Icon(Icons.image_not_supported,
@@ -270,10 +270,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // ---------------- Footer: pagination dots + primary button ----------------
   Widget _footer() {
     return Padding(
-      padding: const EdgeInsets.only(
-        left: AppSpacing.marginMobile,
-        right: AppSpacing.marginMobile,
-        bottom: AppSpacing.xl,
+       padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.marginMobile,
+        vertical: AppSpacing.md,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

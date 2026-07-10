@@ -631,7 +631,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             color: isInEquipmentList
                                 ? Colors.blue
                                 : Colors.black,
+                                fontSize: 12,
                           ),
+                          
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
@@ -1291,52 +1293,52 @@ Future<void> _askSupplier(String text) async {
       );
 
   // ---------------- REVIEWS ----------------
-  Widget _reviewsSection() => _card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Average Rating
-            Center(
-              child: Column(
-                children: [
-                  const Text(
-                    "Average Rating",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    averageRating.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      5,
-                      (i) => Icon(
-                        i < averageRating.round()
-                            ? Icons.star
-                            : Icons.star_border,
-                        color: Colors.amber,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "based on ${reviews.length} reviews",
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    ),
-  );
+  // Widget _reviewsSection() => _card(
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           // Average Rating
+  //           Center(
+  //             child: Column(
+  //               children: [
+  //                 const Text(
+  //                   "Average Rating",
+  //                   style: TextStyle(color: Colors.grey),
+  //                 ),
+  //                 const SizedBox(height: 6),
+  //                 Text(
+  //                   averageRating.toStringAsFixed(1),
+  //                   style: const TextStyle(
+  //                     fontSize: 32,
+  //                     fontWeight: FontWeight.bold,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 4),
+  //                 Row(
+  //                   mainAxisAlignment: MainAxisAlignment.center,
+  //                   children: List.generate(
+  //                     5,
+  //                     (i) => Icon(
+  //                       i < averageRating.round()
+  //                           ? Icons.star
+  //                           : Icons.star_border,
+  //                       color: Colors.amber,
+  //                       size: 22,
+  //                     ),
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 4),
+  //                 Text(
+  //                   "based on ${reviews.length} reviews",
+  //                   style: const TextStyle(color: Colors.grey, fontSize: 12),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //     ],
+  //   ),
+  // );
   // ---------------- REVIEWS ----------------
   Widget _reviewsSection() => _card(
     child: Column(
@@ -1395,6 +1397,8 @@ Future<void> _askSupplier(String text) async {
                     color: Colors.grey.withOpacity(0.15),
                     blurRadius: 6,
                   ),
+                ],
+              ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1766,15 +1770,17 @@ Future<void> _askSupplier(String text) async {
   Widget _actionButton() {
     if (selectedPurchase == 0) {
       // ✅ تعطيل الزر إذا لم تكن التواريخ محددة
-      final isRentable = rentStartDate != null && rentEndDate != null;
+      //final isRentable = rentStartDate != null && rentEndDate != null;
+         final bool canRent =
+          _product!.isRentable && (_product!.rentalStock ?? 0) > 0;
       return Padding(
         padding: const EdgeInsets.all(12),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            backgroundColor: isRentable ? Colors.blue : Colors.grey,
+            backgroundColor: canRent ? Colors.blue : Colors.grey,
           ),
-          onPressed: isRentable ? _rentNow : null,
+          onPressed: canRent ? _rentNow : null,
           child: Text(
             'Rent Now',
             style: TextStyle(
