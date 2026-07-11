@@ -31,14 +31,14 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
 
   final ApiService _apiService = ApiService();
   bool _validateForm() {
-    if (detailsController.text.trim().isEmpty) {
-      _showError("Please add additional details");
-      return false;
-    }
-    if (budgetController.text.trim().isEmpty) {
-      _showError("Please add budget");
-      return false;
-    }
+    // if (detailsController.text.trim().isEmpty) {
+    //   _showError("Please add additional details");
+    //   return false;
+    // }
+    // if (budgetController.text.trim().isEmpty) {
+    //   _showError("Please add budget");
+    //   return false;
+    // }
     if (products.isEmpty) {
       _showError("Please add at least one product");
       return false;
@@ -494,10 +494,10 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
                   : null,
               status: 'open', // مؤقت
               additionalDetails: detailsController.text.isEmpty
-                  ? null
+                  ? 'No Additional Details'
                   : detailsController.text,
               budget: budgetController.text.isEmpty
-                  ? null
+                  ? '0'
                   : budgetController.text,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
@@ -577,7 +577,7 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
 
   Widget _buildSearchResults() {
     if (_searchResults.isEmpty) return const SizedBox.shrink();
-
+final displayed = _searchResults.take(1).toList();
     return Container(
       margin: const EdgeInsets.only(top: 8),
       decoration: BoxDecoration(
@@ -592,7 +592,7 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
         ],
       ),
       child: Column(
-        children: _searchResults.map((product) {
+        children: displayed.map((product) {
           return ListTile(
             leading: ClipRRect(
               borderRadius: BorderRadius.circular(8),

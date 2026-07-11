@@ -69,7 +69,11 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isFirstLoad = true; // ✅ أول مرة تحميل
   bool _isLoadingProducts = true;
   String? _productsError;
-  bool _isSearchingLoading = false;   // ✅ جديد
+  bool _isSearchingLoading = false; 
+  
+  List<Product> _recommendedProducts = [];
+bool _isLoadingRecommended = true;
+String? _recommendedError;  // ✅ جديد
 
   final ApiService _apiService = ApiService();
   final CartService cartService = CartService();
@@ -93,6 +97,13 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchCategoriesApi(); //mohamed only
     _startPolling();
     _startCategoriesPolling();
+     if (ApiService.cachedRecommendedProducts.isNotEmpty) {
+    _recommendedProducts = List.from(ApiService.cachedRecommendedProducts);
+    _isLoadingRecommended = false;
+  }
+
+      _loadRecommendedProducts();
+      _startRecommendedPolling();
     _loadProducts();
     _scrollController.addListener(() {
       print('Scroll position : ${_scrollController.position.pixels}/ ${_scrollController.position.maxScrollExtent}');
@@ -107,6 +118,254 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
   }
+  Future<void> _loadRecommendedProducts() async {
+  if (ApiService.token == null) {
+    setState(() {
+      _recommendedError = 'Please login first';
+      _isLoadingRecommended = false;
+    });
+    return;
+  }
+
+ if (_recommendedProducts.isEmpty) {
+  setState(() {
+    _isLoadingRecommended = true;
+    _recommendedError = null;
+  });
+}
+
+  try {
+      print('🔄 Loading recommended products...');
+    print('🔑 isRecommended: true'); // ✅ برينت
+
+    final result = await _apiService.fetchProductsWithPagination(
+      page: 1,
+      perPage: 5, // ✅ 5 منتجات بس
+      isRecommended: true, // ✅ بتاع التخصص
+    );
+    print('recommended product result ${result['products'].length}');
+
+    ApiService.cachedRecommendedProducts = result['products'];
+
+setState(() {
+  _recommendedProducts = result['products'];
+  _isLoadingRecommended = false;
+});
+  } catch (e) {
+    print('Recommended error');
+    setState(() {
+      _recommendedError = e.toString();
+      _isLoadingRecommended = false;
+    });
+  }
+}
+Timer? _recommendedTimer;
+
+void _startRecommendedPolling() {
+  _recommendedTimer = Timer.periodic(
+    const Duration(seconds: 5),
+    (_) => _loadRecommendedProducts(),
+  );
+}
+Widget _recommendedSection() {
+  print('recommendedproducts ${_recommendedProducts.length}');
+  if (_isLoadingRecommended) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle("Recommended for you"),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 200,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: 5,
+            itemBuilder: (context, index) {
+              return _skeletonRecommendedCard();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  if (_recommendedError != null) {
+    return const SizedBox.shrink(); // مش نعرض حاجة لو في خطأ
+  }
+
+  if (_recommendedProducts.isEmpty) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle("Recommended for you"),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.grey.shade600),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "No recommended products available right now.",
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );// مش نعرض حاجة لو مفيش منتجات
+  }
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _sectionTitle("Recommended for you"),
+      const SizedBox(height: 10),
+      SizedBox(
+        height: 200,
+        child: ListView.builder(
+          
+          scrollDirection: Axis.horizontal,
+          primary: false,
+          physics: CarouselScrollPhysics(),
+          itemCount: _recommendedProducts.length,
+          itemBuilder: (context, index) {
+            return _recommendedCard(_recommendedProducts[index]);
+          },
+        ),
+      ),
+      const SizedBox(height: 20),
+    ],
+  );
+}
+Widget _recommendedCard(Product p) {
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProductDetailsPage(
+            productId: p.id,
+            product: p,
+          ),
+        ),
+      );
+    },
+    child: Container(
+      width: 150,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: Image.network(
+              p.imagePath,
+              height: 120,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 120,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.broken_image, size: 40),
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  p.name,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+               // const SizedBox(height: 4),
+               
+              //    Text(
+              //     p.supplierData!['company_name'],
+              //     style: const TextStyle(color: Colors.grey, fontSize: 12),
+              //     maxLines: 1,
+              //     overflow: TextOverflow.ellipsis,
+                
+              // ),
+              const SizedBox(height: 4),
+                Text(
+                  "EGP${p.price}",
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+Widget _skeletonRecommendedCard() {
+  return Container(
+    width: 150,
+    margin: const EdgeInsets.only(right: 12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ShimmerSkeleton(
+          width: double.infinity,
+          height: 120,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ShimmerSkeleton(width: 100, height: 12, borderRadius: BorderRadius.circular(4)),
+              const SizedBox(height: 4),
+              ShimmerSkeleton(width: 60, height: 12, borderRadius: BorderRadius.circular(4)),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 void _startPolling() {
   _pollTimer = Timer.periodic(Duration(seconds: 60), (timer) {
     if (mounted) {
@@ -117,7 +376,77 @@ void _startPolling() {
     }
   });
 }
-  
+  Widget _customRequestBanner() {
+  return Container(
+
+    padding: const EdgeInsets.symmetric(horizontal: 16,vertical: 2),
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(255, 233, 238, 247),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.auto_awesome,
+            color: Colors.blue,
+            size: 22,
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Can't find a specific device?",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                "Create a custom request\nand let us source it for you.",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        TextButton(
+          onPressed: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>  doctorAccountPage(fromSearch: true),
+
+                ),
+              );
+          },
+          child: const Text(
+            "Request Now",
+            style: TextStyle(
+              color: Colors.blue,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
   
 
   Future<void> _loadProducts({bool loadMore = false, bool forceRefresh = false}) async {
@@ -167,6 +496,7 @@ void _startPolling() {
       final result = await _apiService.fetchProductsWithPagination(
         page: _currentPage,
         perPage: 10,
+        isRecommended: false,
       );
 if (!mounted) return;
       setState(() {
@@ -661,6 +991,7 @@ Widget _buildSearchSkeleton() {
   void dispose() {
     _scrollController.dispose();
     _pollTimer?.cancel();
+    _recommendedTimer?.cancel();
     _categoriesPollTimer?.cancel();
     super.dispose();
   }
@@ -769,6 +1100,9 @@ void _showCategoriesTopSheet() {
       children: [
         _buildBanner(),
         const SizedBox(height: 20),
+        _customRequestBanner(),
+        const SizedBox(height: 20),
+         _recommendedSection(), // ✅ جديد
         _sectionTitle("Categories"),
         const SizedBox(height: 10),
         buildCategories(), // 👈 هنا
@@ -972,7 +1306,7 @@ void _showCategoriesTopSheet() {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate:  SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: MediaQuery.of(context).size.height / (MediaQuery.of(context).size.height * 0.9),
+          childAspectRatio: .45,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -1191,7 +1525,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                   vertical: 4,
                 ),
                 child: Text(
-                  "\EGP${p.price}",
+                  "EGP${p.price}",
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -1223,6 +1557,19 @@ final isNotified = notificationProvider.isNotified(p.id);
                     ),
                   ),
                 ),
+                 if (p.isRentable && p.rentalStock==0)
+                Padding(
+                  padding: const EdgeInsets.all(7.0),
+                  child: const Text(
+                    "Rentable",
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+               ),
+
 
               Padding(
                 padding: const EdgeInsets.symmetric(

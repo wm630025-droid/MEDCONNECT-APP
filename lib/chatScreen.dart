@@ -65,7 +65,7 @@ class _ChatScreenState extends State<ChatScreen> {
     conversationId = widget.conversationId;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.conversationId != null) {
-        _loadMessages();
+       await _loadMessages();
         _startPolling();
 
         // _subscribeToPusher();
@@ -76,8 +76,10 @@ class _ChatScreenState extends State<ChatScreen> {
       }
       print("initialMessage: ${widget.initialMessage}");
       if (widget.initialMessage != null) {
+        Future.delayed(const Duration(microseconds: 400));
         //  WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadMessages();
+      
         _sendSharedProduct(widget.initialMessage!, widget.text ?? '');
         //  });
       }
@@ -248,10 +250,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
-            _scrollController.animateTo(
+           // Future.delayed(const Duration(microseconds: 300));
+            _scrollController.jumpTo(
               _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
+             // duration: const Duration(milliseconds: 300),
+              //curve: Curves.easeOut,
             );
           }
         });

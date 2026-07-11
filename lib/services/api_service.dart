@@ -57,6 +57,7 @@ class ApiService {
   // في api_service.dart
 static List<ChatModel>? cachedConversations;
 static DateTime? cachedConversationsTime;
+static List<Product> cachedRecommendedProducts = [];
 static String? doctorImageUrl;
   static void clearCache() {
     cachedProducts = null;
@@ -269,6 +270,7 @@ static String? doctorImageUrl;
   Future<Map<String, dynamic>> fetchProductsWithPagination({
     int page = 1,
     int perPage = 10,
+      bool isRecommended = false,
   }) async {
     try {
       if (_token == null) {
@@ -282,6 +284,7 @@ static String? doctorImageUrl;
           'per_page': perPage.toString(),
           'sort_by': 'id',
           'sort_order': 'asc',
+          if (isRecommended) 'is_recommended': '1', // ✅ إضافة الـ parameter
         },
       );
       print('🌐 ========== FETCHING PRODUCTS ==========');
@@ -302,7 +305,7 @@ static String? doctorImageUrl;
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
-       print('resonse body ${response.body}');
+     //  print('resonse body ${response.body}');
         print('✅ Success flag: ${data['success']}');
         print('📊 Total products in DB: ${data['total']}');
         print('📄 Last page: ${data['last_page']}');
