@@ -3,6 +3,7 @@ import 'package:medconnect_app/cartScreen.dart';
 import 'package:medconnect_app/chatScreen.dart';
 import 'package:medconnect_app/core/app_colorSupplier.dart';
 import 'package:medconnect_app/homeScreen.dart';
+import 'package:medconnect_app/models/Search_model.dart';
 import 'package:medconnect_app/models/equipment_model.dart';
 import 'package:medconnect_app/models/product.dart';
 import 'package:medconnect_app/productDetails.dart';
@@ -12,6 +13,8 @@ import 'package:medconnect_app/services/api_service.dart';
 import 'package:medconnect_app/services/cart_services.dart';
 import 'package:medconnect_app/services/equipment_service.dart'
     as EquipmentApiService;
+import 'package:medconnect_app/services/search_services.dart';
+import 'package:medconnect_app/shimmerSkeleton.dart';
 import 'package:provider/provider.dart';
 //import 'package:provider/provider.dart';
 
@@ -41,6 +44,15 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
   List<Product> _filteredProducts = [];
   bool _isSearching = false;
 
+// ✅ متغيرات البحث والفلتر (زي الهوم)
+List<ProductModel> searchResults = [];
+bool isSearching = false;
+int? selectedCategoryId;
+bool showCategories = false;
+List<CategoryApiModel> categoriesApi = [];
+bool isLoadingCategoriesApi = false;
+bool _isSearchingLoading = false;
+
   // Pagination
   int _currentPage = 1;
   int _totalPages = 1;
@@ -57,7 +69,9 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
     super.initState();
     _loadSupplierData();
 
+
     _loadProducts();
+    fetchCategoriesApi();
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent - 100 &&
@@ -98,7 +112,139 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
       }
     });
   }
+// ✅ جلب الأقسام من API
+Future<void> fetchCategoriesApi() async {
+  if (!mounted) return;
+  setState(() {
+    isLoadingCategoriesApi = true;
+  });
 
+  try {
+    final result = await CategorySearch.getCategories();
+    if (!mounted) return;
+    setState(() {
+      categoriesApi = result;
+    });
+  } catch (e) {
+    print(e);
+  }
+  if (!mounted) return;
+  setState(() {
+    isLoadingCategoriesApi = false;
+  });
+}
+
+// ✅ البحث
+Future<void> _searchProduct(String query) async {
+  if (!mounted) return;
+  setState(() {
+    _isSearchingLoading = true;
+    isSearching = true;
+  });
+  final result = await SearchService.searchProducts(
+    query,
+    selectedCategoryId,
+  );
+  if (!mounted) return;
+  if (result['success']) {
+    if (!mounted) return;
+    setState(() {
+      searchResults = result['data'];
+      _isSearchingLoading = false;
+      isSearching = query.isNotEmpty || selectedCategoryId != null;
+    });
+  }
+}
+
+// ✅ شاشة اختيار الأقسام
+void _showCategoriesTopSheet() {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: "Dismiss",
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, anim1, anim2) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.only(top: 80, left: 60, right: 60),
+            width: MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.5,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: Text(
+                    'Select Category',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                const Divider(height: 1),
+                if (isLoadingCategoriesApi)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (categoriesApi.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: Text("No categories found")),
+                  )
+                else
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: categoriesApi.map((cat) {
+                        return CheckboxListTile(
+                          title: Text(cat.name),
+                          value: selectedCategoryId == cat.id,
+                          onChanged: (checked) {
+                            setState(() {
+                              selectedCategoryId =
+                                  (selectedCategoryId == cat.id)
+                                  ? null
+                                  : cat.id;
+                              showCategories = false;
+                            });
+                            Navigator.of(context).pop();
+                            _searchProduct(_searchController.text);
+                          },
+                          activeColor: const Color(0xFF0066FF),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          );
+                      }).toList(),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (ctx, anim, _, child) {
+      return SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, -1),
+          end: Offset.zero,
+        ).animate(anim),
+        child: child,
+      );
+    },
+  );
+}
   Future<void> _loadSupplierData() async {
     // هنضيف API لجلب بيانات المورد بعدين
     // حالياً هنستخدم البيانات اللي جاية مع المنتج
@@ -432,47 +578,98 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
     );
   }
 
+  // Widget _SearchBar() {
+  //   return Padding(
+  //     padding: const EdgeInsets.all(16),
+  //     child: Container(
+  //       decoration: BoxDecoration(
+  //         color: Colors.white,
+  //         borderRadius: BorderRadius.circular(12),
+  //         boxShadow: [
+  //           BoxShadow(
+  //             color: Colors.grey.withOpacity(0.1),
+  //             blurRadius: 6,
+  //             offset: const Offset(0, 2),
+  //           ),
+  //         ],
+  //       ),
+  //       child: TextField(
+  //          onChanged: (value) {
+  //             _searchProduct(value);
+  //           },
+  //         controller: _searchController,
+  //         decoration: InputDecoration(
+  //           hintText: "Search products...",
+  //           prefixIcon: const Icon(Icons.search, color: Colors.grey),
+  //           suffixIcon: _searchController.text.isNotEmpty
+  //               ? IconButton(
+  //                   icon: const Icon(Icons.clear, color: Colors.grey),
+  //                   onPressed: () {
+  //                     _searchController.clear();
+  //                     _filterProducts();
+  //                   },
+  //                 )
+  //               : null,
+  //           border: OutlineInputBorder(
+  //             borderRadius: BorderRadius.circular(12),
+  //             borderSide: BorderSide.none,
+  //           ),
+  //           filled: true,
+  //           fillColor: Colors.white,
+  //           contentPadding: const EdgeInsets.symmetric(vertical: 14),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
   Widget _SearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+  return Padding(
+    padding: const EdgeInsets.all(16.0),
+    child: Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
             ),
-          ],
-        ),
-        child: TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            hintText: "Search products...",
-            prefixIcon: const Icon(Icons.search, color: Colors.grey),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
-                    onPressed: () {
-                      _searchController.clear();
-                      _filterProducts();
-                    },
-                  )
-                : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+            child: TextField(
+              onChanged: (value) {
+                _searchProduct(value);
+              },
+              controller: _searchController,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: "Search products...",
+                icon: Icon(Icons.search),
+              ),
             ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
           ),
         ),
-      ),
-    );
-  }
+        const SizedBox(width: 12),
+        InkWell(
+          onTap: () {
+            if (!mounted) return;
+            setState(() {
+              showCategories = !showCategories;
+            });
+            _showCategoriesTopSheet();
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.tune, color: Colors.white, size: 20),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   // ---------------- HEADER ----------------
   Widget _supplierHeader() {
@@ -690,9 +887,153 @@ class _SupplierProfileScreenState extends State<SupplierProfileScreen> {
       ),
     );
   }
+  Widget _searchResultsApi() {
+  if (searchResults.isEmpty) {
+    return const Padding(
+      padding: EdgeInsets.all(32),
+      child: Center(
+        child: Text('No products found'),
+      ),
+    );
+  }
+
+  return Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Search Results (${searchResults.length})",
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+      ...searchResults.map((product) {
+        return _productCardFromSearch(product);
+      }).toList(),
+    ],
+  );
+}
+
+Widget _productCardFromSearch(ProductModel product) {
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProductDetailsPage(
+            productId: product.id ?? 0,
+          ),
+        ),
+      );
+    },
+    child: Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              product.image.isNotEmpty ? product.image.first.image : '',
+              width: 90,
+              height: 90,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 90,
+                  height: 90,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.broken_image, size: 40),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "${product.price} EGP",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildSearchSkeleton() {
+  return Column(
+    children: List.generate(
+      3,
+      (index) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            ShimmerSkeleton(width: 90, height: 90, borderRadius: BorderRadius.circular(12)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerSkeleton(width: double.infinity, height: 16, borderRadius: BorderRadius.circular(4)),
+                  const SizedBox(height: 8),
+                  ShimmerSkeleton(width: 80, height: 14, borderRadius: BorderRadius.circular(4)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
   // ---------------- PRODUCTS ----------------
   Widget _productsSection() {
+
+    // ✅ حالة تحميل البحث
+  if (isSearching && _isSearchingLoading) {
+    return _buildSearchSkeleton();
+  }
+
+  // ✅ عرض نتائج البحث
+  if (isSearching && !_isSearchingLoading) {
+    return _searchResultsApi();
+  }
     if (_isLoading && _products.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }

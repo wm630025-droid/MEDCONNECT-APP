@@ -17,7 +17,6 @@ import 'package:provider/provider.dart';
 import '../models/Search_model.dart';
 import 'package:medconnect_app/services/cart_services.dart';
 
-
 // ---------------------
 // GLOBAL LISTS
 // ---------------------
@@ -69,11 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isFirstLoad = true; // ✅ أول مرة تحميل
   bool _isLoadingProducts = true;
   String? _productsError;
-  bool _isSearchingLoading = false; 
-  
+  bool _isSearchingLoading = false;
+
   List<Product> _recommendedProducts = [];
-bool _isLoadingRecommended = true;
-String? _recommendedError;  // ✅ جديد
+  bool _isLoadingRecommended = true;
+  String? _recommendedError; // ✅ جديد
 
   final ApiService _apiService = ApiService();
   final CartService cartService = CartService();
@@ -81,7 +80,6 @@ String? _recommendedError;  // ✅ جديد
   final ScrollController _scrollController = ScrollController();
 
   //Map<int, bool> _notifyStatus = {};
-  
 
   Timer? _pollTimer;
   bool _forceRefresh = false;
@@ -97,79 +95,138 @@ String? _recommendedError;  // ✅ جديد
     fetchCategoriesApi(); //mohamed only
     _startPolling();
     _startCategoriesPolling();
-     if (ApiService.cachedRecommendedProducts.isNotEmpty) {
-    _recommendedProducts = List.from(ApiService.cachedRecommendedProducts);
-    _isLoadingRecommended = false;
-  }
+    if (ApiService.cachedRecommendedProducts.isNotEmpty) {
+      _recommendedProducts = List.from(ApiService.cachedRecommendedProducts);
+      _isLoadingRecommended = false;
+    }
 
-      _loadRecommendedProducts();
-      _startRecommendedPolling();
+    _loadRecommendedProducts();
+    _startRecommendedPolling();
     _loadProducts();
     _scrollController.addListener(() {
-      print('Scroll position : ${_scrollController.position.pixels}/ ${_scrollController.position.maxScrollExtent}');
+      print(
+        'Scroll position : ${_scrollController.position.pixels}/ ${_scrollController.position.maxScrollExtent}',
+      );
       print('_hasMore: ${_hasMore},_isloadingmore ${_isLoadingMore}');
       if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent *.8 &&
+              _scrollController.position.maxScrollExtent * .8 &&
           _hasMore &&
           !_isLoadingMore) {
-            print('Reashed botton , load more...');
-           
+        print('Reashed botton , load more...');
+
         _loadProducts(loadMore: true);
       }
     });
   }
+
   Future<void> _loadRecommendedProducts() async {
-  if (ApiService.token == null) {
-    setState(() {
-      _recommendedError = 'Please login first';
-      _isLoadingRecommended = false;
-    });
-    return;
-  }
+    if (ApiService.token == null) {
+      setState(() {
+        _recommendedError = 'Please login first';
+        _isLoadingRecommended = false;
+      });
+      return;
+    }
 
- if (_recommendedProducts.isEmpty) {
-  setState(() {
-    _isLoadingRecommended = true;
-    _recommendedError = null;
-  });
-}
+    if (_recommendedProducts.isEmpty) {
+      setState(() {
+        _isLoadingRecommended = true;
+        _recommendedError = null;
+      });
+    }
 
-  try {
+    try {
       print('🔄 Loading recommended products...');
-    print('🔑 isRecommended: true'); // ✅ برينت
+      print('🔑 isRecommended: true'); // ✅ برينت
 
-    final result = await _apiService.fetchProductsWithPagination(
-      page: 1,
-      perPage: 5, // ✅ 5 منتجات بس
-      isRecommended: true, // ✅ بتاع التخصص
-    );
-    print('recommended product result ${result['products'].length}');
+      final result = await _apiService.fetchProductsWithPagination(
+        page: 1,
+        perPage: 5, // ✅ 5 منتجات بس
+        isRecommended: true, // ✅ بتاع التخصص
+      );
+      print('recommended product result ${result['products'].length}');
 
-    ApiService.cachedRecommendedProducts = result['products'];
+      ApiService.cachedRecommendedProducts = result['products'];
 
-setState(() {
-  _recommendedProducts = result['products'];
-  _isLoadingRecommended = false;
-});
-  } catch (e) {
-    print('Recommended error');
-    setState(() {
-      _recommendedError = e.toString();
-      _isLoadingRecommended = false;
-    });
+      setState(() {
+        _recommendedProducts = result['products'];
+        _isLoadingRecommended = false;
+      });
+    } catch (e) {
+      print('Recommended error');
+      setState(() {
+        _recommendedError = e.toString();
+        _isLoadingRecommended = false;
+      });
+    }
   }
-}
-Timer? _recommendedTimer;
 
-void _startRecommendedPolling() {
-  _recommendedTimer = Timer.periodic(
-    const Duration(seconds: 5),
-    (_) => _loadRecommendedProducts(),
-  );
-}
-Widget _recommendedSection() {
-  print('recommendedproducts ${_recommendedProducts.length}');
-  if (_isLoadingRecommended) {
+  Timer? _recommendedTimer;
+
+  void _startRecommendedPolling() {
+    _recommendedTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _loadRecommendedProducts(),
+    );
+  }
+
+  Widget _recommendedSection() {
+    print('recommendedproducts ${_recommendedProducts.length}');
+    if (_isLoadingRecommended) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle("Recommended for you"),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 200,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: 5,
+              itemBuilder: (context, index) {
+                return _skeletonRecommendedCard();
+              },
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_recommendedError != null) {
+      return const SizedBox.shrink(); // مش نعرض حاجة لو في خطأ
+    }
+
+    if (_recommendedProducts.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle("Recommended for you"),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.grey.shade600),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "No recommended products available right now.",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ); // مش نعرض حاجة لو مفيش منتجات
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -179,291 +236,258 @@ Widget _recommendedSection() {
           height: 200,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: 5,
+            primary: false,
+            physics: CarouselScrollPhysics(),
+            itemCount: _recommendedProducts.length,
             itemBuilder: (context, index) {
-              return _skeletonRecommendedCard();
+              return _recommendedCard(_recommendedProducts[index]);
             },
-          ),
-        ),
-      ],
-    );
-  }
-
-  if (_recommendedError != null) {
-    return const SizedBox.shrink(); // مش نعرض حاجة لو في خطأ
-  }
-
-  if (_recommendedProducts.isEmpty) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle("Recommended for you"),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.grey.shade600),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  "No recommended products available right now.",
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
         const SizedBox(height: 20),
       ],
-    );// مش نعرض حاجة لو مفيش منتجات
+    );
   }
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _sectionTitle("Recommended for you"),
-      const SizedBox(height: 10),
-      SizedBox(
-        height: 200,
-        child: ListView.builder(
-          
-          scrollDirection: Axis.horizontal,
-          primary: false,
-          physics: CarouselScrollPhysics(),
-          itemCount: _recommendedProducts.length,
-          itemBuilder: (context, index) {
-            return _recommendedCard(_recommendedProducts[index]);
-          },
+  Widget _recommendedCard(Product p) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProductDetailsPage(productId: p.id, product: p),
+          ),
+        );
+      },
+      child: Container(
+        width: 180,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: Image.network(
+                p.imagePath,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 120,
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.broken_image, size: 40),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.name,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: List.generate(5, (index) {
+                      final rating = p.reviews.isNotEmpty
+                          ? p.reviews.first.rating.toDouble()
+                          : 0.0;
+
+                      if (index < rating.floor()) {
+                        return const Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                          size: 14,
+                        );
+                      } else if (index < rating) {
+                        return const Icon(
+                          Icons.star_half,
+                          color: Colors.amber,
+                          size: 14,
+                        );
+                      } else {
+                        return const Icon(
+                          Icons.star_border,
+                          color: Colors.amber,
+                          size: 14,
+                        );
+                      }
+                    }),
+                  ),
+
+                  const SizedBox(height: 4),
+                  Text(
+                    "EGP${p.price}",
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      const SizedBox(height: 20),
-    ],
-  );
-}
-Widget _recommendedCard(Product p) {
-  return GestureDetector(
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ProductDetailsPage(
-            productId: p.id,
-            product: p,
-          ),
-        ),
-      );
-    },
-    child: Container(
-      width: 150,
+    );
+  }
+
+  Widget _skeletonRecommendedCard() {
+    return Container(
+      width: 180,
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
+          ShimmerSkeleton(
+            width: double.infinity,
+            height: 120,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.network(
-              p.imagePath,
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 120,
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.broken_image, size: 40),
-                );
-              },
-            ),
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  p.name,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                ShimmerSkeleton(
+                  width: 100,
+                  height: 12,
+                  borderRadius: BorderRadius.circular(4),
                 ),
-               // const SizedBox(height: 4),
-               
-              //    Text(
-              //     p.supplierData!['company_name'],
-              //     style: const TextStyle(color: Colors.grey, fontSize: 12),
-              //     maxLines: 1,
-              //     overflow: TextOverflow.ellipsis,
-                
-              // ),
-              const SizedBox(height: 4),
-                Text(
-                  "EGP${p.price}",
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
+                const SizedBox(height: 4),
+                ShimmerSkeleton(
+                  width: 60,
+                  height: 12,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                const SizedBox(height: 4),
+                ShimmerSkeleton(
+                  width: 60,
+                  height: 12,
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ],
             ),
           ),
         ],
       ),
-    ),
-  );
-}
-Widget _skeletonRecommendedCard() {
-  return Container(
-    width: 150,
-    margin: const EdgeInsets.only(right: 12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ShimmerSkeleton(
-          width: double.infinity,
-          height: 120,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ShimmerSkeleton(width: 100, height: 12, borderRadius: BorderRadius.circular(4)),
-              const SizedBox(height: 4),
-              ShimmerSkeleton(width: 60, height: 12, borderRadius: BorderRadius.circular(4)),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-void _startPolling() {
-  _pollTimer = Timer.periodic(Duration(seconds: 60), (timer) {
-    if (mounted) {
-      _forceRefresh = true;
-      _loadProducts(forceRefresh: true).then((_) {
-        if (mounted) _forceRefresh = false;
-      });
-    }
-  });
-}
+    );
+  }
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(Duration(seconds: 60), (timer) {
+      if (mounted) {
+        _forceRefresh = true;
+        _loadProducts(forceRefresh: true).then((_) {
+          if (mounted) _forceRefresh = false;
+        });
+      }
+    });
+  }
+
   Widget _customRequestBanner() {
-  return Container(
-
-    padding: const EdgeInsets.symmetric(horizontal: 16,vertical: 2),
-    decoration: BoxDecoration(
-      color: const Color.fromARGB(255, 233, 238, 247),
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            shape: BoxShape.circle,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 233, 238, 247),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.auto_awesome, color: Colors.blue, size: 22),
           ),
-          child: const Icon(
-            Icons.auto_awesome,
-            color: Colors.blue,
-            size: 22,
-          ),
-        ),
 
-        const SizedBox(width: 12),
+          const SizedBox(width: 12),
 
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Can't find a specific device?",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Can't find a specific device?",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                "Create a custom request\nand let us source it for you.",
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
+                SizedBox(height: 4),
+                Text(
+                  "Create a custom request\nand let us source it for you.",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-              ),
-            ],
-          ),
-        ),
-
-        TextButton(
-          onPressed: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>  doctorAccountPage(fromSearch: true),
-
-                ),
-              );
-          },
-          child: const Text(
-            "Request Now",
-            style: TextStyle(
-              color: Colors.blue,
-              fontWeight: FontWeight.bold,
+              ],
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-  
 
-  Future<void> _loadProducts({bool loadMore = false, bool forceRefresh = false}) async {
-     if (!mounted) return;
-     if(loadMore&& _isLoadingMore) return;
-     if (ApiService.cachedProducts != null && !forceRefresh && !_forceRefresh && !loadMore ) {
-    setState(() {
-      _allProducts = ApiService.cachedProducts!;
-      displayedProducts = List.from(_allProducts);
-      _isLoadingProducts = false;
-      _isLoadingMore = false;
-    });
-    return;
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => doctorAccountPage(fromSearch: true),
+                ),
+              );
+            },
+            child: const Text(
+              "Request Now",
+              style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
-    
-    
-    
+
+  Future<void> _loadProducts({
+    bool loadMore = false,
+    bool forceRefresh = false,
+  }) async {
+    if (!mounted) return;
+    if (loadMore && _isLoadingMore) return;
+    if (ApiService.cachedProducts != null &&
+        !forceRefresh &&
+        !_forceRefresh &&
+        !loadMore) {
+      setState(() {
+        _allProducts = ApiService.cachedProducts!;
+        displayedProducts = List.from(_allProducts);
+        _isLoadingProducts = false;
+        _isLoadingMore = false;
+      });
+      return;
+    }
+
     if (ApiService.token == null) {
       setState(() {
         _productsError = 'Please login first';
@@ -480,16 +504,16 @@ void _startPolling() {
         _allProducts = [];
         _isFirstLoad = true;
       });
-    } else if(loadMore){
+    } else if (loadMore) {
       setState(() {
         _isLoadingMore = true;
       });
-    }else if(forceRefresh){
-  setState(() {
-      _isLoadingProducts = true;
-      _productsError = null;
-      _currentPage = 1;
-    });
+    } else if (forceRefresh) {
+      setState(() {
+        _isLoadingProducts = true;
+        _productsError = null;
+        _currentPage = 1;
+      });
     }
 
     try {
@@ -498,16 +522,16 @@ void _startPolling() {
         perPage: 10,
         isRecommended: false,
       );
-if (!mounted) return;
+      if (!mounted) return;
       setState(() {
         if (loadMore) {
           _allProducts.addAll(result['products']);
         } else {
           _allProducts = result['products'];
 
-            if (_currentPage == 1) {
-          ApiService.cachedProducts = _allProducts;
-        }
+          if (_currentPage == 1) {
+            ApiService.cachedProducts = _allProducts;
+          }
         }
         displayedProducts = List.from(_allProducts);
         _totalPages = result['lastPage'];
@@ -515,14 +539,16 @@ if (!mounted) return;
         _currentPage++;
         _isLoadingProducts = false;
         _isLoadingMore = false;
-        _isFirstLoad=false;
+        _isFirstLoad = false;
       });
-print('loaded page ${_currentPage -1}, hasmore ${_hasMore}');
+      print('loaded page ${_currentPage - 1}, hasmore ${_hasMore}');
       for (var product in _allProducts) {
         if (product.stock == 0 && product.restockDate != null) {
           final isNotified = await _apiService.isNotified(product.id);
-          Provider.of<NotificationProvider>(context, listen: false)
-              .setNotified(product.id, isNotified);
+          Provider.of<NotificationProvider>(
+            context,
+            listen: false,
+          ).setNotified(product.id, isNotified);
         }
       }
       if (!mounted) return;
@@ -533,7 +559,7 @@ print('loaded page ${_currentPage -1}, hasmore ${_hasMore}');
         _productsError = e.toString();
         _isLoadingProducts = false;
         _isLoadingMore = false;
-        _isFirstLoad=false;
+        _isFirstLoad = false;
       });
     }
   }
@@ -550,17 +576,19 @@ print('loaded page ${_currentPage -1}, hasmore ${_hasMore}');
       return;
     }
 
- if (!mounted) return;
-      if (ApiService.cachedCategories != null && !forceRefresh && !_forceRefreshCategories) {
-        if (!mounted) return;
-    setState(() {
-      _categories = ApiService.cachedCategories!;
-      _isLoadingCategories = false;
-      _categoriesError = null;
-    });
-    return;
-  }
-  
+    if (!mounted) return;
+    if (ApiService.cachedCategories != null &&
+        !forceRefresh &&
+        !_forceRefreshCategories) {
+      if (!mounted) return;
+      setState(() {
+        _categories = ApiService.cachedCategories!;
+        _isLoadingCategories = false;
+        _categoriesError = null;
+      });
+      return;
+    }
+
     // ✅ التأكد من وجود توكن
     if (ApiService.token == null) {
       setState(() {
@@ -569,7 +597,7 @@ print('loaded page ${_currentPage -1}, hasmore ${_hasMore}');
       });
       return;
     }
-if (!mounted) return;
+    if (!mounted) return;
     setState(() {
       _isLoadingCategories = true;
       _categoriesError = null;
@@ -580,7 +608,7 @@ if (!mounted) return;
         page: 1,
         perPage: 10,
       );
-if (!mounted) return;
+      if (!mounted) return;
       setState(() {
         _categories = categories;
         _isLoadingCategories = false;
@@ -606,53 +634,53 @@ if (!mounted) return;
   }
   //######################
 
- 
   //##################################################################
   // mohamed
   Future<void> _searchProduct(String query) async {
-     if (!mounted) return;
-  setState(() {
-    _isSearchingLoading = true;      // ✅ بدء التحميل
-    isSearching = true;       
-  });
+    if (!mounted) return;
+    setState(() {
+      _isSearchingLoading = true; // ✅ بدء التحميل
+      isSearching = true;
+    });
     final result = await SearchService.searchProducts(
       query,
       selectedCategoryId,
     );
- if (!mounted) return;
+    if (!mounted) return;
     if (result['success']) {
       if (!mounted) return;
       setState(() {
-        searchResults = result['data'] ;
-         _isSearchingLoading = false;      // ✅ انتهاء التحميل
+        searchResults = result['data'];
+        _isSearchingLoading = false; // ✅ انتهاء التحميل
         isSearching = query.isNotEmpty || selectedCategoryId != null;
       });
     }
   }
 
   Future<void> fetchCategoriesApi() async {
-     if (!mounted) return;
+    if (!mounted) return;
     setState(() {
       isLoadingCategoriesApi = true;
     });
 
     try {
       final result = await CategorySearch.getCategories();
-if (!mounted) return;
+      print('category $result+++++++++++');
+      if (!mounted) return;
       setState(() {
         categoriesApi = result;
       });
     } catch (e) {
       print(e);
     }
-if (!mounted) return;
+    if (!mounted) return;
     setState(() {
       isLoadingCategoriesApi = false;
     });
   }
   //##################################################################################
   //int _selectedIndex = 0;
- 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -693,11 +721,17 @@ if (!mounted) return;
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: Text('Cancel', style: TextStyle(color: Colors.black)),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.black),
+                      ),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: Text('Log out', style: TextStyle(color: Colors.blue)),
+                      child: Text(
+                        'Log out',
+                        style: TextStyle(color: Colors.blue),
+                      ),
                     ),
                   ],
                 ),
@@ -738,210 +772,226 @@ if (!mounted) return;
           ///////////////////////////////////////////////////////////////////////
         ],
       ),
-   // drawer: _buildDrawer(), // افتح الدروير
+      // drawer: _buildDrawer(), // افتح الدروير
       body: SingleChildScrollView(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-         children: [
-      _buildSearchBar(),
-      const SizedBox(height: 20),
-      if (isSearching && _isSearchingLoading)   // ✅ حالة التحميل
-        _buildSearchSkeleton()
-      else if (isSearching && !_isSearchingLoading)
-        _searchResultsApi() // Pass the first search result
-      else
-        _buildHomeSections(),
-    ],
+          children: [
+            _buildSearchBar(),
+            const SizedBox(height: 20),
+            if (isSearching && _isSearchingLoading) // ✅ حالة التحميل
+              _buildSearchSkeleton()
+            else if (isSearching && !_isSearchingLoading)
+              _searchResultsApi() // Pass the first search result
+            else
+              _buildHomeSections(),
+          ],
         ),
       ),
     );
   }
- Widget _searchResultsApi() {
-  if (searchResults.isEmpty) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off_rounded,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            "Couldn't find your product?",
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: Colors.grey.shade800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-  "If you couldn't find the product you're looking for, you can create a custom request now and we'll get it for you.",
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 22),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>  doctorAccountPage(fromSearch: true),
 
-                ),
-              );
-            },
-            icon: const Icon(Icons.add_box_outlined, size: 20),
-            label: const Text(
-              "Create Custom Request",
+  Widget _searchResultsApi() {
+    if (searchResults.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off_rounded,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Couldn't find your product?",
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
+                color: Colors.grey.shade800,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "If you couldn't find the product you're looking for, you can create a custom request now and we'll get it for you.",
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 22),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => doctorAccountPage(fromSearch: true),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_box_outlined, size: 20),
+              label: const Text(
+                "Create Custom Request",
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3A7DFF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3A7DFF),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 14,
+          ],
+        ),
+      );
+    }
+    return GridView.builder(
+      itemCount: searchResults.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemBuilder: (context, index) {
+        final product = searchResults[index];
+        final bool isRentable = product.is_rentable ?? false;
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProductDetailsPage(productId: product.id ?? 0),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
+            );
+          },
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.network(
+                  product.image.isNotEmpty ? product.image.first.image : "",
+                  height: 120,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    product.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    "${product.price} EGP",
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (isRentable)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      "Rentable",
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                const SizedBox(height: 2),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
-  return GridView.builder(
-    itemCount: searchResults.length,
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      childAspectRatio: 0.75,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-    ),
-    itemBuilder: (context, index) {
-      final product = searchResults[index];
-      final bool isRentable = product.is_rentable ?? false; 
 
-      return GestureDetector(
-        onTap: () {
-           Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => ProductDetailsPage(
-        productId: product.id ?? 0,
+  Widget _buildSearchSkeleton() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
       ),
-    ),
-  );
-        },
-        child: Container(
+      itemCount: 4, // عدد الـ skeletons أثناء التحميل
+      itemBuilder: (context, index) {
+        return Container(
           color: Colors.white,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.network(
-                product.image.isNotEmpty ? product.image.first.image : "",
-                height: 120,
+              ShimmerSkeleton(
                 width: double.infinity,
-                fit: BoxFit.cover,
+                height: 120,
+                borderRadius: BorderRadius.circular(8),
               ),
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  product.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                child: ShimmerSkeleton(
+                  width: double.infinity,
+                  height: 14,
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
               const SizedBox(height: 4),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  "${product.price} EGP",
-                  style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
+                child: ShimmerSkeleton(
+                  width: 80,
+                  height: 14,
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
               const SizedBox(height: 8),
-              if (isRentable)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    "Rentable",
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: ShimmerSkeleton(
+                  width: 70,
+                  height: 24,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              const SizedBox(height: 2),
+              ),
             ],
           ),
-        ),
-      );
-    },
-  );
-}
-Widget _buildSearchSkeleton() {
-  return GridView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      childAspectRatio: 0.75,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-    ),
-    itemCount: 4,  // عدد الـ skeletons أثناء التحميل
-    itemBuilder: (context, index) {
-      return Container(
-        color: Colors.white,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ShimmerSkeleton(width: double.infinity, height: 120, borderRadius: BorderRadius.circular(8)),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: ShimmerSkeleton(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: ShimmerSkeleton(width: 80, height: 14, borderRadius: BorderRadius.circular(4)),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: ShimmerSkeleton(width: 70, height: 24, borderRadius: BorderRadius.circular(12)),
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
-//######################################################################################
+        );
+      },
+    );
+  }
+
+  //######################################################################################
   Widget _buildSearchBar() {
     return Row(
       children: [
@@ -987,6 +1037,7 @@ Widget _buildSearchSkeleton() {
       ],
     );
   }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -995,33 +1046,38 @@ Widget _buildSearchSkeleton() {
     _categoriesPollTimer?.cancel();
     super.dispose();
   }
-//############################################################################################
-// mohamed
-void _showCategoriesTopSheet() {
-  showGeneralDialog(
-    context: context,
-    barrierDismissible: true, // النقر خارج النافذة يغلقها
-    barrierLabel: "Dismiss",
-    transitionDuration: const Duration(milliseconds: 200),
-    pageBuilder: (context, anim1, anim2) {
-      return Align(
-        alignment: Alignment.topCenter, // تظهر في أعلى المنتصف
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            margin: const EdgeInsets.only(top: 80, left: 60, right: 60),
-            width: MediaQuery.of(context).size.width * 0.9,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.5,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))
-              ],
-            ),
-            
+
+  //############################################################################################
+  // mohamed
+  void _showCategoriesTopSheet() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true, // النقر خارج النافذة يغلقها
+      barrierLabel: "Dismiss",
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (context, anim1, anim2) {
+        return Align(
+          alignment: Alignment.topCenter, // تظهر في أعلى المنتصف
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              margin: const EdgeInsets.only(top: 80, left: 60, right: 60),
+              width: MediaQuery.of(context).size.width * 0.9,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.5,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1102,7 +1158,7 @@ void _showCategoriesTopSheet() {
         const SizedBox(height: 20),
         _customRequestBanner(),
         const SizedBox(height: 20),
-         _recommendedSection(), // ✅ جديد
+        _recommendedSection(), // ✅ جديد
         _sectionTitle("Categories"),
         const SizedBox(height: 10),
         buildCategories(), // 👈 هنا
@@ -1219,22 +1275,30 @@ void _showCategoriesTopSheet() {
   Widget buildCategories() {
     if (_isLoadingCategories && _categories.isEmpty) {
       return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(
-          1, // ✅ عدد الـ skeleton categories
-          (index) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Column(
-              children: [
-                ShimmerSkeleton(width: 70, height: 70, borderRadius: BorderRadius.circular(12)),
-                const SizedBox(height: 8),
-                ShimmerSkeleton(width: 60, height: 12, borderRadius: BorderRadius.circular(4)),
-              ],
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(
+            1, // ✅ عدد الـ skeleton categories
+            (index) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Column(
+                children: [
+                  ShimmerSkeleton(
+                    width: 70,
+                    height: 70,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  const SizedBox(height: 8),
+                  ShimmerSkeleton(
+                    width: 60,
+                    height: 12,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
       );
       // return const Center(
       //   child: Padding(
@@ -1304,9 +1368,9 @@ void _showCategoriesTopSheet() {
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        gridDelegate:  SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: .45,
+          childAspectRatio: .4,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -1353,7 +1417,7 @@ void _showCategoriesTopSheet() {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: .45,
+            childAspectRatio: .4,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
@@ -1369,61 +1433,99 @@ void _showCategoriesTopSheet() {
       ],
     );
   }
-Widget _skeletonProductCard() {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // صورة
-        ShimmerSkeleton(
-          width: double.infinity,
-          height: MediaQuery.of(context).size.height * 0.22,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        const SizedBox(height: 8),
-        // اسم المنتج
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: ShimmerSkeleton(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
-        ),
-        const SizedBox(height: 8),
-        // اسم المورد
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: ShimmerSkeleton(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
-        ),
-        const SizedBox(height: 8),
-        // السعر
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: ShimmerSkeleton(width: 80, height: 14, borderRadius: BorderRadius.circular(4)),
-        ),
-        const SizedBox(height: 8),
-        // زر
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: ShimmerSkeleton(width: double.infinity, height: 36, borderRadius: BorderRadius.circular(8)),
-        ),
-        const SizedBox(height: 8),
-      ],
-    ),
-  );
-}
+
+  Widget _skeletonProductCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // صورة
+          ShimmerSkeleton(
+            width: double.infinity,
+            height: MediaQuery.of(context).size.height * 0.22,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          const SizedBox(height: 8),
+          // اسم المنتج
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ShimmerSkeleton(
+              width: double.infinity,
+              height: 14,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // اسم المورد
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ShimmerSkeleton(
+              width: 100,
+              height: 14,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // السعر
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ShimmerSkeleton(
+              width: 80,
+              height: 14,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // تقييم
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ShimmerSkeleton(
+              width: 80,
+              height: 14,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // نجوم
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ShimmerSkeleton(
+              width: 80,
+              height: 14,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // زر
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ShimmerSkeleton(
+              width: double.infinity,
+              height: 36,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
   // ---------------------
   // PRODUCT CARD
   // ---------------------
   Widget _productCard(Product p) {
     final notificationProvider = Provider.of<NotificationProvider>(context);
-final isNotified = notificationProvider.isNotified(p.id);
-   // final wishlistProvider = Provider.of<WishlistProvider>(
-   //   context,
+    final isNotified = notificationProvider.isNotified(p.id);
+    // final wishlistProvider = Provider.of<WishlistProvider>(
+    //   context,
     //  listen: true,
-   // );
-   // final isInWishlist = wishlistProvider.isInWishlist(p.id);
+    // );
+    // final isInWishlist = wishlistProvider.isInWishlist(p.id);
     // final isInWishlist = wishListGlobal.any((i) => i["name"] == p.name);
     //bool isInequipmentList = equipmentListGlobal.any(
     //  (i) => i["name"] == p.name,
@@ -1445,12 +1547,11 @@ final isNotified = notificationProvider.isNotified(p.id);
             children: [
               GestureDetector(
                 onTap: () async {
-                  final result = await Navigator.push(
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          ProductDetailsPage(        productId: p.id ,product: p,
-),
+                          ProductDetailsPage(productId: p.id, product: p),
                     ),
                   );
 
@@ -1524,6 +1625,39 @@ final isNotified = notificationProvider.isNotified(p.id);
                   horizontal: 8.0,
                   vertical: 4,
                 ),
+                child: Row(
+                  children: List.generate(5, (index) {
+                    final rating = p.reviews.isNotEmpty
+                        ? p.reviews.first.rating.toDouble()
+                        : 0.0;
+
+                    if (index < rating.floor()) {
+                      return const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 14,
+                      );
+                    } else if (index < rating) {
+                      return const Icon(
+                        Icons.star_half,
+                        color: Colors.amber,
+                        size: 14,
+                      );
+                    } else {
+                      return const Icon(
+                        Icons.star_border,
+                        color: Colors.amber,
+                        size: 14,
+                      );
+                    }
+                  }),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8.0,
+                  vertical: 4,
+                ),
                 child: Text(
                   "EGP${p.price}",
                   style: const TextStyle(
@@ -1533,7 +1667,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                 ),
               ),
 
-              if (p.isRentable == false || p.rentalStock==0)
+              if (p.isRentable == false || p.rentalStock == 0)
                 Padding(
                   padding: const EdgeInsets.all(7.0),
                   child: const Text(
@@ -1545,7 +1679,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                     ),
                   ),
                 ),
-              if (p.isRentable && p.rentalStock!>0)
+              if (p.isRentable && p.rentalStock! > 0)
                 Padding(
                   padding: const EdgeInsets.all(7.0),
                   child: const Text(
@@ -1557,7 +1691,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                     ),
                   ),
                 ),
-                 if (p.isRentable && p.rentalStock==0)
+              if (p.isRentable && p.rentalStock == 0)
                 Padding(
                   padding: const EdgeInsets.all(7.0),
                   child: const Text(
@@ -1568,8 +1702,7 @@ final isNotified = notificationProvider.isNotified(p.id);
                       fontSize: 10,
                     ),
                   ),
-               ),
-
+                ),
 
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -1777,7 +1910,7 @@ final isNotified = notificationProvider.isNotified(p.id);
 
   Widget _buildNotifyButton(Product p) {
     final notificationProvider = Provider.of<NotificationProvider>(context);
-final isNotified = notificationProvider.isNotified(p.id);
+    final isNotified = notificationProvider.isNotified(p.id);
     return FutureBuilder<bool>(
       future: _apiService.isNotified(p.id),
       builder: (context, snapshot) {
@@ -1820,30 +1953,29 @@ final isNotified = notificationProvider.isNotified(p.id);
     );
   }
 
-
   Widget _buildActionButton(Product p) {
-final bool isOutOfStock = p.stock == 0;
-  final bool isRentable = p.isRentable && (p.rentalStock ?? 0) > 0;
-  final bool canBuy = p.stock > 0;
+    final bool isOutOfStock = p.stock == 0;
+    final bool isRentable = p.isRentable && (p.rentalStock ?? 0) > 0;
+    final bool canBuy = p.stock > 0;
 
     // ✅ حالة 1: Out of Stock (stock == 0) و restock_date == null
     if (p.stock == 0 && p.restockDate == null) {
-  return SizedBox(
-    width: double.infinity,
-    child: ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey.shade400,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        disabledBackgroundColor: Colors.grey.shade400,
-      ),
-      onPressed: null,
-      child: const Text(
-        "Out of Stock",
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      ),
-    ),
-  );
-}
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey.shade400,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            disabledBackgroundColor: Colors.grey.shade400,
+          ),
+          onPressed: null,
+          child: const Text(
+            "Out of Stock",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
 
     // ✅ حالة 2: Notify Me (stock == 0 و restock_date != null)
     if (p.stock == 0 && p.restockDate != null) {
@@ -1899,7 +2031,7 @@ final bool isOutOfStock = p.stock == 0;
                 quantity: 1,
                 type: "sale",
               );
-if (!mounted) return;
+              if (!mounted) return;
               if (result['success'] != false) {
                 // ✅ ضيفه local برضو لو عايز
                 cartItemsGlobal.add(
@@ -2005,4 +2137,3 @@ if (!mounted) return;
   //   );
   // }
 }
-

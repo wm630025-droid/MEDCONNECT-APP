@@ -305,10 +305,10 @@ static String? doctorImageUrl;
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
-     //  print('resonse body ${response.body}');
-        print('✅ Success flag: ${data['success']}');
-        print('📊 Total products in DB: ${data['total']}');
-        print('📄 Last page: ${data['last_page']}');
+      // print('resonse body ${response.body}');
+       // print('✅ Success flag: ${data['success']}');
+        //print('📊 Total products in DB: ${data['total']}');
+      //  print('📄 Last page: ${data['last_page']}');
        // print('📦 Products in this page: ${data['data']?.length ?? 0}');
 
         if (data['success'] == true) {
@@ -316,8 +316,8 @@ static String? doctorImageUrl;
               .map((json) => Product.fromJson(json))
               .toList();
 
-          print('✅ Loaded ${products.length} products from page $page');
-          print('🏷️ Product names: ${products.map((p) => p.name).join(', ')}');
+        ///  print('✅ Loaded ${products.length} products from page $page');
+        //  print('🏷️ Product names: ${products.map((p) => p.name).join(', ')}');
           print('=====================================');
           if (response.statusCode == 200 && page == 1) {
             cachedProducts = products; // خزن المنتجات
@@ -368,7 +368,7 @@ static String? doctorImageUrl;
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
-
+       // print('${response.body}');
         if (data['success'] == true) {
           return Product.fromJson(data['data']);
         } else {
