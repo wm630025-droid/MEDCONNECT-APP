@@ -130,6 +130,7 @@ class _OnboardingFindItemScreenState extends State<OnboardingFindItemScreen> {
               children: [
                 _header(),
                 Expanded(child: _mainContent()),
+
                 _footer(),
               ],
             ),
@@ -272,10 +273,9 @@ class _OnboardingFindItemScreenState extends State<OnboardingFindItemScreen> {
   // ---------------- Footer: pagination dots + primary button ----------------
   Widget _footer() {
     return Padding(
-      padding: const EdgeInsets.only(
-        left: AppSpacing.marginMobile,
-        right: AppSpacing.marginMobile,
-        bottom: AppSpacing.xl,
+       padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.marginMobile,
+        vertical: AppSpacing.md,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

@@ -66,6 +66,8 @@ static Future<List<CategoryApiModel>> getCategories({
       final data = jsonDecode(response.body);
 
       List categoriesJson = data['data'];
+      print('category body: ${response.body}');
+
 
       return categoriesJson
           .map((json) => CategoryApiModel.fromJson(json))

@@ -622,6 +622,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         onPressed: () => _showAddToListDialog(_product!),
                         icon: Icon(
                           Icons.playlist_add,
+                          size: 15,
                           color:
                               isInEquipmentList ? Colors.blue : Colors.black,
                         ),
@@ -631,7 +632,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             color: isInEquipmentList
                                 ? Colors.blue
                                 : Colors.black,
+                                fontSize: 11,
                           ),
+                          
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
@@ -654,14 +657,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           icon: const Icon(
             Icons.chat,
             color: Colors.white,
-            size: 18,
+            size: 15,
           ),
           label: const Text(
             "Ask Supplier",
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: 11,
             ),
           ),
           style: ElevatedButton.styleFrom(
@@ -937,19 +940,19 @@ Future<void> _showAskSupplierDialog() async {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          "$averageRating (${reviews.length} Reviews)",
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                    // Row(
+                    //   children: [
+                    //     const Icon(Icons.star, color: Colors.amber, size: 16),
+                    //     const SizedBox(width: 4),
+                    //     Text(
+                    //     //  "$averageRating (${reviews.length} Reviews)",
+                    //       style: const TextStyle(
+                    //         color: Colors.grey,
+                    //         fontSize: 12,
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                   ],
                 ),
               ),
@@ -1291,52 +1294,52 @@ Future<void> _askSupplier(String text) async {
       );
 
   // ---------------- REVIEWS ----------------
-  Widget _reviewsSection() => _card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Average Rating
-            Center(
-              child: Column(
-                children: [
-                  const Text(
-                    "Average Rating",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    averageRating.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      5,
-                      (i) => Icon(
-                        i < averageRating.round()
-                            ? Icons.star
-                            : Icons.star_border,
-                        color: Colors.amber,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "based on ${reviews.length} reviews",
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    ),
-  );
+  // Widget _reviewsSection() => _card(
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           // Average Rating
+  //           Center(
+  //             child: Column(
+  //               children: [
+  //                 const Text(
+  //                   "Average Rating",
+  //                   style: TextStyle(color: Colors.grey),
+  //                 ),
+  //                 const SizedBox(height: 6),
+  //                 Text(
+  //                   averageRating.toStringAsFixed(1),
+  //                   style: const TextStyle(
+  //                     fontSize: 32,
+  //                     fontWeight: FontWeight.bold,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 4),
+  //                 Row(
+  //                   mainAxisAlignment: MainAxisAlignment.center,
+  //                   children: List.generate(
+  //                     5,
+  //                     (i) => Icon(
+  //                       i < averageRating.round()
+  //                           ? Icons.star
+  //                           : Icons.star_border,
+  //                       color: Colors.amber,
+  //                       size: 22,
+  //                     ),
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 4),
+  //                 Text(
+  //                   "based on ${reviews.length} reviews",
+  //                   style: const TextStyle(color: Colors.grey, fontSize: 12),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //     ],
+  //   ),
+  // );
   // ---------------- REVIEWS ----------------
   Widget _reviewsSection() => _card(
     child: Column(
@@ -1395,8 +1398,12 @@ Future<void> _askSupplier(String text) async {
                     color: Colors.grey.withOpacity(0.15),
                     blurRadius: 6,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
                       CircleAvatar(
                         radius: 20,
@@ -1407,8 +1414,8 @@ Future<void> _askSupplier(String text) async {
                             ? ClipOval(
                                 child: Image.network(
                                   r.profileImageUrl!,
-                                  width: 40,
-                                  height: 40,
+                                  width: 35,
+                                  height: 35,
                                   fit: BoxFit.cover,
                                   cacheWidth: 80,
                                   cacheHeight: 80,
@@ -1456,83 +1463,93 @@ Future<void> _askSupplier(String text) async {
                           color: Colors.grey,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: List.generate(
-                          5,
-                          (i) => Icon(
-                            i < r.rating ? Icons.star : Icons.star_border,
-                            color: Colors.amber,
-                            size: 16,
+
+                      if (r.doctorId ==
+                          ApiService.doctorId) // تقييم المستخدم الحالي
+                        IconButton(
+                          onPressed: () => _deleteReview(r),
+                          icon: const Icon(
+                            Icons.delete,
+                            size: 18,
+                            color: Colors.red,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(r.comment),
                     ],
                   ),
-                );
-              }).toList()
-            else
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child:
-                    Text("No reviews yet", style: TextStyle(color: Colors.grey)),
-              ),
-
-            const SizedBox(height: 20),
-
-            // Leave Review
-            const Text(
-              "Leave A Review",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: List.generate(
-                5,
-                (i) => GestureDetector(
-                  onTap: () => setState(() => userRating = i + 1),
-                  child: Icon(
-                    i < userRating ? Icons.star : Icons.star_border,
-                    color: Colors.amber,
-                    size: 28,
+                  const SizedBox(height: 6),
+                  Row(
+                    children: List.generate(
+                      5,
+                      (i) => Icon(
+                        i < r.rating ? Icons.star : Icons.star_border,
+                        color: Colors.amber,
+                        size: 16,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Text(r.comment),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reviewController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: "Share Your Experience With This Product...",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF005EA6),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onPressed: _submitReview,
-                child: const Text(
-                  "Submit Review",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ),
-          ],
+            );
+          }).toList()
+        else
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text("No reviews yet", style: TextStyle(color: Colors.grey)),
+          ),
+
+        const SizedBox(height: 20),
+
+        // Leave Review
+        const Text(
+          "Leave A Review",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-      );
+        const SizedBox(height: 10),
+        Row(
+          children: List.generate(
+            5,
+            (i) => GestureDetector(
+              onTap: () => setState(() => userRating = i + 1),
+              child: Icon(
+                i < userRating ? Icons.star : Icons.star_border,
+                color: Colors.amber,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: reviewController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: "Share Your Experience With This Product...",
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF005EA6),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: _submitReview,
+            child: const Text(
+              "Submit Review",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Future<void> _submitReview() async {
     if (reviewController.text.isEmpty || userRating == 0) {
@@ -1766,15 +1783,17 @@ Future<void> _askSupplier(String text) async {
   Widget _actionButton() {
     if (selectedPurchase == 0) {
       // ✅ تعطيل الزر إذا لم تكن التواريخ محددة
-      final isRentable = rentStartDate != null && rentEndDate != null;
+      //final isRentable = rentStartDate != null && rentEndDate != null;
+         final bool canRent =
+          _product!.isRentable && (_product!.rentalStock ?? 0) > 0;
       return Padding(
         padding: const EdgeInsets.all(12),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            backgroundColor: isRentable ? Colors.blue : Colors.grey,
+            backgroundColor: canRent ? Colors.blue : Colors.grey,
           ),
-          onPressed: isRentable ? _rentNow : null,
+          onPressed: canRent ? _rentNow : null,
           child: Text(
             'Rent Now',
             style: TextStyle(

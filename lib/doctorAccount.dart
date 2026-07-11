@@ -1032,7 +1032,7 @@ class OldChatsSection extends StatelessWidget {
                 leading: const Icon(Icons.forum),
                 title: const Text(
                   "Tab To View All Chats",
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blue),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blue),
                 ),
                 //subtitle: const Text("Re: Anesthesia Machine"),
                 trailing: const Icon(Icons.arrow_right),
@@ -1194,7 +1194,7 @@ class CustomRequestsSection extends StatelessWidget {
             leading: const Icon(Icons.edit_note),
             title: const Text(
               "Tab To View All Custom Requests",
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,color: Colors.blue),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,color: Colors.blue),
             ),
             // subtitle: const Text("3 quotes received"),
             onTap: () {

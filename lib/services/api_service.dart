@@ -57,6 +57,7 @@ class ApiService {
   // في api_service.dart
 static List<ChatModel>? cachedConversations;
 static DateTime? cachedConversationsTime;
+static List<Product> cachedRecommendedProducts = [];
 static String? doctorImageUrl;
   static void clearCache() {
     cachedProducts = null;
@@ -269,6 +270,7 @@ static String? doctorImageUrl;
   Future<Map<String, dynamic>> fetchProductsWithPagination({
     int page = 1,
     int perPage = 10,
+      bool isRecommended = false,
   }) async {
     try {
       if (_token == null) {
@@ -282,6 +284,7 @@ static String? doctorImageUrl;
           'per_page': perPage.toString(),
           'sort_by': 'id',
           'sort_order': 'asc',
+          if (isRecommended) 'is_recommended': '1', // ✅ إضافة الـ parameter
         },
       );
       print('🌐 ========== FETCHING PRODUCTS ==========');
@@ -302,10 +305,10 @@ static String? doctorImageUrl;
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
-      //  print('resonse body ${response.body}');
-        print('✅ Success flag: ${data['success']}');
-        print('📊 Total products in DB: ${data['total']}');
-        print('📄 Last page: ${data['last_page']}');
+      // print('resonse body ${response.body}');
+       // print('✅ Success flag: ${data['success']}');
+        //print('📊 Total products in DB: ${data['total']}');
+      //  print('📄 Last page: ${data['last_page']}');
        // print('📦 Products in this page: ${data['data']?.length ?? 0}');
 
         if (data['success'] == true) {
@@ -313,8 +316,8 @@ static String? doctorImageUrl;
               .map((json) => Product.fromJson(json))
               .toList();
 
-          print('✅ Loaded ${products.length} products from page $page');
-          print('🏷️ Product names: ${products.map((p) => p.name).join(', ')}');
+        ///  print('✅ Loaded ${products.length} products from page $page');
+        //  print('🏷️ Product names: ${products.map((p) => p.name).join(', ')}');
           print('=====================================');
           if (response.statusCode == 200 && page == 1) {
             cachedProducts = products; // خزن المنتجات
@@ -365,7 +368,7 @@ static String? doctorImageUrl;
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
-
+       // print('${response.body}');
         if (data['success'] == true) {
           return Product.fromJson(data['data']);
         } else {
@@ -1111,7 +1114,7 @@ static String? doctorImageUrl;
     );
       if (res.statusCode == 200) {
     final data = jsonDecode(res.body);
-  //  print('📦 getMessages Response: $data');
+  // print('📦 getMessages Response: $data');
    // print('📦 getMessages Response: ${data['data']}');
     // ✅ إذا كانت الـ data هي List مباشرة
     if (data['data'] is List) {
@@ -1160,6 +1163,7 @@ static String? doctorImageUrl;
   Future<Map<String, dynamic>> sendMessage({
     required int receiverId,
     required String message,
+    int? productId,
   }) async {
     print('Reciver ID : ${receiverId}');
     print('Messsege ${message}');
@@ -1169,7 +1173,11 @@ static String? doctorImageUrl;
       final res = await http.post(
         Uri.parse('$baseUrl/v1/conversations/messages'),
         headers: {..._authHeaders(), 'Content-Type': 'application/json'},
-        body: jsonEncode({'receiver_id': receiverId, 'message': message}),
+        body: jsonEncode({
+          'receiver_id': receiverId,
+          'message': message,
+          'product_id': productId
+        }),
       );
       final data = jsonDecode(res.body);
       print('📦 sendMessage Response: $data');
@@ -1196,6 +1204,7 @@ Map<String, String> _authHeaders() {
     'Content-type': 'application/json'
   };
 }
+
 // في api_service.dart
 Future<Map<String, dynamic>> validateRent({
   required int productId,

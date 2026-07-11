@@ -83,7 +83,7 @@ class _OnboardingStayInLoopScreenState
     extends State<OnboardingStayInLoopScreen> {
   // Index of the active pagination dot (0-based). First dot
   // is active here, exactly like the HTML markup for this page.
-  int _activeDot = 0;
+  int _activeDot = 2;
 
   void _onSkip() {
     _finishOnboardingAndGoToIntro();
@@ -235,7 +235,7 @@ class _OnboardingStayInLoopScreenState
                           ),
                         ),
                         Image.asset(
-                          'assets/images/third_image.png',
+                          'assets/images/first_image.png',
                           fit: BoxFit.contain,
                           height: 320,
                           errorBuilder: (context, error, stackTrace) =>
@@ -249,7 +249,7 @@ class _OnboardingStayInLoopScreenState
 
                 // Title
                 const Text(
-                  "Can't Find What You Need?",
+                  "Stay in the Loop",
                   textAlign: TextAlign.center,
                   style: AppText.headlineLgMobile,
                 ),
@@ -259,7 +259,7 @@ class _OnboardingStayInLoopScreenState
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 280),
                   child: const Text(
-                    "Send a custom request and we'll source it for you.",
+                    "Get notified when items restock and Chat directly with supplier.",
                     textAlign: TextAlign.center,
                     style: AppText.bodyMd,
                   ),
@@ -299,7 +299,7 @@ class _OnboardingStayInLoopScreenState
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(3, (index) {
-        final isActive = index == _activeDot;
+        final bool isActive = index == _activeDot;
         return GestureDetector(
           onTap: () => setState(() => _activeDot = index),
           child: AnimatedContainer(

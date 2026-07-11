@@ -65,7 +65,7 @@ class _ChatScreenState extends State<ChatScreen> {
     conversationId = widget.conversationId;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.conversationId != null) {
-        _loadMessages();
+       await _loadMessages();
         _startPolling();
 
         // _subscribeToPusher();
@@ -76,8 +76,10 @@ class _ChatScreenState extends State<ChatScreen> {
       }
       print("initialMessage: ${widget.initialMessage}");
       if (widget.initialMessage != null) {
+        Future.delayed(const Duration(microseconds: 400));
         //  WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadMessages();
+      
         _sendSharedProduct(widget.initialMessage!, widget.text ?? '');
         //  });
       }
@@ -219,9 +221,9 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final messages = await _api.getMessages(conversationId!);
 
-      print("messages length: ${messages.length}");
+    //  print("messages length: ${messages.length}");
       if (messages.isNotEmpty) {
-        print('📦 Last message: ${messages.last}');
+    //    print('📦 Last message: ${messages.last}');
       }
       if (mounted) {
         setState(() {
@@ -248,10 +250,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
-            _scrollController.animateTo(
+           // Future.delayed(const Duration(microseconds: 300));
+            _scrollController.jumpTo(
               _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
+             // duration: const Duration(milliseconds: 300),
+              //curve: Curves.easeOut,
             );
           }
         });
@@ -322,9 +325,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _controller.clear();
     try {
+      print("isProduct = $isProduct");
+print("productData = $productData");
+print("productId = ${productData?['productId']}");
       final response = await _api.sendMessage(
         receiverId: widget.receiverId, // ✅ من الـ widget
         message: text,
+        productId: productData?['productId'], // ✅ لو فيه منتج
       );
       await Future.delayed(const Duration(milliseconds: 500));
       await _loadMessages(); // ✅ بعد الإرسال نحدث الرسائل
@@ -460,11 +467,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         /// محتوى الرسالة
-                        if (msg.text != null && msg.text!.isNotEmpty)
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(msg.text ?? ""),
-                          ),
+                        
 
                         if (msg.productData != null)
                           Container(
@@ -518,6 +521,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                 ),
                               ],
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          if (msg.text != null && msg.text!.isNotEmpty)
+                          Container(
+                            decoration: BoxDecoration(
+                            //  color: Colors.grey[300],
+                              //borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(msg.text ?? ""),
                             ),
                           ),
 
