@@ -32,7 +32,8 @@ dependencies:
   
   
   webview_flutter: ^4.4.2
-  flutter_inappwebview: ^5.0.8
+  flutter_inappwebview: ^6.1.5
+  
   
  
   

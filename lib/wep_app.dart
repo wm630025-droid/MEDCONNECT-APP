@@ -118,10 +118,11 @@ class _InAppWebViewScreenState extends State<InAppWebViewScreen> {
             LinearProgressIndicator(value: _progress),
           Expanded(
             child: InAppWebView(
-              initialUrlRequest: URLRequest(
-               // url:WebUri.uri(_initialUrl!) ,
-              url:_initialUrl,
-              ),
+            initialUrlRequest: URLRequest(
+ // url:WebUri.uri(_initialUrl!) ,
+ url: WebUri(_initialUrl!.toString()),
+),
+              
               initialOptions: InAppWebViewGroupOptions(
                 crossPlatform: InAppWebViewOptions(
                   javaScriptEnabled: true,
