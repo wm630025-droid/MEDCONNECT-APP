@@ -320,7 +320,7 @@ if (message.isNotEmpty && mounted) {
                 const SizedBox(height: 4),
 
                 Text(
-                  '\$${item.price.toStringAsFixed(2)}',
+                  'EGP${item.price.toStringAsFixed(2)}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
 
@@ -596,7 +596,7 @@ if (message.isNotEmpty && mounted) {
           style: TextStyle(fontWeight: isBold ? FontWeight.bold : null),
         ),
         Text(
-          '\$${value.toStringAsFixed(2)}',
+          'EGP${value.toStringAsFixed(2)}',
           style: TextStyle(fontWeight: isBold ? FontWeight.bold : null),
         ),
       ],

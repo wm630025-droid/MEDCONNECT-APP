@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:medconnect_app/models/order_model.dart';
 import 'package:medconnect_app/services/order_services.dart';
 import 'package:medconnect_app/shimmerSkeleton.dart';
-import 'package:medconnect_app/rent_extension_button.dart';
+import 'package:medconnect_app/rent_extension_button.dart'; // ✅ عدّل المسار حسب مكانه
+
 class OrderDetailsPage extends StatefulWidget {
   final int orderId;
 
@@ -27,96 +28,94 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   bool _isCancelling = false;
   Order? _currentOrder;
 
- Future<void> _cancelOrder(Order order) async {
-  final status = order.status.toLowerCase();
+  Future<void> _cancelOrder(Order order) async {
+    final status = order.status.toLowerCase();
 
-  // يسمح فقط بـ pending أو confirmed
-  if (status != 'pending' && status != 'confirmed') {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Cancellation only available for Pending or Confirmed status orders.',
+    // يسمح فقط بـ pending أو confirmed
+    if (status != 'pending' && status != 'confirmed') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cancellation only available for Pending or Confirmed status orders.',
+          ),
+          backgroundColor: Colors.red,
         ),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
+      );
+      return;
+    }
 
-  try {
-    setState(() {
-      _isCancelling = true;
-    });
+    try {
+      setState(() {
+        _isCancelling = true;
+      });
 
-    // ✅ لو المستخدم اختار سبب إلغاء، نحدّثه في الـ API قبل الإلغاء
-   if (selectedIssue != "None" && selectedIssue.isNotEmpty) {
-    print("=== CALLING assignOrderIssue ===");
-    final assignResult = await OrderServices.assignOrderIssue(
-      orderId: order.id,
-      orderIssue: selectedIssue,
-    );
-    print("=== assignOrderIssue RESULT: $assignResult ===");
+      // ✅ لو المستخدم اختار سبب إلغاء، نحدّثه في الـ API قبل الإلغاء
+      if (selectedIssue != "None" && selectedIssue.isNotEmpty) {
+        print("=== CALLING assignOrderIssue ===");
+        final assignResult = await OrderServices.assignOrderIssue(
+          orderId: order.id,
+          orderIssue: selectedIssue,
+        );
+        print("=== assignOrderIssue RESULT: $assignResult ===");
 
-    if (assignResult['success'] != true) {
-      throw Exception(assignResult['message'] ?? 'Failed to assign issue');
+        if (assignResult['success'] != true) {
+          throw Exception(assignResult['message'] ?? 'Failed to assign issue');
+        }
+      }
+
+      print("=== CALLING cancelDoctorOrder for orderId: ${widget.orderId} ===");
+      final result = await OrderServices.cancelDoctorOrder(widget.orderId);
+      print("=== cancelDoctorOrder RESULT: $result ===");
+
+      // حدّث الحالة محلياً فوراً بدون إعادة تحميل الصفحة
+      setState(() {
+        _currentOrder = Order(
+          id: order.id,
+          doctorId: order.doctorId,
+          orderType: order.orderType,
+          orderIssue: order.orderIssue,
+          subtotal: order.subtotal,
+          total: order.total,
+          invoiceKey: order.invoiceKey,
+          invoiceNumber: order.invoiceNumber,
+          status: 'cancelled',
+          createdAt: order.createdAt,
+          updatedAt: DateTime.now(),
+          items: order.items,
+        );
+      });
+
+      // اعرض رسالة النجاح
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Order cancelled successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isCancelling = false;
+      });
     }
   }
 
-  print("=== CALLING cancelDoctorOrder for orderId: ${widget.orderId} ===");
-  final result = await OrderServices.cancelDoctorOrder(widget.orderId);
-  print("=== cancelDoctorOrder RESULT: $result ===");
-
-    // حدّث الحالة محلياً فوراً بدون إعادة تحميل الصفحة
-    setState(() {
-      _currentOrder = Order(
-        id: order.id,
-        doctorId: order.doctorId,
-        orderType: order.orderType,
-        orderIssue: order.orderIssue,
-        subtotal: order.subtotal,
-        total: order.total,
-        invoiceKey: order.invoiceKey,
-        invoiceNumber: order.invoiceNumber,
-        status: 'cancelled',
-        createdAt: order.createdAt,
-        updatedAt: DateTime.now(),
-        items: order.items,
-      );
-    });
-
-    // اعرض رسالة النجاح
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result['message'] ?? 'Order cancelled successfully'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          e.toString().replaceAll('Exception: ', ''),
-        ),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
-    setState(() {
-      _isCancelling = false;
+  @override
+  void initState() {
+    super.initState();
+    orderFuture = OrderServices.fetchDoctorOrder(widget.orderId).then((order) {
+      setState(() {
+        selectedIssue = order.orderIssue.isNotEmpty ? order.orderIssue : "None";
+      });
+      return order;
     });
   }
-}
-
- @override
-void initState() {
-  super.initState();
-  orderFuture = OrderServices.fetchDoctorOrder(widget.orderId).then((order) {
-    setState(() {
-      selectedIssue = order.orderIssue.isNotEmpty ? order.orderIssue : "None";
-    });
-    return order;
-  });
-}
 
   @override
   Widget build(BuildContext context) {
@@ -130,23 +129,20 @@ void initState() {
       backgroundColor: const Color(0xFFF5F5F5),
 
       // ================= Bottom Navigation =================
-      
-
       body: FutureBuilder<Order>(
         future: orderFuture,
         builder: (context, snapshot) {
-         
-
           if (snapshot.hasError) {
             return Center(child: Text(snapshot.error.toString()));
           }
 
-          if (snapshot.connectionState == ConnectionState.waiting && _currentOrder == null) {
-  return _buildSkeletonLoader();
-}
-if (!snapshot.hasData && _currentOrder == null) {
-  return const Center(child: Text('No order found'));
-}
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              _currentOrder == null) {
+            return _buildSkeletonLoader();
+          }
+          if (!snapshot.hasData && _currentOrder == null) {
+            return const Center(child: Text('No order found'));
+          }
 
           final order = _currentOrder ?? snapshot.data!;
           final isOrderCancelled = order.status.toLowerCase() == 'cancelled';
@@ -228,44 +224,49 @@ if (!snapshot.hasData && _currentOrder == null) {
                         const SizedBox(height: 18),
 
                         // ================= Status =================
-                       Container(
-  padding: const EdgeInsets.symmetric(
-    horizontal: 18,
-    vertical: 10,
-  ),
-  decoration: BoxDecoration(
-    color: Colors.white, // خلفية بيضاء
-    borderRadius: BorderRadius.circular(50),
-    border: Border.all(
-      color: order.status.toLowerCase() == 'confirmed'
-          ? Colors.green // اخضر للحواف
-          : order.status.toLowerCase() == 'cancelled'
-          ? Colors.red // احمر للحواف
-          : Colors.orange, // برتقالي للحواف
-      width: 1.5,
-    ),
-  ),
-  child: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      const SizedBox(width: 8),
-      Text(
-        order.status.toUpperCase(), // تحويل إلى uppercase
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1,
-          color: order.status.toLowerCase() == 'confirmed'
-              ? Colors.green
-              : order.status.toLowerCase() == 'cancelled'
-              ? Colors.red
-              : Colors.orange,
-        ),
-      ),
-      const SizedBox(width: 8),
-    ],
-  ),
-),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white, // خلفية بيضاء
+                            borderRadius: BorderRadius.circular(50),
+                            border: Border.all(
+                              color: order.status.toLowerCase() == 'confirmed'
+                                  ? Colors
+                                        .green // اخضر للحواف
+                                  : order.status.toLowerCase() == 'cancelled'
+                                  ? Colors
+                                        .red // احمر للحواف
+                                  : Colors.orange, // برتقالي للحواف
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(width: 8),
+                              Text(
+                                order.status
+                                    .toUpperCase(), // تحويل إلى uppercase
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1,
+                                  color:
+                                      order.status.toLowerCase() == 'confirmed'
+                                      ? Colors.green
+                                      : order.status.toLowerCase() ==
+                                            'cancelled'
+                                      ? Colors.red
+                                      : Colors.orange,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                          ),
+                        ),
 
                         const SizedBox(height: 28),
 
@@ -400,7 +401,7 @@ if (!snapshot.hasData && _currentOrder == null) {
                                         ),
                                       ),
                                       Text(
-                                        "\$${order.subtotal}",
+                                        "EGP${order.subtotal}",
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 18,
@@ -429,10 +430,10 @@ if (!snapshot.hasData && _currentOrder == null) {
                                         ),
                                       ),
                                       Text(
-                                        "\$${order.total}",
+                                        "EGP${order.total}",
                                         style: TextStyle(
                                           color: Colors.white,
-                                          fontSize: 32,
+                                          fontSize: 25,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -540,27 +541,88 @@ if (!snapshot.hasData && _currentOrder == null) {
                                         _smallTag(
                                           title: "UNIT",
                                           value:
-                                              "\$${item.unitPrice.toStringAsFixed(2)}",
+                                              "EGP${item.unitPrice.toStringAsFixed(2)}",
                                         ),
                                       ],
                                     ),
-                                     if (item.rentalStart != null && item.rentalEnd != null) ...[
-  const SizedBox(height: 18),
-  Divider(color: Colors.grey.shade200),
-  const SizedBox(height: 10),
-  Row(
-    children: [
-      const Icon(Icons.date_range, size: 16, color: secondaryText),
-      const SizedBox(width: 6),
-      Text(
-        "${_fmtDate(item.rentalStart!)} → ${_fmtDate(item.rentalEnd!)}",
-        style: const TextStyle(fontSize: 13, color: secondaryText),
-      ),
-    ],
-  ),
-  const SizedBox(height: 12),
-  _extendRentSection(order, item),
-],
+                                    if (item.rentalStart != null &&
+                                        item.rentalEnd != null) ...[
+                                      const SizedBox(height: 18),
+                                      Divider(color: Colors.grey.shade200),
+                                      const SizedBox(height: 10),
+                                      Wrap(
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.date_range,
+                                                size: 16,
+                                                color: secondaryText,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                "${_fmtDate(item.rentalStart!)} → ${_fmtDate(item.rentalEnd!)}",
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: secondaryText,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (item.extendRent != null &&
+                                              item.extendRent!.prevDay != null)
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 3,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue.shade50,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: Colors.blue.shade200,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                "Previous: ${item.extendRent!.prevDay} day${item.extendRent!.prevDay! > 1 ? 's' : ''}",
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.blue.shade800,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      if (item.extendRent != null) ...[
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              "Extension:",
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            _extendStatusBadge(
+                                              item.extendRent!.status,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                      const SizedBox(height: 12),
+                                      _extendRentSection(order, item),
+                                    ],
                                   ],
                                 ),
                               );
@@ -653,14 +715,18 @@ if (!snapshot.hasData && _currentOrder == null) {
                                             _currentOrder = Order(
                                               id: _currentOrder!.id,
                                               doctorId: _currentOrder!.doctorId,
-                                              orderType: _currentOrder!.orderType,
+                                              orderType:
+                                                  _currentOrder!.orderType,
                                               orderIssue: value,
                                               subtotal: _currentOrder!.subtotal,
                                               total: _currentOrder!.total,
-                                              invoiceKey: _currentOrder!.invoiceKey,
-                                              invoiceNumber: _currentOrder!.invoiceNumber,
+                                              invoiceKey:
+                                                  _currentOrder!.invoiceKey,
+                                              invoiceNumber:
+                                                  _currentOrder!.invoiceNumber,
                                               status: _currentOrder!.status,
-                                              createdAt: _currentOrder!.createdAt,
+                                              createdAt:
+                                                  _currentOrder!.createdAt,
                                               updatedAt: DateTime.now(),
                                               items: _currentOrder!.items,
                                             );
@@ -796,7 +862,6 @@ if (!snapshot.hasData && _currentOrder == null) {
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          
                                           const SizedBox(width: 10),
                                           const Text(
                                             "Cancel Order",
@@ -826,7 +891,6 @@ if (!snapshot.hasData && _currentOrder == null) {
     );
   }
 
- 
   // ================= Info Item =================
   Widget _infoItem({
     required IconData icon,
@@ -896,14 +960,17 @@ if (!snapshot.hasData && _currentOrder == null) {
       ),
     );
   }
-   String _fmtDate(DateTime d) => "${d.day}/${d.month}/${d.year}";
 
- Widget _extendRentSection(Order order, OrderItem item) {
+  String _fmtDate(DateTime d) => "${d.day}/${d.month}/${d.year}";
+
+  Widget _extendRentSection(Order order, OrderItem item) {
     return RentExtensionButton(
       orderId: order.id,
       rentStartDate: item.rentalStart!,
       rentEndDate: item.rentalEnd!,
-      isDelivered: order.status.toLowerCase() == 'delivered', // ✅ جديد - بيحدد لو الطلب اتأكد
+      isDelivered:
+          order.status.toLowerCase() ==
+          'delivered', // ✅ جديد - بيحدد لو الطلب اتأكد
       extendRentInfo: item.extendRent, // ✅ جديد - بيجي من الـ API مباشرة
       onExtended: () {
         setState(() {
@@ -913,6 +980,67 @@ if (!snapshot.hasData && _currentOrder == null) {
       },
     );
   }
+
+  Color _extendStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+      case 'accepted':
+      case 'completed':
+        return Colors.green;
+      case 'rejected':
+      case 'declined':
+      case 'cancelled':
+        return Colors.red;
+      case 'pending':
+      default:
+        return Colors.orange;
+    }
+  }
+
+  IconData _extendStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+      case 'accepted':
+      case 'completed':
+        return Icons.check_circle_outline;
+      case 'rejected':
+      case 'declined':
+      case 'cancelled':
+        return Icons.cancel_outlined;
+      case 'pending':
+      default:
+        return Icons.hourglass_empty;
+    }
+  }
+
+  Widget _extendStatusBadge(String status) {
+    final color = _extendStatusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: color.withOpacity(0.4), width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_extendStatusIcon(status), size: 13, color: color),
+          const SizedBox(width: 6),
+          Text(
+            status.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ================= Skeleton Loader =================
   Widget _buildSkeletonLoader() {
     return SafeArea(
@@ -928,7 +1056,11 @@ if (!snapshot.hasData && _currentOrder == null) {
             ),
             child: Row(
               children: [
-                const Icon(Icons.arrow_back, color: Color(0xFF3A7DFF), size: 30),
+                const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFF3A7DFF),
+                  size: 30,
+                ),
                 const Spacer(),
                 const Text(
                   "Secure Access",
@@ -1056,8 +1188,10 @@ if (!snapshot.hasData && _currentOrder == null) {
                   // Order items title placeholder
                   Row(
                     children: [
-                      Icon(Icons.inventory_2_outlined,
-                          color: Colors.grey.shade400),
+                      Icon(
+                        Icons.inventory_2_outlined,
+                        color: Colors.grey.shade400,
+                      ),
                       const SizedBox(width: 10),
                       const ShimmerSkeleton(width: 120, height: 14),
                     ],
@@ -1082,7 +1216,10 @@ if (!snapshot.hasData && _currentOrder == null) {
                         children: [
                           const ShimmerSkeleton(width: 180, height: 20),
                           const SizedBox(height: 8),
-                          const ShimmerSkeleton(width: double.infinity, height: 14),
+                          const ShimmerSkeleton(
+                            width: double.infinity,
+                            height: 14,
+                          ),
                           const SizedBox(height: 4),
                           const ShimmerSkeleton(width: 140, height: 14),
                           const SizedBox(height: 18),

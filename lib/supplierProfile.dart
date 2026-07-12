@@ -1163,7 +1163,7 @@ Widget _buildSearchSkeleton() {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "\$${product.price}",
+                    "EGP${product.price}",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: isOutOfStock ? Colors.red : AppColors.primary,

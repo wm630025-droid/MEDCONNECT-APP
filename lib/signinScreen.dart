@@ -174,7 +174,7 @@ class _SignInScreenState extends State<SignInScreen> {
         children: [
           // AppBar (كما هو)
           Container(
-            height: 55,
+            height: 85,
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(

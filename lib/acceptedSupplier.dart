@@ -163,7 +163,7 @@ Widget _budgetSection(bool isDark, OfferRequest offer, String budget) {
       Expanded(
         child: _budgetCard(
           title: "Your Budget",
-          value: "\$$budget",
+          value: "EGP$budget",
           strike: true,
           isDark: isDark,
         ),
@@ -172,7 +172,7 @@ Widget _budgetSection(bool isDark, OfferRequest offer, String budget) {
       Expanded(
         child: _budgetCard(
           title: "Accepted Budget",
-          value: "\$${offer.price}",
+          value: "EGP${offer.price}",
           highlight: true,
           isDark: isDark,
         ),

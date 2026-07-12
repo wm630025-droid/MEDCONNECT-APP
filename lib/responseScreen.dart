@@ -294,7 +294,7 @@ const SizedBox(height: 4),
           _budgetRow("Your Budget:", _formatBudget(widget.customRequestBudget)),
           _budgetRow(
             "Supplier's offer:",
-            "\$${widget.offer.price}",
+            "EGP${widget.offer.price}",
             highlight: true,
           ),
           const SizedBox(height: 16),
@@ -311,8 +311,8 @@ const SizedBox(height: 4),
 
   String _formatBudget(String budget) {
   if (budget == "No Budget") return budget;
-  if (budget.startsWith('\$')) return budget;
-  return "\$$budget";
+  if (budget.startsWith('EGP')) return budget;
+  return "EGP$budget";
   }
 
   // Widget _budgetRow(

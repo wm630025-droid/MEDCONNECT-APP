@@ -1030,11 +1030,11 @@ Future<void> _showAskSupplierDialog() async {
             const Divider(),
             _priceRow(
               "Daily Rent",
-              "\EGP ${(_product!.dailyPrice ?? 0.0).toStringAsFixed(2)}",
+              "EGP ${(_product!.dailyPrice ?? 0.0).toStringAsFixed(2)}",
             ),
             _priceRow(
               "Total Rent",
-              "\EGP ${(rentDays * rentQuantity * (_product!.dailyPrice ?? 0.0)).toStringAsFixed(2)}",
+              "EGP ${(rentDays * rentQuantity * (_product!.dailyPrice ?? 0.0)).toStringAsFixed(2)}",
               bold: true,
             ),
           ],
@@ -1162,7 +1162,7 @@ Future<void> _showAskSupplierDialog() async {
             const SizedBox(height: 20),
             locationAndSetupTime(),
             const SizedBox(height: 20),
-            _priceRow("Total Price", "\EGP ${_product!.price}", bold: true),
+            _priceRow("Total Price", "EGP ${_product!.price}", bold: true),
             if (_product!.stock > 0 && _product!.stock < 10)
               Padding(
                 padding: const EdgeInsets.only(top: 8),

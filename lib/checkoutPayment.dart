@@ -359,7 +359,7 @@ List<CartItem> getDisplayItems() {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  'Rental • Daily: \EGP ${item.dailyPrice.toStringAsFixed(2)}',
+                                  'Rental • Daily: EGP ${item.dailyPrice.toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     color: Colors.blue,
                                     fontSize: 10,
@@ -389,7 +389,7 @@ List<CartItem> getDisplayItems() {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '\EGP ${(item.price * item.quantity).toStringAsFixed(2)}',
+                            'EGP ${(item.price * item.quantity).toStringAsFixed(2)}',
                             style: const TextStyle(
                               color: Color(0xFF0D6EFD),
                               fontWeight: FontWeight.bold,
@@ -416,10 +416,10 @@ List<CartItem> getDisplayItems() {
             }),
 
           const Divider(height: 32),
-          _priceRow('Subtotal', '\EGP ${subtotal.toStringAsFixed(2)}'),
+          _priceRow('Subtotal', 'EGP ${subtotal.toStringAsFixed(2)}'),
          
           const SizedBox(height: 8),
-          _priceRow('Total', '\EGP ${total.toStringAsFixed(2)}', isTotal: true),
+          _priceRow('Total', 'EGP ${total.toStringAsFixed(2)}', isTotal: true),
 
           const SizedBox(height: 16),
           const Divider(),

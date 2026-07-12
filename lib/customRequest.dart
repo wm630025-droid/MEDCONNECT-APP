@@ -618,7 +618,7 @@ final displayed = _searchResults.take(1).toList();
               overflow: TextOverflow.ellipsis,
             ),
             subtitle: Text(
-              "\$${product.price}",
+              "EGP${product.price}",
               style: const TextStyle(color: Colors.grey),
             ),
             trailing: Text(

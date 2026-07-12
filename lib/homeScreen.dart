@@ -230,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle("Recommended for you"),
+        _sectionTitle("Recommended by speciality"),
         const SizedBox(height: 10),
         SizedBox(
           height: 200,
@@ -414,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _customRequestBanner() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
         color: const Color.fromARGB(255, 233, 238, 247),
         borderRadius: BorderRadius.circular(16),
@@ -443,7 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  "Create a custom request\nand let us source it for you.",
+                  "Create a custom request and let us source it for you.",
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
@@ -461,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             child: const Text(
               "Request Now",
-              style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold,fontSize: 12),
             ),
           ),
         ],
@@ -525,7 +525,13 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() {
         if (loadMore) {
-          _allProducts.addAll(result['products']);
+
+        for (var product in result['products']) {
+          if (!_allProducts.any((p) => p.id == product.id)) {
+            _allProducts.add(product);
+          }
+        }
+          // _allProducts.addAll(result['products']);
         } else {
           _allProducts = result['products'];
 
@@ -542,6 +548,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _isFirstLoad = false;
       });
       print('loaded page ${_currentPage - 1}, hasmore ${_hasMore}');
+        // ✅ تحديث الكاش بعد التحميل
+    ApiService.cachedProducts = _allProducts;
+
       for (var product in _allProducts) {
         if (product.stock == 0 && product.restockDate != null) {
           final isNotified = await _apiService.isNotified(product.id);

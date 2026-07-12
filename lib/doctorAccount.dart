@@ -101,7 +101,7 @@ class _doctorAccountPageState extends State<doctorAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+       backgroundColor: const Color(0xFFF5F5F5),
       body: Stack(
         children: [
           SafeArea(
@@ -228,21 +228,22 @@ class _DashboardHeaderState extends State<DashboardHeader> {
   @override
   void initState() {
     super.initState();
-    _loadDoctorName();
+   // _loadDoctorName();
   }
 
-  Future<void> _loadDoctorName() async {
-    final result = await GetDoctorProfile.doctorProfile();
-    if (result['success']) {
-      final fullname = result['data']['fullname'] ?? 'Doctor';
-      setState(() {
-        doctorFullName = fullname;
-      });
-    }
-  }
+  // Future<void> _loadDoctorName() async {
+  //   final result = await GetDoctorProfile.doctorProfile();
+  //   if (result['success']) {
+  //     final fullname = result['data']['fullname'] ?? 'Doctor';
+  //     setState(() {
+  //       doctorFullName = fullname;
+  //     });
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
+    doctorFullName=ApiService.doctorName??'';
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -493,8 +494,8 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
         children: [
            Text(
   order.orderType == 'rental'
-      ? 'Total: \$${order.total.toStringAsFixed(2) }'
-      : 'Total: \$${order.subtotal.toStringAsFixed(2)}',
+      ? 'Total: ${order.total.toStringAsFixed(2) }'
+      : 'Total: ${order.subtotal.toStringAsFixed(2)}',
   style: const TextStyle(fontSize: 14),
 ),
           Text(
@@ -817,15 +818,17 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
   @override
 Widget build(BuildContext context) {
   return Scaffold(
+     backgroundColor: const Color(0xFFF5F5F5),
     appBar: AppBar(
+      backgroundColor: Colors.white,
       title: const Text(
         'All Orders',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        style: TextStyle(color: Colors.black, ),
       ),
-      backgroundColor: AppColors.primary,
-      iconTheme: const IconThemeData(color: Colors.white),
+    //  backgroundColor: AppColors.primary,
+      iconTheme: const IconThemeData(color: Colors.black),
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: const Icon(Icons.arrow_back, color: Colors.black),
         onPressed: () => Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => doctorAccountPage()),
@@ -951,7 +954,7 @@ Widget build(BuildContext context) {
                 Text(
   order.orderType == 'rental'?
      
-       'Total: \$${order.total.toStringAsFixed(2)}': 'Total: \$${order.subtotal.toStringAsFixed(2)}',
+       'Total: EGP${order.total.toStringAsFixed(2)}': 'Total: EGP${order.subtotal.toStringAsFixed(2)}',
   style: const TextStyle(fontSize: 14),
   
 ),
@@ -1086,6 +1089,7 @@ class OldChatsSection extends StatelessWidget {
           child: Column(
             children: [
               ListTile(
+                contentPadding: const EdgeInsets.fromLTRB(16,8 , 16, 0),
                 leading: const Icon(Icons.forum),
                 title: const Text(
                   "Tab To View All Chats",
@@ -1248,7 +1252,8 @@ class CustomRequestsSection extends StatelessWidget {
         sectionCard(
           title: "Custom Requests",
           child: ListTile(
-            leading: const Icon(Icons.edit_note),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16,vertical: 4),
+            leading: const Icon(Icons.edit_note ,size: 35,),
             title: const Text(
               "Tab To View All Custom Requests",
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,color: Colors.blue),
