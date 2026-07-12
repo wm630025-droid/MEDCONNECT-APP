@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
    
  
  static Future<Map<String, dynamic>> doctorProfile() async {
-     const String baseUrl = 'https://medconnect-one-pi.vercel.app/api/api/'; // استبدل ده بالـ URL بتاعك
+     const String baseUrl = 'https://med-connect-backend-ten.vercel.app/api/api/'; // استبدل ده بالـ URL بتاعك
 
   try {
     // 🔥 نجيب التوكن

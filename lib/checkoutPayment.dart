@@ -621,7 +621,7 @@ Future<void> _launchURL(String url) async {
   if (result == true) {
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => AllOrdersScreen(
+      MaterialPageRoute(builder: (_) => AllOrdersScreen(orderType: widget.isRentalMode ? 'rental' : 'sale' ,
       )),
       (route) => false,
     );
@@ -695,7 +695,7 @@ Future<void> _launchURL(String url) async {
               Navigator.pop(context);
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) =>  AllOrdersScreen()),
+                MaterialPageRoute(builder: (_) =>  AllOrdersScreen(orderType: widget.isRentalMode ? 'rental' : 'sale',)),
                 (route) => false,
               );
             },

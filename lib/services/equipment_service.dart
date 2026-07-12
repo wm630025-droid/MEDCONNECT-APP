@@ -37,7 +37,7 @@ import 'package:medconnect_app/models/equipment_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
-const String baseUrl = 'https://medconnect-one-pi.vercel.app/api/api/v1';
+const String baseUrl = 'https://med-connect-backend-ten.vercel.app/api/api/v1';
 
 Future<Map<String, String>> _getHeaders() async {
   final prefs = await SharedPreferences.getInstance();

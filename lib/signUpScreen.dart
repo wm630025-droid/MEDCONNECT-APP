@@ -119,15 +119,25 @@ void _deleteProfileImage() {
         print('✅ [signUpScreen] profileImageUrl from API: $profileImageUrl');
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? "Registration successful! Please verify your email."),
-            backgroundColor: Colors.green,
-          ),
-        );
+  SnackBar(
+    content: Text(
+      "${result['message'] ?? 'Registration successful!'}\nRedirecting to login in 3 seconds...",
+    ),
+    backgroundColor: Colors.green,
+    duration: const Duration(seconds: 3),
+  ),
+);
         // Mark that this device now has an account (so onboarding won't show again)
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('has_account', true);
         await prefs.setBool('seen_onboarding', true);
+
+        Future.delayed(const Duration(seconds: 3), () {
+    if (!mounted) return; // تأكد إن الـ widget لسه موجود
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const SignInScreen()),
+    );
+  });
        
       } else if (result['statusCode'] == 422) {
         print('⚠️ [signUpScreen] validation errors: ${result['errors']}');
@@ -233,7 +243,7 @@ void _deleteProfileImage() {
         children: [
           // Header
           Container(
-            height: 50,
+            height: 55,
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(colors: [Color(0xFF0066FF), Color(0xFF0088FF)]),

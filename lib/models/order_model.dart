@@ -71,7 +71,9 @@ class OrderItem {
   final double? dailyPrice; // ✅ أضف هذا
   final int? rentalDays; // ✅ أضف هذا
   final String? startDate; // ✅ أضف هذا (اختياري)
-  final String? endDate; // ✅ أضف هذا (اختياري)
+  final String? endDate;
+    final ExtendRentInfo? extendRent; // ✅ جديد
+ // ✅ أضف هذا (اختياري)
 
   OrderItem({
     required this.id,
@@ -91,6 +93,7 @@ class OrderItem {
     this.rentalDays,
     this.startDate,
     this.endDate,
+    this.extendRent,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -124,6 +127,58 @@ class OrderItem {
 
       product: json['product'] != null
           ? Product.fromJson(json['product'] as Map<String, dynamic>)
+          : null,
+           extendRent: json['extend_rent'] != null // ✅ السطر الناقص - ضيفه
+          ? ExtendRentInfo.fromJson(json['extend_rent'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+}
+
+class ExtendRentInfo {
+  final int id;
+  final int itemId;
+  final int? extendDay;
+  final String? invoiceKey;
+  final String status;
+  final String? amount;
+  final String? paymentMethod;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final int? prevDay;
+
+  ExtendRentInfo({
+    required this.id,
+    required this.itemId,
+    this.extendDay,
+    this.invoiceKey,
+    required this.status,
+    this.amount,
+    this.paymentMethod,
+    this.createdAt,
+    this.updatedAt,
+    this.prevDay,
+  });
+
+  factory ExtendRentInfo.fromJson(Map<String, dynamic> json) {
+    return ExtendRentInfo(
+      id: json['id'] ?? 0,
+      itemId: json['item_id'] ?? 0,
+      extendDay: json['extend_day'] != null
+          ? int.tryParse(json['extend_day'].toString())
+          : null,
+      invoiceKey: json['invoice_key'],
+      status: json['status'] ?? 'pending',
+      amount: json['amount']?.toString(),
+      paymentMethod: json['payment_method'],
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'])
+          : null,
+      prevDay: json['prev_day'] != null
+          ? int.tryParse(json['prev_day'].toString())
           : null,
     );
   }

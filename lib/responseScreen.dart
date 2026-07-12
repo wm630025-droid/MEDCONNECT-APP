@@ -12,8 +12,7 @@ import 'package:medconnect_app/supplierProfile.dart';
 class SupplierBidsPage extends StatefulWidget {
   final int customRequestId;
   final String customRequestBudget;
-  final CustomRequest request;
-  const SupplierBidsPage({super.key, required this.customRequestId , required this.customRequestBudget, required this.request});
+  const SupplierBidsPage({super.key, required this.customRequestId , required this.customRequestBudget, });
 
   @override
   State<SupplierBidsPage> createState() => _SupplierBidsPageState();
@@ -94,7 +93,7 @@ class _SupplierBidsPageState extends State<SupplierBidsPage> {
               itemCount: _offers.length,
               itemBuilder: (context, index) {
                 return SupplierBidCard(
-                  request: widget.request,
+                 
                   offer: _offers[index],
                   initiallyExpanded: index == 0,
                   customRequestBudget : widget.customRequestBudget
@@ -110,14 +109,14 @@ class SupplierBidCard extends StatefulWidget {
   final bool initiallyExpanded;
   final String customRequestBudget;
     final VoidCallback? onRejected;
-    final CustomRequest request;
+ 
 
   const SupplierBidCard({
     super.key,
     required this.offer,
     this.initiallyExpanded = false,
     required this.customRequestBudget,
-    this.onRejected, required this.request,
+    this.onRejected, 
   });
 
   @override
@@ -422,6 +421,7 @@ Future<void> _navigateToChat(BuildContext context) async {
         offerId: widget.offer.id,
         response: 'accepted',
       );
+      
 setState((){
       widget.offer.status = 'accepted';
     });
@@ -434,7 +434,7 @@ setState((){
         context,
         MaterialPageRoute(
           builder: (_) => AcceptedSupplierDetailsPage(
-            request: widget.request,
+            status: 'in negotiation',
             offer: widget.offer,
             requestBudget: widget.customRequestBudget,
           ),

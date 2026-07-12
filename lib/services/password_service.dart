@@ -7,7 +7,7 @@ class PasswordService {
      
 
       final response = await http.post(
-        Uri.parse("https://medconnect-one-pi.vercel.app/api/api/v1/password/forget"),
+        Uri.parse("https://med-connect-backend-ten.vercel.app/api/api/v1/password/forget"),
         headers: {
           "Accept": "application/json",
           "Content-Type": "application/json",

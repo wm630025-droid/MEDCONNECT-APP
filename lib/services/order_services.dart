@@ -5,17 +5,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:medconnect_app/models/order_model.dart';
 
 class OrderServices {
-  static const String baseUrl = 'https://medconnect-one-pi.vercel.app/api/api';
-
+  static const String baseUrl = 'https://med-connect-backend-ten.vercel.app/api/api';
+//https://med-connect-backend-ten.vercel.app
   static Future<Map<String, dynamic>> fetchDoctorOrders({
     int page = 1,
     int perPage = 15,
     String status = '',
     bool forceRefresh = false,
+    String orderType = '',
   }) async {
     
   if (!forceRefresh && 
       page == 1 && 
+      orderType.isEmpty &&
       ApiService.cachedRecentOrders != null && 
       ApiService.cachedRecentOrdersTime != null &&
       DateTime.now().difference(ApiService.cachedRecentOrdersTime!).inMinutes < 5) {
@@ -39,17 +41,26 @@ class OrderServices {
         'page': page.toString(),
         'per_page': perPage.toString(),
         if (status.isNotEmpty) 'status': status,
+            if (orderType.isNotEmpty) 'type': orderType,  // ✅ كـ query param
+                      
       },
     );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+   
+     
+      
+    final request = http.Request('GET', uri)
+  ..headers.addAll({
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  })
+  ..body = jsonEncode({
+    'type': orderType,
+  });
+
+final streamedResponse = await request.send();
+final response = await http.Response.fromStream(streamedResponse);
 
     final data = jsonDecode(response.body);
     print('order details: ${response.body} and status code ${response.statusCode} ');
@@ -211,5 +222,96 @@ class OrderServices {
     throw Exception(
       data['error'] ?? data['message'] ?? 'Failed to assign issue',
     );
+  }
+
+  static Future<Map<String, dynamic>> extendRent({
+    required int orderId,
+    required int extensionDays,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Please login first.');
+    }
+
+    final uri = Uri.parse('$baseUrl/v1/payment/extend-rent');
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'order_id': orderId,
+        'extension_days': extensionDays,
+      }),
+      
+    );
+
+    final data = jsonDecode(response.body);
+     print('📦 RAW DATA: $data');
+    print('🔍 DATA KEYS: ${data.keys}');
+    print('📊 DATA STRUCTURE: ${data.toString()}');
+    print('EXTEND RENT RESPONSE: ${response.statusCode} - ${response.body}');
+
+    // نجاح: رجع فاتورة الدفع
+    if (response.statusCode == 200 && data['status'] == 'success') {
+      return {
+        'success': true,
+        'redirectUrl': data['data']['payment_data']['redirectTo'],
+        'invoiceId': data['data']['invoice_id'],
+      };
+    }
+
+    // أخطاء الفاليديشن
+    if (data['errors'] != null) {
+      final firstError = (data['errors'] as Map<String, dynamic>)
+          .values
+          .first[0];
+      throw Exception(firstError);
+    }
+
+    // باقي حالات success: false
+    throw Exception(data['error'] ?? data['message'] ?? 'Failed to extend rent');
+  }
+
+  /// بتستنى وتتأكد إن الـ extend اتأكد فعلاً من السيرفر
+  /// بتحاول كذا مرة (polling) لحد ما تلاقي إن الحالة اتغيرت من pending
+  static Future<Order?> waitForExtendConfirmation({
+    required int orderId,
+    required int itemId,
+    int maxAttempts = 6,
+    Duration interval = const Duration(seconds: 3),
+  }) async {
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      await Future.delayed(interval);
+
+      try {
+        final order = await fetchDoctorOrder(orderId);
+        final item = order.items.firstWhere(
+          (it) => it.id == itemId,
+          orElse: () => order.items.first,
+        );
+
+        // ✅ لو الـ extend_rent موجود وحالته مش pending، يبقى اتأكد
+        if (item.extendRent != null &&
+            item.extendRent!.status.toLowerCase() != 'pending') {
+          print('✅ Extend confirmed after ${attempt + 1} attempt(s)');
+          return order;
+        }
+
+        // ✅ أو لو rentalEnd نفسه اتغير عن القيمة القديمة (احتياطي)
+        print('⏳ Attempt ${attempt + 1}: still pending, retrying...');
+      } catch (e) {
+        print('⚠️ Polling attempt ${attempt + 1} failed: $e');
+        // نكمل نحاول تاني حتى لو فشل الطلب مرة
+      }
+    }
+
+    print('⌛ Polling timed out after $maxAttempts attempts');
+    return null; // خلص المحاولات ولسه pending - السيرفر لسه بيعالج
   }
 }

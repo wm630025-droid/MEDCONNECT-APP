@@ -11,7 +11,7 @@ class SearchService {
 
       final response = await http.get(
         Uri.parse(
-          "https://medconnect-one-pi.vercel.app/api/api/v1/product/search",
+          "https://med-connect-backend-ten.vercel.app/api/api/v1/product/search",
         ).replace(queryParameters: {
           if (query != null && query.isNotEmpty)'search': query ,
           if (categoryId != null) 'category_id': categoryId.toString(),
@@ -56,18 +56,20 @@ static Future<List<CategoryApiModel>> getCategories({
   int perPage = 10,
   int page = 1,
   }) async {
-    
-    final url = Uri.parse(
-        "https://medconnect-one-pi.vercel.app/api/api/v1/category/doctor/show?per_page=$perPage&page=$page");
+     final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
 
-    final response = await http.get(url);
+    final url = Uri.parse(
+        "https://med-connect-backend-ten.vercel.app/api/api/v1/category/doctor/show?per_page=$perPage&page=$page");
+
+    final response = await http.get(url, headers: {
+      if (token != null) "Authorization": "Bearer $token",
+    });
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
       List categoriesJson = data['data'];
-      print('category body: ${response.body}');
-
 
       return categoriesJson
           .map((json) => CategoryApiModel.fromJson(json))

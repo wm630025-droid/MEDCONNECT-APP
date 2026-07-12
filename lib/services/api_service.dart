@@ -31,7 +31,7 @@ String _stringifyDynamicValue(dynamic value) {
 }
 
 class ApiService {
-  static const String baseUrl = 'https://medconnect-one-pi.vercel.app/api/api';
+  static const String baseUrl = 'https://med-connect-backend-ten.vercel.app/api/api';
 
   static int? get doctorId => _doctorId;
   static int? _doctorId;

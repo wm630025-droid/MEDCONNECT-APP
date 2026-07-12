@@ -5,7 +5,8 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 class RegisterService {
-  static const String baseUrl = 'https://medconnect-one-pi.vercel.app';
+  static const String baseUrl = 'https://med-connect-backend-ten.vercel.app';
+    //    "https://med-connect-backend-ten.vercel.app/api/api/v1/category/doctor/show?per_page=$perPage&page=$page");
 
   Future<Map<String, dynamic>> register({
     required String fullName,

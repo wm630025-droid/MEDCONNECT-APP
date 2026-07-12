@@ -11,7 +11,7 @@ String _stringifyDynamicValue(dynamic value) {
 
 class PaymentService {
   static const String baseUrl =
-      'https://medconnect-one-pi.vercel.app/api/api';
+      'https://med-connect-backend-ten.vercel.app/api/api';
 
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();

@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CartService {
 
   static const String baseUrl =
-      'https://medconnect-one-pi.vercel.app/api/api';
+      'https://med-connect-backend-ten.vercel.app/api/api';
 
     Future<Map<String, dynamic>> addToCart({
     required int productId,

@@ -11,8 +11,8 @@ import 'package:medconnect_app/supplierProfile.dart';
 class AcceptedSupplierDetailsPage extends StatelessWidget {
   final OfferRequest offer;
   final String requestBudget;
-  final CustomRequest request;
-  const AcceptedSupplierDetailsPage({super.key,required this.offer,required this.requestBudget, required this.request});
+  final String status;
+  const AcceptedSupplierDetailsPage({super.key,required this.offer,required this.requestBudget, required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +52,7 @@ class AcceptedSupplierDetailsPage extends StatelessWidget {
                 const SizedBox(height: 20),
                 _budgetSection(isDark,offer,requestBudget),
                 const SizedBox(height: 20),
-                _statusCard(isDark,request),
+                _statusCard(isDark,status),
               ],
             ),
           ),
@@ -228,7 +228,7 @@ Widget _budgetCard({
     ),
   );
 }
-Widget _statusCard(bool isDark,CustomRequest request) {
+Widget _statusCard(bool isDark,String status) {
   return Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
@@ -252,7 +252,7 @@ Widget _statusCard(bool isDark,CustomRequest request) {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            request.status,
+            status,
             style: const TextStyle(
               color: AppColors.assigned,
               fontWeight: FontWeight.bold,

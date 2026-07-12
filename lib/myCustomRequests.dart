@@ -401,7 +401,6 @@ print('LastPage: ${result['lastPage']}');
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => SupplierBidsPage(
-                                    request: request,
                                     customRequestId: request.id,
                                     customRequestBudget: budget,
                                   ),
@@ -665,7 +664,7 @@ print('LastPage: ${result['lastPage']}');
         context,
         MaterialPageRoute(
           builder: (_) => AcceptedSupplierDetailsPage(
-            request : request,
+            status: request.status,
             offer: acceptedOffer,
             requestBudget: originalBudget,
           ),

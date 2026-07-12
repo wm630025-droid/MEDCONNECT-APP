@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:medconnect_app/models/order_model.dart';
 import 'package:medconnect_app/services/order_services.dart';
 import 'package:medconnect_app/shimmerSkeleton.dart';
-
+import 'package:medconnect_app/rent_extension_button.dart';
 class OrderDetailsPage extends StatefulWidget {
   final int orderId;
 
@@ -544,6 +544,23 @@ if (!snapshot.hasData && _currentOrder == null) {
                                         ),
                                       ],
                                     ),
+                                     if (item.rentalStart != null && item.rentalEnd != null) ...[
+  const SizedBox(height: 18),
+  Divider(color: Colors.grey.shade200),
+  const SizedBox(height: 10),
+  Row(
+    children: [
+      const Icon(Icons.date_range, size: 16, color: secondaryText),
+      const SizedBox(width: 6),
+      Text(
+        "${_fmtDate(item.rentalStart!)} → ${_fmtDate(item.rentalEnd!)}",
+        style: const TextStyle(fontSize: 13, color: secondaryText),
+      ),
+    ],
+  ),
+  const SizedBox(height: 12),
+  _extendRentSection(order, item),
+],
                                   ],
                                 ),
                               );
@@ -877,6 +894,23 @@ if (!snapshot.hasData && _currentOrder == null) {
           ),
         ],
       ),
+    );
+  }
+   String _fmtDate(DateTime d) => "${d.day}/${d.month}/${d.year}";
+
+ Widget _extendRentSection(Order order, OrderItem item) {
+    return RentExtensionButton(
+      orderId: order.id,
+      rentStartDate: item.rentalStart!,
+      rentEndDate: item.rentalEnd!,
+      isDelivered: order.status.toLowerCase() == 'delivered', // ✅ جديد - بيحدد لو الطلب اتأكد
+      extendRentInfo: item.extendRent, // ✅ جديد - بيجي من الـ API مباشرة
+      onExtended: () {
+        setState(() {
+          orderFuture = OrderServices.fetchDoctorOrder(widget.orderId);
+          _currentOrder = null;
+        });
+      },
     );
   }
   // ================= Skeleton Loader =================

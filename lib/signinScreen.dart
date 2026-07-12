@@ -174,7 +174,7 @@ class _SignInScreenState extends State<SignInScreen> {
         children: [
           // AppBar (كما هو)
           Container(
-            height: 50,
+            height: 55,
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -220,7 +220,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
 
               child: Form(
                 key: _formKey,
@@ -270,7 +270,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     //     ),
                     //   ],
                     // ),
-                    const SizedBox(height: 50),
+                    const SizedBox(height: 200),
 
                     // ---------------- EMAIL ----------------
                     Column(
@@ -311,7 +311,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
                     // ---------------- PASSWORD ----------------
                     Column(
@@ -383,7 +383,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 100),
 
                     // ---------------- SIGN IN BUTTON ----------------
                     SizedBox(

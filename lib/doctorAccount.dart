@@ -403,6 +403,7 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
         perPage: 3, 
         // ✅ 3 orders بس
         forceRefresh: forceRefresh,
+         orderType: 'rental',
       );
   if (!mounted) return;              // ✅
 
@@ -490,10 +491,12 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
       trailing: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(
-            '\EGP ${order.total.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+           Text(
+  order.orderType == 'rental'
+      ? 'Total: \$${order.total.toStringAsFixed(2) }'
+      : 'Total: \$${order.subtotal.toStringAsFixed(2)}',
+  style: const TextStyle(fontSize: 14),
+),
           Text(
             order.status,
             style: TextStyle(
@@ -598,12 +601,7 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
           ),
           elevation: 0,
         ),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AllOrdersScreen()),
-          );
-        },
+        onPressed: () => _showOrderTypeSheet(context),
         child: const Text(
           "View All Orders",
           style: TextStyle(
@@ -615,6 +613,67 @@ class _RecentOrdersSectionState extends State<RecentOrdersSection> {
       ),
     );
   }
+}
+void _showOrderTypeSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const Text(
+                "Select Order Type",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.shopping_bag_outlined, color: AppColors.primary),
+                title: const Text('Sale'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _navigateToAllOrders(context, 'sale');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_today_outlined, color: AppColors.primary),
+                title: const Text('Rental'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _navigateToAllOrders(context, 'rental');
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+void _navigateToAllOrders(BuildContext context, String orderType) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => AllOrdersScreen(orderType: orderType),
+    ),
+  );
 }
 //
 
@@ -648,7 +707,9 @@ class OrderRow extends StatelessWidget {
 }
 
 class AllOrdersScreen extends StatefulWidget {
-  const AllOrdersScreen({super.key});
+   final String? orderType; // 'sale' or 'rental'
+  const AllOrdersScreen({super.key, 
+this.orderType });
 
   @override
   State<AllOrdersScreen> createState() => _AllOrdersScreenState();
@@ -684,6 +745,8 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
       final result = await OrderServices.fetchDoctorOrders(
         page: _currentPage,
         perPage: 5,
+         orderType: widget.orderType?? '',
+          forceRefresh: true, 
       );
 
       // التحقق من صحة النتيجة
@@ -718,6 +781,8 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
       final result = await OrderServices.fetchDoctorOrders(
         page: nextPage,
         perPage: 5,
+          orderType: widget.orderType?? '',
+          forceRefresh: true,  
       );
 
       if (result.containsKey('orders') && result['orders'] is List) {
@@ -830,9 +895,7 @@ Widget build(BuildContext context) {
         }
 
         final order = _orders[index];
-        final productNames = order.items.isNotEmpty
-            ? order.items.map((item) => item.name).join(', ')
-            : 'No item details';
+      
 
         return GestureDetector(
           onTap: () {
@@ -897,13 +960,7 @@ Widget build(BuildContext context) {
                   'Type: ${order.orderType}',
                   style: const TextStyle(fontSize: 14),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Name: $productNames',
-                  style: const TextStyle(fontSize: 14),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+               
                 const SizedBox(height: 4),
                 Text(
                   'Date: ${_formatDate(order.createdAt)}',
